@@ -1,0 +1,7 @@
+{
+  "name": "dzeble",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
