@@ -1,20 +1,107 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Blank
-    </ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- src/app/home/home.page.html -->
+<ion-content [fullscreen]="true" class="dashboard-content">
+  
+  <!-- 1. NEW UTILITY TOP BAR -->
+  <div class="utility-bar">
+    <div class="utility-left">
+      <!-- Leave empty or add a tiny logo/name like "Џебле" if you want later -->
+    </div>
+    
+    <div class="utility-right">
+      <!-- "Get Premium" Button: Only visible if logged in but NOT premium yet -->
+      @if (userTier === 'logged-in') {
+        <button class="btn-premium-badge" (click)="setPremiumModal(true)">
+          👑 {{ 'HOME.GET_PREMIUM' | translate }}
+        </button>
+      }
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+      <!-- Language Selector -->
+      <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
+        <ion-select-option value="mk">MK</ion-select-option>
+        <ion-select-option value="al">AL</ion-select-option>
+        <ion-select-option value="en">EN</ion-select-option>
+      </ion-select>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+      <!-- Profile Avatar / Login Button -->
+      @if (userTier === 'guest') {
+        <button class="btn-login" (click)="goToLogin()">
+          {{ 'HOME.LOGIN' | translate }}
+        </button>
+      } @else {
+        <div class="user-avatar" (click)="logout()">
+          👤
+        </div>
+      }
+    </div>
   </div>
+
+  <!-- 2. TITLES SECTION (Under the utility bar) -->
+  <div class="dashboard-titles">
+    <span class="city-subtitle">{{ 'HOME.CITY' | translate }}</span>
+    <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
+  </div>
+
+  <!-- 3. WIDGETS CONTAINER -->
+  <div class="widgets-container" [ngClass]="{'guest-grid': userTier !== 'premium', 'premium-grid': userTier === 'premium'}">
+    @for (widget of visibleWidgets; track widget.id) {
+      <div 
+        class="widget-card-wrapper"
+        (click)="onWidgetClick(widget.id, widget.isPremium)"
+      >
+        <div class="interactive-card">
+          <div class="card-emoji">{{ widget.icon }}</div>
+          <div class="card-value">{{ widget.value }}</div>
+          <div class="card-label">{{ widget.translationKey | translate }}</div>
+        </div>
+      </div>
+    }
+
+    @if (userTier === 'premium') {
+      <div class="widget-card-wrapper add-widget-btn">
+        <div class="interactive-card dashed-card">
+          <div class="plus-icon">+</div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="footer-hint">
+    <span>{{ 'HOME.FOOTER_HINT' | translate }}</span>
+  </div>
+
+  <!-- PREMIUM UPGRADE ION-MODAL -->
+  <ion-modal [isOpen]="isPremiumModalOpen" (didDismiss)="setPremiumModal(false)" class="premium-modal">
+    <ng-template>
+      <div class="modal-wrapper">
+        <div class="modal-hero">
+          <span class="hero-crown">👑</span>
+          <h2>{{ 'PREMIUM.TITLE' | translate }}</h2>
+          <p class="subtitle">{{ 'PREMIUM.SUBTITLE' | translate }}</p>
+          <span class="price-pill">{{ 'PREMIUM.PRICE' | translate }}</span>
+        </div>
+
+        <div class="modal-body">
+          <ul class="benefits-list">
+            <li>{{ 'PREMIUM.BENEFIT_1' | translate }}</li>
+            <li>{{ 'PREMIUM.BENEFIT_2' | translate }}</li>
+            <li>{{ 'PREMIUM.BENEFIT_3' | translate }}</li>
+          </ul>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-modal-cancel" (click)="setPremiumModal(false)">
+            {{ 'PREMIUM.CANCEL' | translate }}
+          </button>
+          <button class="btn-modal-activate" (click)="activatePremium()" [disabled]="isUpgrading">
+            @if (isUpgrading) {
+              ...
+            } @else {
+              {{ 'PREMIUM.ACTIVATE' | translate }}
+            }
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
 </ion-content>

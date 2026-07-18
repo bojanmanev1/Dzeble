@@ -1,0 +1,56 @@
+<ion-content [fullscreen]="true" class="auth-content">
+
+  <div class="back-btn-container">
+    <button class="btn-back" (click)='goBack()'>←</button>
+  </div>
+
+  <div class="auth-wrapper">
+    <div class="auth-header">
+      <span class="auth-logo">📱</span>
+      <h1>{{ 'AUTH.LOGIN_TITLE' | translate }}</h1>
+    </div>
+
+    <form (submit)="onSubmit(); $event.preventDefault()" class="auth-form">
+      
+      <div class="input-group">
+        <label>{{ 'AUTH.EMAIL' | translate }}</label>
+        <input 
+          type="email" 
+          name="email" 
+          [(ngModel)]="email" 
+          required 
+          placeholder="example@mail.com"
+        />
+      </div>
+
+      <div class="input-group">
+        <label>{{ 'AUTH.PASSWORD' | translate }}</label>
+        <input 
+          type="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          required 
+          placeholder="••••••••"
+        />
+      </div>
+
+      @if (errorMessage) {
+        <p class="error-text">{{ errorMessage | translate }}</p>
+      }
+
+      <button type="submit" class="btn-submit" [disabled]="isLoading">
+        @if (isLoading) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          {{ (isSignUpMode ? 'AUTH.SIGN_UP' : 'AUTH.SIGN_IN') | translate }}
+        }
+      </button>
+
+    </form>
+
+    <button class="btn-toggle-mode" (click)="toggleMode()">
+      {{ (isSignUpMode ? 'AUTH.HAVE_ACCOUNT' : 'AUTH.NEED_ACCOUNT') | translate }}
+    </button>
+  </div>
+
+</ion-content>

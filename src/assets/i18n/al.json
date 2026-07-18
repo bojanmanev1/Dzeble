@@ -1,0 +1,37 @@
+{
+  "HOME": {
+    "CITY": "Shkup",
+    "TODAY": "Sot",
+    "LOGIN": "Hyni",
+    "FOOTER_HINT": "Mbani pllakën · detajet shfaqen më lart",
+    "GET_PREMIUM": "Merr Premium"
+  },
+  "WIDGETS": {
+    "AQI": "AQI",
+    "WEATHER": "Koha",
+    "CURRENCY": "Kursi",
+    "FUEL": "Karburant",
+    "HOLIDAY": "Pushim",
+    "UV": "UV Indeksi"
+  },
+  "AUTH": {
+    "LOGIN_TITLE": "Mirësevini",
+    "EMAIL": "Email",
+    "PASSWORD": "Fjalëkalimi",
+    "SIGN_IN": "Hyni",
+    "SIGN_UP": "Regjistrohuni",
+    "NEED_ACCOUNT": "Nuk keni llogari? Regjistrohuni",
+    "HAVE_ACCOUNT": "Keni një llogari? Hyni",
+    "ERROR": "Ndodhi një gabim. Provoni përsëri."
+  },
+  "PREMIUM": {
+    "TITLE": "Zhblloko Premium",
+    "SUBTITLE": "Përfitoni qasje në të gjitha funksionet",
+    "PRICE": "Vetëm 100 MKD",
+    "BENEFIT_1": "✓ Të gjitha widget-et premium (UV, Pushimet)",
+    "BENEFIT_2": "✓ Ndjekje në kohë reale pa kufizime",
+    "BENEFIT_3": "✓ Mbështetje e hershme për funksionet e reja",
+    "CANCEL": "Anulo",
+    "ACTIVATE": "Aktivizo"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "HOME": {
+    "CITY": "Skopje",
+    "TODAY": "Today",
+    "LOGIN": "Login",
+    "FOOTER_HINT": "Hold tile · details are shown above",
+    "GET_PREMIUM": "Get Premium"
+  },
+  "WIDGETS": {
+    "AQI": "AQI",
+    "WEATHER": "Weather",
+    "CURRENCY": "Exchange",
+    "FUEL": "Fuel",
+    "HOLIDAY": "Holiday",
+    "UV": "UV Index"
+  },
+  "AUTH": {
+    "LOGIN_TITLE": "Welcome",
+    "EMAIL": "Email",
+    "PASSWORD": "Password",
+    "SIGN_IN": "Sign In",
+    "SIGN_UP": "Sign Up",
+    "NEED_ACCOUNT": "Don't have an account? Sign Up",
+    "HAVE_ACCOUNT": "Already have an account? Sign In",
+    "ERROR": "An error occurred. Please try again."
+  },
+  "PREMIUM": {
+    "TITLE": "Unlock Premium",
+    "SUBTITLE": "Get full access to all features",
+    "PRICE": "Only 100 MKD",
+    "BENEFIT_1": "✓ All premium widgets (UV Index, Holidays)",
+    "BENEFIT_2": "✓ Real-time tracking without limits",
+    "BENEFIT_3": "✓ Early access to upcoming features",
+    "CANCEL": "Cancel",
+    "ACTIVATE": "Activate"
+  }
+}
