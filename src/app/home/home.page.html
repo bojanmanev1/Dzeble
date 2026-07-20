@@ -1,14 +1,14 @@
 <!-- src/app/home/home.page.html -->
 <ion-content [fullscreen]="true" class="dashboard-content">
   
-  <!-- 1. NEW UTILITY TOP BAR -->
+  <!-- 1. UTILITY TOP BAR -->
   <div class="utility-bar">
     <div class="utility-left">
-      <!-- Leave empty or add a tiny logo/name like "Џебле" if you want later -->
+      <!-- Future location for branding text or mini-logo -->
     </div>
     
     <div class="utility-right">
-      <!-- "Get Premium" Button: Only visible if logged in but NOT premium yet -->
+      <!-- "Get Premium" Button -->
       @if (userTier === 'logged-in') {
         <button class="btn-premium-badge" (click)="setPremiumModal(true)">
           👑 {{ 'HOME.GET_PREMIUM' | translate }}
@@ -35,7 +35,7 @@
     </div>
   </div>
 
-  <!-- 2. TITLES SECTION (Under the utility bar) -->
+  <!-- 2. TITLES SECTION -->
   <div class="dashboard-titles">
     <span class="city-subtitle">{{ currentCityName }}</span>
     <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
@@ -69,7 +69,9 @@
     <span>{{ 'HOME.FOOTER_HINT' | translate }}</span>
   </div>
 
-  <!-- PREMIUM UPGRADE ION-MODAL -->
+  <!-- ========================================== -->
+  <!-- MODAL 1: PREMIUM UPGRADE INTERFACE         -->
+  <!-- ========================================== -->
   <ion-modal [isOpen]="isPremiumModalOpen" (didDismiss)="setPremiumModal(false)" class="premium-modal">
     <ng-template>
       <div class="modal-wrapper">
@@ -100,6 +102,134 @@
             }
           </button>
         </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: UNIVERSAL WIDGET DETAIL DISPLAY   -->
+  <!-- ========================================== -->
+  <ion-modal [isOpen]="isDetailModalOpen" (didDismiss)="setDetailModal(false)" class="premium-modal">
+    <ng-template>
+      <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+        
+        <!-- SUB-VIEW A: WEATHER DETAILED OVERVIEW -->
+        @if (activeDetailWidgetId === 'weather' || activeDetailWidgetId === 'uv') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <span class="hero-crown">⛈️</span>
+            <h2>Временска Прогноза</h2>
+            <p class="subtitle">Детални информации по часови и денови</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Следни неколку часа</h3>
+            <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px;">
+              
+              <!-- DYNAMIC HOURLY ITERATION FOR-LOOP -->
+              @for (hourItem of getHourlyForecast(); track hourItem.time) {
+                <div style="background: #f7f7f5; padding: 10px 14px; border-radius: 12px; text-align: center; min-width: 65px;">
+                  <span style="font-size: 0.75rem; color: #888; display: block;">{{ hourItem.time }}</span>
+                  <span style="font-size: 1.2rem; display: block; margin: 4px 0;">{{ hourItem.icon }}</span>
+                  <span style="font-weight: bold; color: #111;">{{ hourItem.temp }}</span>
+                </div>
+              } @empty {
+                <p style="font-size: 0.85rem; color: #999; padding: 8px;">Се вчитуваат часовни податоци...</p>
+              }
+            </div>
+
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Неделна прогноза</h3>
+            <ul class="benefits-list">
+              
+              <!-- DYNAMIC WEEKLY ITERATION FOR-LOOP -->
+              @for (dayItem of getWeeklyForecast(); track dayItem.day) {
+                <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                  <span>{{ dayItem.day }}</span>
+                  <span style="font-weight: 700;">{{ dayItem.icon }} {{ dayItem.temps }}</span>
+                </li>
+              } @empty {
+                <p style="font-size: 0.85rem; color: #999; padding: 8px;">Се вчитува неделна прогноза...</p>
+              }
+            </ul>
+          </div>
+        }
+
+        <!-- SUB-VIEW B: CURRENCY CALCULATION MODULE -->
+        @if (activeDetailWidgetId === 'currency') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <span class="hero-crown">💶</span>
+            <h2>Курсна Листа</h2>
+            <p class="subtitle">Официјален среден курс на Народна Банка</p>
+          </div>
+
+          <!-- Quick Interactive Input Interface -->
+          <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
+            <input 
+              type="number" 
+              [(ngModel)]="inputEuroAmount"
+              style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;"
+              placeholder="1"
+            />
+          </div>
+
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">🇲🇰 Македонски Денар (MKD)</span>
+                <span style="font-weight: 800; font-size: 1.1rem;">{{ getCalculatedRate('MKD') }} ден</span>
+              </li>
+              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
+                <span>🇺🇸 УС Долар (USD)</span>
+                <span style="font-weight: 700;">$ {{ getCalculatedRate('USD') }}</span>
+              </li>
+              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
+                <span>🇨🇭 Швајцарски Франк (CHF)</span>
+                <span style="font-weight: 700;">CHF {{ getCalculatedRate('CHF') }}</span>
+              </li>
+              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
+                <span>🇬🇧 Британска Фунта (GBP)</span>
+                <span style="font-weight: 700;">£ {{ getCalculatedRate('GBP') }}</span>
+              </li>
+            </ul>
+          </div>
+        }
+
+        <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
+        @if (activeDetailWidgetId === 'fuel') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <span class="hero-crown">⛽</span>
+            <h2>Цени на Горива</h2>
+            <p class="subtitle">Максимални малопродажни цени на РКЕ</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуросупер БС-95</span>
+                <span style="font-weight: bold; color: #e63946;">82.50 ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуросупер БС-98</span>
+                <span style="font-weight: bold; color: #e63946;">84.50 ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
+                <span style="font-weight: bold; color: #2a9d8f;">74.00 ден/лит</span>
+              </li>
+            </ul>
+            <p style="font-size: 0.75rem; color: #999; text-align: center; margin-top: 12px;">
+              * Цените се усогласуваат автоматски со официјалните одлуки.
+            </p>
+          </div>
+        }
+
+        <!-- MASTER MODAL CONTROL DISMISS FOOTER BUTTON -->
+        <div class="modal-footer" style="padding-top: 10px;">
+          <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold;">
+            Затвори
+          </button>
+        </div>
+
       </div>
     </ng-template>
   </ion-modal>

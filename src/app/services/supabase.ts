@@ -130,4 +130,18 @@ async syncUserWeather(metrics: {
   return data;
 }
 
+/**
+ * Reads all active currency rates from the database cache table
+ */
+async getLatestCurrencyRates() {
+  const { data, error } = await this.supabase
+    .from('currency_rates')
+    .select('target_currency, rate');
+
+  if (error) {
+    console.error('Error fetching currency values:', error.message);
+    throw error;
+  }
+  return data;
+}
 }
