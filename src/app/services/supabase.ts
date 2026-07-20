@@ -100,4 +100,34 @@ async signOut() {
     return true;
   }
 
+  /**
+ * Passive sync: Saves the current phone location and weather metrics to the database
+ */
+async syncUserWeather(metrics: {
+  userId: string;
+  lat: number;
+  lng: number;
+  temp: number;
+  code: number;
+  uv: number;
+}) {
+  const { data, error } = await this.supabase
+    .from('user_weather_status')
+    .upsert({
+      user_id: metrics.userId,
+      latitude: metrics.lat,
+      longitude: metrics.lng,
+      current_temp: metrics.temp,
+      weather_code: metrics.code,
+      uv_index: metrics.uv,
+      updated_at: new Date().toISOString()
+    });
+
+  if (error) {
+    console.error('Error syncing weather to Supabase database:', error.message);
+    throw error;
+  }
+  return data;
+}
+
 }
