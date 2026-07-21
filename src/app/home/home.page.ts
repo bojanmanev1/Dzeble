@@ -93,6 +93,29 @@ export class HomePage implements OnInit, OnDestroy {
     this.fetchDatabaseCurrencyRates();
   }
 
+  getCurrencyFlag(currency: string): string {
+  const flags: { [key: string]: string } = {
+    'MKD': '🇲🇰', 'USD': '🇺🇸', 'CHF': '🇨🇭', 'GBP': '🇬🇧', 'RSD': '🇷🇸',
+    'TRY': '🇹🇷', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'ALL': '🇦🇱', 'BGN': '🇧🇬'
+  };
+  return flags[currency] || '🏳️';
+}
+
+getCurrencyNameLocal(currency: string): string {
+  const names: { [key: string]: string } = {
+    'MKD': 'Македонски Денар', 'USD': 'УС Долар', 'CHF': 'Швајцарски Франк', 
+    'GBP': 'Британска Фунта', 'RSD': 'Сербиски Динар', 'TRY': 'Турска Лира', 
+    'AUD': 'Австралиски Долар', 'CAD': 'Канадски Долар', 'ALL': 'Албански Лек', 
+    'BGN': 'Бугарски Лев'
+  };
+  return names[currency] || currency;
+}
+
+getCalculatedRateDynamic(rate: number): string {
+  const total = this.inputEuroAmount * rate;
+  return total.toLocaleString('mk-MK', { maximumFractionDigits: 2 });
+}
+
   fetchLiveMetrics() {
     this.weatherSub = this.weatherService.getLocalWeatherData().subscribe({
       next: async (data) => {
@@ -255,29 +278,33 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  async fetchDatabaseCurrencyRates() {
-    try {
-      const ratesData = await this.supabaseService.getLatestCurrencyRates();
-      if (!ratesData) return;
+ async fetchDatabaseCurrencyRates() {
+  try {
+    const ratesData = await this.supabaseService.getLatestCurrencyRates();
+    if (!ratesData) return;
 
-      const mkdRecord = ratesData.find((r: any) => r.target_currency === 'MKD');
+    const mkdRecord = ratesData.find((r: any) => r.target_currency === 'MKD');
+    
+    if (mkdRecord) {
+      const liveMkdRate = mkdRecord.rate.toFixed(2); 
+
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'currency') {
+          return { 
+            ...widget, 
+            value: `1 EUR = ${liveMkdRate}`, // Updates the text on the card grid
+            unit: 'МКД' 
+          };
+        }
+        return widget;
+      });
       
-      if (mkdRecord) {
-        const liveMkdRate = mkdRecord.rate.toFixed(2); 
-
-        this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'currency') {
-            return { ...widget, value: liveMkdRate };
-          }
-          return widget;
-        });
-        
-        this.filterWidgets();
-      }
-    } catch (err) {
-      console.error('Failed to resolve local currency rates, using fallback layout.', err);
+      this.filterWidgets();
     }
+  } catch (err) {
+    console.error('Failed to resolve local currency rates, using fallback layout.', err);
   }
+}
 
   async onWidgetClick(widgetId: string, isPremium: boolean) {
     if (isPremium && this.userTier !== 'premium') {

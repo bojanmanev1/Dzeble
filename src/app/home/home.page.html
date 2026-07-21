@@ -42,6 +42,7 @@
   </div>
 
   <!-- 3. WIDGETS CONTAINER -->
+<!-- 3. WIDGETS CONTAINER -->
   <div class="widgets-container" [ngClass]="{'guest-grid': userTier !== 'premium', 'premium-grid': userTier === 'premium'}">
     @for (widget of visibleWidgets; track widget.id) {
       <div 
@@ -51,6 +52,12 @@
         <div class="interactive-card">
           <div class="card-emoji">{{ widget.icon }}</div>
           <div class="card-value">{{ widget.value }}</div>
+          
+          <!-- DYNAMIC UNIT LAYER (Shows МКД, UV, °C, etc. based on the active widget) -->
+          <div class="card-unit" style="font-size: 0.75rem; font-weight: bold; color: #888; margin-bottom: 2px;">
+            {{ widget.unit }}
+          </div>
+          
           <div class="card-label">{{ widget.translationKey | translate }}</div>
         </div>
       </div>
@@ -154,45 +161,45 @@
         }
 
         <!-- SUB-VIEW B: CURRENCY CALCULATION MODULE -->
-        @if (activeDetailWidgetId === 'currency') {
-          <div class="modal-hero" style="padding-bottom: 10px;">
-            <span class="hero-crown">💶</span>
-            <h2>Курсна Листа</h2>
-            <p class="subtitle">Официјален среден курс на Народна Банка</p>
-          </div>
+       <!-- SUB-VIEW B: CURRENCY CALCULATION MODULE -->
+@if (activeDetailWidgetId === 'currency') {
+  <div class="modal-hero" style="padding-bottom: 10px;">
+    <span class="hero-crown">💶</span>
+    <h2>Курсна Листа</h2>
+    <p class="subtitle">Официјален среден курс во однос на ЕВРО (EUR)</p>
+  </div>
 
-          <!-- Quick Interactive Input Interface -->
-          <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
-            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
-            <input 
-              type="number" 
-              [(ngModel)]="inputEuroAmount"
-              style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;"
-              placeholder="1"
-            />
-          </div>
+  <!-- Quick Interactive Input Interface -->
+  <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
+    <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
+    <input 
+      type="number" 
+      [(ngModel)]="inputEuroAmount"
+      style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;"
+      placeholder="1"
+    />
+  </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto;">
-            <ul class="benefits-list">
-              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">🇲🇰 Македонски Денар (MKD)</span>
-                <span style="font-weight: 800; font-size: 1.1rem;">{{ getCalculatedRate('MKD') }} ден</span>
-              </li>
-              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
-                <span>🇺🇸 УС Долар (USD)</span>
-                <span style="font-weight: 700;">$ {{ getCalculatedRate('USD') }}</span>
-              </li>
-              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
-                <span>🇨🇭 Швајцарски Франк (CHF)</span>
-                <span style="font-weight: 700;">CHF {{ getCalculatedRate('CHF') }}</span>
-              </li>
-              <li style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f5;">
-                <span>🇬🇧 Британска Фунта (GBP)</span>
-                <span style="font-weight: 700;">£ {{ getCalculatedRate('GBP') }}</span>
-              </li>
-            </ul>
-          </div>
-        }
+  <div class="modal-body" style="flex: 1; overflow-y: auto;">
+    <ul class="benefits-list">
+      
+      <!-- AUTOMATICALLY LOOPS AND CALCULATES ALL 10 CURRENCIES FROM YOUR SUPABASE DATA -->
+      @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
+        <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+          <span style="font-weight: 600;">
+            {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
+          </span>
+          <span style="font-weight: 800; font-size: 1.1rem;">
+            {{ getCalculatedRateDynamic(rateRow.rate) }} ден
+          </span>
+        </li>
+      } @empty {
+        <p style="font-size: 0.85rem; color: #999; padding: 8px; text-align: center;">Вчитување на курсна листа...</p>
+      }
+      
+    </ul>
+  </div>
+}
 
         <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
         @if (activeDetailWidgetId === 'fuel') {

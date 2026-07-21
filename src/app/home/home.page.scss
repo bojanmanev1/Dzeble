@@ -174,11 +174,30 @@
 
 /* Custom IonModal overrides */
 .premium-modal {
-  --height: 480px;
-  --width: 90%;
-  --max-width: 380px;
-  --border-radius: 28px;
-  --box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  // 1. Structure sizing constraints
+  --height: 85%;
+  --width: 100%;
+  --max-width: 100%; // Clear previous mobile breakpoints width cap
+  --border-radius: 32px 32px 0px 0px; // Rounded elegant crown top edges only
+  --box-shadow: 0 -10px 35px rgba(0,0,0,0.12);
+  
+  // 2. Pin to bottom-sheet layout position anchor
+  align-items: flex-end;
+
+  // 3. Frosted Glass Backdrop configurations
+  --backdrop-opacity: 0.45;
+  &::part(backdrop) {
+    background: #000000;
+    backdrop-filter: blur(12px); // Blurs the main dashboard elements behind the view
+    -webkit-backdrop-filter: blur(12px); // Safely handles Apple WebView engines
+  }
+
+  // 4. Force container components inside shadow root part to anchor down cleanly
+  &::part(content) {
+    position: absolute;
+    bottom: 0;
+    border-radius: 32px 32px 0px 0px;
+  }
 }
 
 .modal-wrapper {
@@ -187,12 +206,13 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px;
+  padding: 28px 24px calc(20px + env(safe-area-inset-bottom)) 24px; // Respects safe space height metrics
+  box-sizing: border-box;
 }
 
 .modal-hero {
   text-align: center;
-  padding-top: 10px;
+  padding-bottom: 12px;
 
   .hero-crown {
     font-size: 3rem;
@@ -226,7 +246,10 @@
 }
 
 .modal-body {
+  flex: 1; // Allows body to stretch and fill all available screen space
+  overflow-y: auto; // Enables safe inner text scrolling loops
   padding: 10px 0;
+  -webkit-overflow-scrolling: touch; // Crisp inertial sliding on devices
 
   .benefits-list {
     list-style: none;
@@ -249,14 +272,16 @@
 .modal-footer {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
+  padding-top: 14px;
+  background: white; // Lock color over text overlap when scrolling
+  margin-top: auto; 
 
   button {
     flex: 1;
-    padding: 14px;
+    padding: 16px;
     font-size: 0.95rem;
     font-weight: 700;
-    border-radius: 16px;
+    border-radius: 18px;
     border: none;
     cursor: pointer;
     transition: transform 0.1s ease;
