@@ -202,33 +202,34 @@
 }
 
         <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
-        @if (activeDetailWidgetId === 'fuel') {
-          <div class="modal-hero" style="padding-bottom: 10px;">
-            <span class="hero-crown">⛽</span>
-            <h2>Цени на Горива</h2>
-            <p class="subtitle">Максимални малопродажни цени на РКЕ</p>
-          </div>
-          
-          <div class="modal-body" style="flex: 1; overflow-y: auto;">
-            <ul class="benefits-list">
-              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуросупер БС-95</span>
-                <span style="font-weight: bold; color: #e63946;">82.50 ден/лит</span>
-              </li>
-              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуросупер БС-98</span>
-                <span style="font-weight: bold; color: #e63946;">84.50 ден/лит</span>
-              </li>
-              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
-                <span style="font-weight: bold; color: #2a9d8f;">74.00 ден/лит</span>
-              </li>
-            </ul>
-            <p style="font-size: 0.75rem; color: #999; text-align: center; margin-top: 12px;">
-              * Цените се усогласуваат автоматски со официјалните одлуки.
-            </p>
-          </div>
-        }
+       <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
+@if (activeDetailWidgetId === 'fuel') {
+  <div class="modal-hero" style="padding-bottom: 10px;">
+    <span class="hero-crown">⛽</span>
+    <h2>Цени на Горива</h2>
+    <p class="subtitle">Максимални малопродажни цени на РКЕ</p>
+  </div>
+  
+  <div class="modal-body" style="flex: 1; overflow-y: auto;">
+    <ul class="benefits-list">
+      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+        <span style="font-weight: 600;">Еуросупер БС-95</span>
+        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} ден/лит</span>
+      </li>
+      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+        <span style="font-weight: 600;">Еуросупер БС-98</span>
+        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} ден/лит</span>
+      </li>
+      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+        <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
+        <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} ден/лит</span>
+      </li>
+    </ul>
+    <p style="font-size: 0.75rem; color: #999; text-align: center; margin-top: 12px;">
+      * Цените се усогласуваат автоматски со официјалните одлуки во реално време.
+    </p>
+  </div>
+}
 
         <!-- MASTER MODAL CONTROL DISMISS FOOTER BUTTON -->
         <div class="modal-footer" style="padding-top: 10px;">

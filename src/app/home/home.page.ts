@@ -57,7 +57,7 @@ export class HomePage implements OnInit, OnDestroy {
   isUpgrading = false;
   isCurrencyModalOpen = false;
   currentCityName = 'Скопје'; 
-
+  rawDatabaseFuel: any[] | null = [];
   private weatherSub: Subscription | null = null;
 
   allWidgets: Widget[] = [
@@ -91,6 +91,7 @@ export class HomePage implements OnInit, OnDestroy {
 
     this.fetchLiveMetrics();
     this.fetchDatabaseCurrencyRates();
+    this.fetchDatabaseFuelPrices();
   }
 
   getCurrencyFlag(currency: string): string {
@@ -109,6 +110,43 @@ getCurrencyNameLocal(currency: string): string {
     'BGN': 'Бугарски Лев'
   };
   return names[currency] || currency;
+}
+
+async fetchDatabaseFuelPrices() {
+  try {
+    const fuelData = await this.supabaseService.getLatestFuelPrices();
+    
+    // Fallback to an empty array if fuelData is null, completely satisfying TypeScript
+    this.rawDatabaseFuel = fuelData || []; 
+
+    if (this.rawDatabaseFuel.length === 0) return;
+
+    // Find the standard Diesel price as a baseline reference for the grid widget card
+    const dieselRecord = this.rawDatabaseFuel.find((f: any) => f.fuel_type === 'Дизел');
+    const displayPrice = dieselRecord ? dieselRecord.price_mkd.toFixed(1) : '74.0';
+
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'fuel') {
+        return { 
+          ...widget, 
+          value: `${displayPrice}`, 
+          unit: 'МКД (Дизел)' 
+        };
+      }
+      return widget;
+    });
+    
+    this.filterWidgets();
+  } catch (err) {
+    console.error('Failed to resolve local fuel matrices, dropping back to static.', err);
+  }
+}
+
+// Simple matching helper function for the HTML template view blocks
+getDynamicFuelPrice(fuelName: string): string {
+  const match = this.rawDatabaseFuel?.find(f => f.fuel_type === fuelName);
+  if (!match) return '--.--';
+  return match.price_mkd.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 getCalculatedRateDynamic(rate: number): string {
@@ -306,24 +344,24 @@ getCalculatedRateDynamic(rate: number): string {
   }
 }
 
-  async onWidgetClick(widgetId: string, isPremium: boolean) {
-    if (isPremium && this.userTier !== 'premium') {
-      this.setPremiumModal(true); 
-      return;
-    }
-    
-    this.activeDetailWidgetId = widgetId;
-    
-    if (widgetId === 'currency') {
-      try {
-        this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates();
-      } catch (e) {
-        console.error('Failed to pre-fetch currency lists.');
-      }
-    }
-
-    this.isDetailModalOpen = true;
+async onWidgetClick(widgetId: string, isPremium: boolean) {
+  if (isPremium && this.userTier !== 'premium') {
+    this.setPremiumModal(true); 
+    return;
   }
+  
+  this.activeDetailWidgetId = widgetId;
+  
+  if (widgetId === 'currency') {
+    try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
+  }
+  
+  if (widgetId === 'fuel') {
+    try { this.rawDatabaseFuel = await this.supabaseService.getLatestFuelPrices(); } catch (e) {}
+  }
+
+  this.isDetailModalOpen = true;
+}
 
   setCurrencyModal(isOpen: boolean) {
     this.isCurrencyModalOpen = isOpen;

@@ -130,6 +130,18 @@ async syncUserWeather(metrics: {
   return data;
 }
 
+async getLatestFuelPrices(): Promise<any[] | null> {
+  const { data, error } = await this.supabase
+    .from('fuel_prices')
+    .select('fuel_type, price_mkd');
+
+  if (error) {
+    console.error('Error fetching fuel data from Supabase:', error.message);
+    throw error;
+  }
+  return data;
+}
+
 /**
  * Reads all active currency rates from the database cache table
  */
