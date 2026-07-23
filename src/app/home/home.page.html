@@ -1,126 +1,72 @@
-<!-- src/app/home/home.page.html -->
 <ion-content [fullscreen]="true" class="dashboard-content">
   
-  <!-- 1. UTILITY TOP BAR -->
-  <div class="utility-bar">
-    <div class="utility-left">
-      <!-- Future location for branding text or mini-logo -->
-    </div>
-    
-    <div class="utility-right">
-      <!-- "Get Premium" Button -->
-      @if (userTier === 'logged-in') {
-        <button class="btn-premium-badge" (click)="setPremiumModal(true)">
-          👑 {{ 'HOME.GET_PREMIUM' | translate }}
-        </button>
-      }
-
-      <!-- Language Selector -->
-      <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
-        <ion-select-option value="mk">MK</ion-select-option>
-        <ion-select-option value="al">AL</ion-select-option>
-        <ion-select-option value="en">EN</ion-select-option>
-      </ion-select>
-
-      <!-- Profile Avatar / Login Button -->
-      @if (userTier === 'guest') {
-        <button class="btn-login" (click)="goToLogin()">
-          {{ 'HOME.LOGIN' | translate }}
-        </button>
-      } @else {
-        <div class="user-avatar" (click)="logout()">
-          👤
-        </div>
-      }
-    </div>
-  </div>
-
-  <!-- 2. TITLES SECTION -->
-  <div class="dashboard-titles">
-    <span class="city-subtitle">{{ currentCityName }}</span>
-    <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
-  </div>
-
-  <!-- 3. WIDGETS CONTAINER -->
-<!-- 3. WIDGETS CONTAINER -->
-  <div class="widgets-container" [ngClass]="{'guest-grid': userTier !== 'premium', 'premium-grid': userTier === 'premium'}">
-    @for (widget of visibleWidgets; track widget.id) {
-      <div 
-        class="widget-card-wrapper"
-        (click)="onWidgetClick(widget.id, widget.isPremium)"
-      >
-        <div class="interactive-card">
-          <div class="card-emoji">{{ widget.icon }}</div>
-          <div class="card-value">{{ widget.value }}</div>
-          
-          <!-- DYNAMIC UNIT LAYER (Shows МКД, UV, °C, etc. based on the active widget) -->
-          <div class="card-unit" style="font-size: 0.75rem; font-weight: bold; color: #888; margin-bottom: 2px;">
-            {{ widget.unit }}
-          </div>
-          
-          <div class="card-label">{{ widget.translationKey | translate }}</div>
-        </div>
+  <div class="dashboard-wrapper">
+    <!-- 1. UTILITY TOP BAR -->
+    <div class="utility-bar">
+      <div class="utility-left"></div>
+      <div class="utility-right">
+        <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
+          <ion-select-option value="mk">MK</ion-select-option>
+          <ion-select-option value="al">AL</ion-select-option>
+          <ion-select-option value="en">EN</ion-select-option>
+        </ion-select>
+        <div class="user-avatar">👤</div>
       </div>
-    }
+    </div>
 
-    @if (userTier === 'premium') {
-      <div class="widget-card-wrapper add-widget-btn">
+    <!-- 2. TITLES SECTION -->
+    <div class="dashboard-titles">
+      <span class="city-subtitle">{{ currentCityName }}</span>
+      <h1 class="main-title">Денес</h1>
+    </div>
+
+    <!-- 3. WIDGETS FIXED GRID LAYER -->
+ <!-- 3. WIDGETS 3x3 SHAPED GRID -->
+    <div class="widgets-container premium-grid">
+      @for (widget of visibleWidgets; track widget.id) {
+        <div class="widget-card-wrapper" (click)="onWidgetClick(widget.id)">
+          <div class="interactive-card">
+            
+            <!-- 🌟 CHANGED: Vector Icon Layer replacing flat text emojis -->
+            <div class="card-icon-frame">
+              <ion-icon [name]="widget.icon" class="widget-vector-icon" [ngClass]="widget.id + '-icon'"></ion-icon>
+            </div>
+            
+            <div class="card-value">{{ widget.value }}</div>
+            <div class="card-label">{{ widget.translationKey }}</div>
+          </div>
+        </div>
+      }
+
+      <!-- Plus Card Anchor remains identical -->
+      <div class="widget-card-wrapper">
         <div class="interactive-card dashed-card">
           <div class="plus-icon">+</div>
         </div>
       </div>
-    }
-  </div>
+    </div>
 
-  <div class="footer-hint">
-    <span>{{ 'HOME.FOOTER_HINT' | translate }}</span>
-  </div>
-
-  <!-- ========================================== -->
-  <!-- MODAL 1: PREMIUM UPGRADE INTERFACE         -->
-  <!-- ========================================== -->
-  <ion-modal [isOpen]="isPremiumModalOpen" (didDismiss)="setPremiumModal(false)" class="premium-modal">
-    <ng-template>
-      <div class="modal-wrapper">
-        <div class="modal-hero">
-          <span class="hero-crown">👑</span>
-          <h2>{{ 'PREMIUM.TITLE' | translate }}</h2>
-          <p class="subtitle">{{ 'PREMIUM.SUBTITLE' | translate }}</p>
-          <span class="price-pill">{{ 'PREMIUM.PRICE' | translate }}</span>
-        </div>
-
-        <div class="modal-body">
-          <ul class="benefits-list">
-            <li>{{ 'PREMIUM.BENEFIT_1' | translate }}</li>
-            <li>{{ 'PREMIUM.BENEFIT_2' | translate }}</li>
-            <li>{{ 'PREMIUM.BENEFIT_3' | translate }}</li>
-          </ul>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-modal-cancel" (click)="setPremiumModal(false)">
-            {{ 'PREMIUM.CANCEL' | translate }}
-          </button>
-          <button class="btn-modal-activate" (click)="activatePremium()" [disabled]="isUpgrading">
-            @if (isUpgrading) {
-              ...
-            } @else {
-              {{ 'PREMIUM.ACTIVATE' | translate }}
-            }
-          </button>
-        </div>
+    <!-- 4. BOTTOM NEWS FEED BLOCK -->
+    <div class="news-ticker-container">
+      <div class="news-header">
+        <span>📰 Вести</span>
       </div>
-    </ng-template>
-  </ion-modal>
+      <p class="news-body">Нова автопатска делница Скопје–Тетово</p>
+    </div>
+
+    <div class="footer-hint-text">
+      <span>Допри за детали</span>
+    </div>
+  </div>
 
   <!-- ========================================== -->
-  <!-- MODAL 2: UNIVERSAL WIDGET DETAIL DISPLAY   -->
+  <!-- MODAL LAYER: WIDGET DETAILED INTERFACE     -->
   <!-- ========================================== -->
   <ion-modal [isOpen]="isDetailModalOpen" (didDismiss)="setDetailModal(false)" class="premium-modal">
     <ng-template>
       <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%;">
         
-        <!-- SUB-VIEW A: WEATHER DETAILED OVERVIEW -->
+        <!-- MODULE A: WEATHER OVERVIEWS -->
         @if (activeDetailWidgetId === 'weather' || activeDetailWidgetId === 'uv') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">⛈️</span>
@@ -131,107 +77,96 @@
           <div class="modal-body" style="flex: 1; overflow-y: auto;">
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Следни неколку часа</h3>
             <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px;">
-              
-              <!-- DYNAMIC HOURLY ITERATION FOR-LOOP -->
               @for (hourItem of getHourlyForecast(); track hourItem.time) {
                 <div style="background: #f7f7f5; padding: 10px 14px; border-radius: 12px; text-align: center; min-width: 65px;">
                   <span style="font-size: 0.75rem; color: #888; display: block;">{{ hourItem.time }}</span>
                   <span style="font-size: 1.2rem; display: block; margin: 4px 0;">{{ hourItem.icon }}</span>
                   <span style="font-weight: bold; color: #111;">{{ hourItem.temp }}</span>
                 </div>
-              } @empty {
-                <p style="font-size: 0.85rem; color: #999; padding: 8px;">Се вчитуваат часовни податоци...</p>
               }
             </div>
 
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Неделна прогноза</h3>
             <ul class="benefits-list">
-              
-              <!-- DYNAMIC WEEKLY ITERATION FOR-LOOP -->
               @for (dayItem of getWeeklyForecast(); track dayItem.day) {
                 <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
                   <span>{{ dayItem.day }}</span>
                   <span style="font-weight: 700;">{{ dayItem.icon }} {{ dayItem.temps }}</span>
                 </li>
-              } @empty {
-                <p style="font-size: 0.85rem; color: #999; padding: 8px;">Се вчитува неделна прогноза...</p>
               }
             </ul>
           </div>
         }
 
-        <!-- SUB-VIEW B: CURRENCY CALCULATION MODULE -->
-       <!-- SUB-VIEW B: CURRENCY CALCULATION MODULE -->
-@if (activeDetailWidgetId === 'currency') {
-  <div class="modal-hero" style="padding-bottom: 10px;">
-    <span class="hero-crown">💶</span>
-    <h2>Курсна Листа</h2>
-    <p class="subtitle">Официјален среден курс во однос на ЕВРО (EUR)</p>
-  </div>
+        <!-- MODULE B: CURRENCY CONVERTER -->
+        @if (activeDetailWidgetId === 'currency') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <span class="hero-crown">💶</span>
+            <h2>Курсна Листа</h2>
+            <p class="subtitle">Официјален среден курс во однос на ЕВРО (EUR)</p>
+          </div>
 
-  <!-- Quick Interactive Input Interface -->
-  <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
-    <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
-    <input 
-      type="number" 
-      [(ngModel)]="inputEuroAmount"
-      style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;"
-      placeholder="1"
-    />
-  </div>
+          <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
+            <input type="number" [(ngModel)]="inputEuroAmount" style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;" placeholder="1" />
+          </div>
 
-  <div class="modal-body" style="flex: 1; overflow-y: auto;">
-    <ul class="benefits-list">
-      
-      <!-- AUTOMATICALLY LOOPS AND CALCULATES ALL 10 CURRENCIES FROM YOUR SUPABASE DATA -->
-      @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
-        <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-          <span style="font-weight: 600;">
-            {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
-          </span>
-          <span style="font-weight: 800; font-size: 1.1rem;">
-            {{ getCalculatedRateDynamic(rateRow.rate) }} ден
-          </span>
-        </li>
-      } @empty {
-        <p style="font-size: 0.85rem; color: #999; padding: 8px; text-align: center;">Вчитување на курсна листа...</p>
-      }
-      
-    </ul>
-  </div>
-}
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
+                <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                  <span style="font-weight: 600;">
+                    {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
+                  </span>
+                  <span style="font-weight: 800; font-size: 1.1rem;">
+                    {{ getCalculatedRateDynamic(rateRow.rate) }} ден
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
 
-        <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
-       <!-- SUB-VIEW C: MAXIMUM LOCAL RETAIL FUEL PRICES -->
-@if (activeDetailWidgetId === 'fuel') {
-  <div class="modal-hero" style="padding-bottom: 10px;">
-    <span class="hero-crown">⛽</span>
-    <h2>Цени на Горива</h2>
-    <p class="subtitle">Максимални малопродажни цени на РКЕ</p>
-  </div>
-  
-  <div class="modal-body" style="flex: 1; overflow-y: auto;">
-    <ul class="benefits-list">
-      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-        <span style="font-weight: 600;">Еуросупер БС-95</span>
-        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} ден/лит</span>
-      </li>
-      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-        <span style="font-weight: 600;">Еуросупер БС-98</span>
-        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} ден/лит</span>
-      </li>
-      <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-        <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
-        <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} ден/лит</span>
-      </li>
-    </ul>
-    <p style="font-size: 0.75rem; color: #999; text-align: center; margin-top: 12px;">
-      * Цените се усогласуваат автоматски со официјалните одлуки во реално време.
-    </p>
-  </div>
-}
+        <!-- MODULE C: FUEL RATES OVERVIEW -->
+        @if (activeDetailWidgetId === 'fuel') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <span class="hero-crown">⛽</span>
+            <h2>Цени на Горива</h2>
+            <p class="subtitle">Максимални малопродажни цени утврдени од РКЕ</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуросупер БС-95</span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуросупер БС-98</span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
+                <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Екстра Лесно Гориво (ЕЛ-1)</span>
+                <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} ден/лит</span>
+              </li>
+              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">Мазут М-1 НС</span>
+                <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} ден/кг</span>
+              </li>
+            </ul>
+            
+            <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
+              <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">🗓️ Одлуката е во сила од:</span>
+              <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} година</span>
+            </div>
+          </div>
+        }
 
-        <!-- MASTER MODAL CONTROL DISMISS FOOTER BUTTON -->
+        <!-- MODAL FOOTER DISMISS ACTION -->
         <div class="modal-footer" style="padding-top: 10px;">
           <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold;">
             Затвори

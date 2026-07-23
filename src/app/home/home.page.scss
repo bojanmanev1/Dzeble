@@ -1,105 +1,105 @@
-/* src/app/home/home.page.scss */
-
 .dashboard-content {
-  --background: #f7f7f5; /* Off-white, organic background like your mockups */
-  display: flex;
-  flex-direction: column;
+  --background: #fcfcfc;
+  --overflow: hidden; // Shuts down scroll engine locks on standard Ionic wrappers
+  
+  // Target underlying Shadow DOM component parts to guarantee no scrolling artifacts leak out
+  &::part(scroll) {
+    overflow: hidden;
+  }
 }
 
-/* Custom Header styling */
-.custom-header {
+/* Master full viewport lock wrapper layout configuration */
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; // Perfect device fallback targeting screen height caps precisely
+  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom) 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 1. Slim Top Utility Bar Layout */
+.utility-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 40px 24px 10px 24px;
-
-  .city-subtitle {
-    font-size: 0.95rem;
-    color: #888888;
-    display: block;
-    margin-bottom: 2px;
-  }
-
-  .main-title {
-    font-size: 1.85rem;
-    font-weight: 700;
-    margin: 0;
-    color: #111111;
-  }
+  height: 6%; // Explicit percentage footprint bounds
+  min-height: 40px;
 }
 
-.header-actions {
+.utility-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .lang-select {
-  --background: #eef0f3;
-  --placeholder-color: #333;
-  border-radius: 20px;
-  padding-inline-start: 12px;
-  padding-inline-end: 8px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  min-height: 36px;
-}
-
-.btn-login {
-  background: #1a73e8;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
+  --background: #f1f3f5;
+  --border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #495057;
+  max-height: 34px;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
-  background: #e2e8f0;
+  background: white;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
   font-size: 1.1rem;
+  border: 1px solid #eaeaea;
 }
 
-/* Flex Grid Containers */
-.widgets-container {
-  display: grid;
-  gap: 16px;
-  padding: 16px 24px;
-  box-sizing: border-box;
+/* 2. Bold Titles Section layout properties */
+.dashboard-titles {
+  height: 10%; // Explicit percentage footprint bounds
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   
-  // Stretch to fill up most of the viewport height below the header
-  height: calc(100vh - 180px); 
+  .city-subtitle {
+    font-size: 0.85rem;
+    color: #a0a0a0;
+    font-weight: 500;
+  }
+
+  .main-title {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #111;
+    margin: 0;
+  }
 }
 
-/* 4-Widget Guest/Free Layout: 2 columns, 2 tall rows */
-.guest-grid {
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-}
-
-/* Premium Layout: 3 columns, 3 rows */
-.premium-grid {
+/* 3. Auto-stretching grid layout framework configuration */
+.widgets-container {
+  flex: 1; // Explicitly forces the grid to fill the absolute maximum available workspace area
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  height: calc(100vh - 200px); /* Slightly tighter rows to fit 3 levels */
+  grid-template-rows: repeat(3, 1fr); // Locks down precisely to three grid levels
+  gap: 12px;
+  box-sizing: border-box;
+  padding-bottom: 12px;
 }
 
-/* Card Styling */
+/* Widget Card wrapper setups */
 .widget-card-wrapper {
   background: white;
-  border-radius: 24px; /* Big organic rounded corners like Google widgets */
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-  transition: transform 0.15s ease;
+  border-radius: 18px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+  height: 100%; // Fill the container row height bounds perfectly
+  width: 100%;
   overflow: hidden;
 
   &:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
   }
 }
 
@@ -110,161 +110,154 @@
   justify-content: center;
   height: 100%;
   width: 100%;
-  padding: 16px;
+  padding: 6px;
   text-align: center;
   box-sizing: border-box;
 }
 
-.card-emoji {
-  font-size: 2.2rem;
-  margin-bottom: 8px;
-}
-
-.card-value {
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: #111111;
-  margin-bottom: 4px;
-}
-
-.card-label {
-  font-size: 0.85rem;
-  color: #666666;
-  font-weight: 500;
-}
-
-/* Dashed card layout for adding items */
-.dashed-card {
-  border: 2px dashed #cccccc;
-  background: transparent;
-  border-radius: 24px;
+/* Icon Frame Configuration */
+.card-icon-frame {
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 4px;
+}
+
+.widget-vector-icon {
+  font-size: 1.65rem;
+  color: #4e4e50; // Flat minimalist modern default tone
+  transition: color 0.2s ease;
+}
+
+/* Typography Rules */
+.card-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1c1c1e;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.card-label {
+  font-size: 0.72rem;
+  color: #8e8e93;
+  font-weight: 600;
+}
+
+.dashed-card {
+  border: 1px dashed #d1d1d6;
+  background: #fafafa;
+  border-radius: 18px;
 
   .plus-icon {
-    font-size: 2rem;
-    color: #888888;
+    font-size: 1.5rem;
+    color: #8e8e93;
   }
 }
 
-.footer-hint {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #999999;
-  margin-top: auto;
-  padding-bottom: 20px;
+/* 4. Bottom News Footer elements */
+.news-ticker-container {
+  height: 10%; // Explicit percentage footprint bounds
+  background: white;
+  padding: 10px 16px;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+
+  .news-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #8e8e93;
+    margin-bottom: 2px;
+  }
+
+  .news-body {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1c1c1e;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
-/* Premium Badge in Header */
-.btn-premium-badge {
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  color: #333;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  box-shadow: 0 4px 10px rgba(255, 165, 0, 0.2);
-  cursor: pointer;
-  margin-right: 8px;
+
+.footer-hint-text {
+  height: 4%; // Explicit percentage footprint bounds
+  text-align: center;
+  font-size: 0.78rem;
+  color: #8e8e93;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 }
 
-/* Custom IonModal overrides */
+/* 5. Sheet Modal Setup configurations */
 .premium-modal {
-  // 1. Structure sizing constraints
   --height: 85%;
   --width: 100%;
-  --max-width: 100%; // Clear previous mobile breakpoints width cap
-  --border-radius: 32px 32px 0px 0px; // Rounded elegant crown top edges only
-  --box-shadow: 0 -10px 35px rgba(0,0,0,0.12);
-  
-  // 2. Pin to bottom-sheet layout position anchor
+  --max-width: 100%;
+  --border-radius: 28px 28px 0px 0px;
+  --box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.12);
   align-items: flex-end;
+  --backdrop-opacity: 0.4;
 
-  // 3. Frosted Glass Backdrop configurations
-  --backdrop-opacity: 0.45;
   &::part(backdrop) {
-    background: #000000;
-    backdrop-filter: blur(12px); // Blurs the main dashboard elements behind the view
-    -webkit-backdrop-filter: blur(12px); // Safely handles Apple WebView engines
+    background: #000;
+    backdrop-filter: blur(8px);
   }
 
-  // 4. Force container components inside shadow root part to anchor down cleanly
   &::part(content) {
     position: absolute;
     bottom: 0;
-    border-radius: 32px 32px 0px 0px;
   }
 }
 
 .modal-wrapper {
   background: white;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 28px 24px calc(20px + env(safe-area-inset-bottom)) 24px; // Respects safe space height metrics
+  padding: 24px;
   box-sizing: border-box;
 }
 
 .modal-hero {
   text-align: center;
-  padding-bottom: 12px;
-
-  .hero-crown {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  h2 {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: #111;
-    margin: 0 0 6px 0;
-  }
-
-  .subtitle {
-    font-size: 0.9rem;
-    color: #666;
-    margin: 0 0 16px 0;
-  }
-
-  .price-pill {
-    background: #f7f7f5;
-    border: 1px solid #e2e8f0;
-    color: #111;
-    font-size: 0.95rem;
-    font-weight: 700;
-    padding: 6px 16px;
-    border-radius: 20px;
-    display: inline-block;
-  }
+  h2 { font-size: 1.4rem; font-weight: 800; margin: 0; }
+  .subtitle { font-size: 0.85rem; color: #666; margin: 4px 0 12px 0; }
 }
 
 .modal-body {
-  flex: 1; // Allows body to stretch and fill all available screen space
-  overflow-y: auto; // Enables safe inner text scrolling loops
+  flex: 1;
+  overflow-y: auto;
   padding: 10px 0;
-  -webkit-overflow-scrolling: touch; // Crisp inertial sliding on devices
+  -webkit-overflow-scrolling: touch;
 
   .benefits-list {
     list-style: none;
-    padding: 0;
+    padding: 0; 
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px; // Clean spacing between list rows
 
     li {
       font-size: 0.95rem;
-      font-weight: 500;
-      color: #333;
-      display: flex;
+      font-weight: 600;
+      color: #1c1c1e !important; // Forces crisp dark text in modal rows
+      display: flex !important;
       align-items: center;
+      width: 100%;
+      min-height: 44px;
+      box-sizing: border-box;
+
+      span {
+        color: #1c1c1e !important;
+      }
     }
   }
 }
@@ -273,16 +266,16 @@
   display: flex;
   gap: 12px;
   padding-top: 14px;
-  background: white; // Lock color over text overlap when scrolling
+  background: white;
   margin-top: auto; 
 
   button {
     flex: 1;
-    padding: 16px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    border-radius: 18px;
+    padding: 14px;
+    font-size: 0.9rem;
+    border-radius: 14px;
     border: none;
+    font-weight: 700;
     cursor: pointer;
     transition: transform 0.1s ease;
 
@@ -290,106 +283,33 @@
       transform: scale(0.98);
     }
   }
-
-  .btn-modal-cancel {
-    background: #f1f3f5;
-    color: #495057;
-  }
-
-  .btn-modal-activate {
-    background: #111;
-    color: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-}
-/* src/app/home/home.page.scss */
-
-/* 1. Slim Top Utility Bar */
-.utility-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px 8px 24px;
-  background: transparent;
 }
 
-.utility-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* --- Category Accent Mappings Directly from Mockup Design Guidelines --- */
+.aqi-icon {
+  color: #2a9d8f; // Organic Green for breathing metrics
 }
 
-/* Language Selector styling */
-.lang-select {
-  --background: #f1f3f5;
-  --border-radius: 12px;
-  --padding-start: 12px;
-  --padding-end: 12px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #495057;
-  max-height: 38px;
+.weather-icon {
+  color: #2196f3; // Sky Blue for local forecast tracking
 }
 
-/* User Profile Avatar / Login Action */
-.user-avatar {
-  background: white;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  font-size: 1.2rem;
-  cursor: pointer;
-  border: 1px solid #e2e8f0;
+.currency-icon {
+  color: #ffb703; // Sovereign Gold for exchange values
 }
 
-.btn-login {
-  background: #111;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
+.fuel-icon {
+  color: #e63946; // Warning Alert Red for utility indicators
 }
 
-/* 2. Bold Titles Section under the Top Utility Bar */
-.dashboard-titles {
-  padding: 8px 24px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  .city-subtitle {
-    font-size: 0.95rem;
-    color: #888;
-    font-weight: 600;
-  }
-
-  .main-title {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #111;
-    margin: 0;
-  }
+.uv-icon {
+  color: #fb8500; // Vibrant Orange for intense radiation indexes
 }
 
-/* Premium Badge Button */
-.btn-premium-badge {
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  color: #333;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  box-shadow: 0 4px 10px rgba(255, 165, 0, 0.2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 38px;
+.holiday-icon, .nameday-icon {
+  color: #7209b7; // Event Purple for calendar alerts
+}
+
+.custom-reminder-icon, .custom-task-icon {
+  color: #6c757d; // Neutral Slate tint for user-created task blocks
 }

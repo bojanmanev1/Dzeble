@@ -130,15 +130,17 @@ async syncUserWeather(metrics: {
   return data;
 }
 
-async getLatestFuelPrices(): Promise<any[] | null> {
+async getLatestFuelPrices() {
   const { data, error } = await this.supabase
     .from('fuel_prices')
-    .select('fuel_type, price_mkd');
+    .select('id, fuel_type, price_mkd, effective_from, updated_at')
+    .order('id', { ascending: true });
 
   if (error) {
-    console.error('Error fetching fuel data from Supabase:', error.message);
+    console.error('Error fetching fuel data:', error.message);
     throw error;
   }
+  
   return data;
 }
 
