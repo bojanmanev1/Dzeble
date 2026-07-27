@@ -178,94 +178,54 @@ allWidgets: Widget[] = [
     return total.toLocaleString('mk-MK', { maximumFractionDigits: 2 });
   }
 
-  fetchLiveMetrics() {
-    this.weatherSub = this.weatherService.getLocalWeatherData().subscribe({
-      next: async (data) => {
-        if (!data || !data.current) return;
+fetchLiveMetrics() {
+    this.weatherSub = this.weatherService.getCityFromDeviceLocation().subscribe({
+      next: async (cityName) => {
+        this.currentCityName = cityName;
 
-        this.parsedWeatherData = data; 
-        const lat = data.latitude || 41.9965;
-        const lng = data.longitude || 21.4314;
-        
-        this.weatherService.getCityNameFromCoords(lat, lng).subscribe(cityName => {
-          this.currentCityName = cityName; 
-        });
+        // Pull fully aggregated metrics compiled by your backend cron
+        const metrics = await this.supabaseService.getCachedMetricsForCity(this.currentCityName);
+        if (!metrics) return;
 
-        const temp = Math.round(data.current.temperature_2m);
-        const code = data.current.weather_code;
-        const isDay = data.current.is_day ?? 1; 
-
-        const statusText = this.weatherService.getWeatherDesc(code);
-        const dynamicWeatherIcon = this.weatherService.getWeatherIcon(code, isDay);
-
-        const currentHourStr = new Date().toISOString().substring(0, 14) + '00';
-        const hourIndex = data.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
-        const uvValue = hourIndex !== -1 ? Math.round(data.hourly.uv_index[hourIndex]) : 0;
+        this.parsedWeatherData = metrics; // Retained to drive detailed weather modals smoothly
 
         this.allWidgets = this.allWidgets.map(widget => {
           if (widget.id === 'weather') {
-            return { ...widget, value: `${temp}°`, unit: 'Време' };
+            return { 
+              ...widget, 
+              value: `${Math.round(metrics.current_temp)}°`, 
+              unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
+            };
           }
           if (widget.id === 'uv') {
-            return { ...widget, value: `${uvValue}` };
+            return { ...widget, value: `${Math.round(metrics.uv_index)}` };
+          }
+          if (widget.id === 'aqi') {
+            return { 
+              ...widget, 
+              value: `${metrics.aqi_value}`, 
+              unit: metrics.aqi_status_text 
+            };
           }
           return widget;
         });
+
         this.filterWidgets();
       },
       error: (err) => {
-        console.error('Failed to load GPS metrics.', err);
+        console.error('Failed to resolve database cache coordinates loop.', err);
       }
     });
   }
 
   getHourlyForecast() {
-    if (!this.parsedWeatherData || !this.parsedWeatherData.hourly) return [];
-    const hourly = this.parsedWeatherData.hourly;
-    const list = [];
-    
-    const currentHourStr = new Date().toISOString().substring(0, 14) + '00';
-    let startIndex = hourly.time.findIndex((t: string) => t.startsWith(currentHourStr));
-    if (startIndex === -1) startIndex = 0;
-
-    for (let i = startIndex; i < startIndex + 5; i++) {
-      if (!hourly.time[i]) break;
-      const timeValue = new Date(hourly.time[i]);
-      const displayHour = timeValue.toLocaleTimeString('mk-MK', { hour: '2-digit', minute: '2-digit' });
-      const temp = Math.round(hourly.temperature_2m?.[i] ?? 0);
-      const code = hourly.weather_code?.[i] ?? 0;
-      const hourNumber = timeValue.getHours();
-      const calculatedIsDay = (hourNumber >= 6 && hourNumber < 20) ? 1 : 0;
-
-      list.push({
-        time: i === startIndex ? 'Сега' : displayHour,
-        temp: `${temp}°`,
-        icon: this.weatherService.getWeatherIcon(code, calculatedIsDay)
-      });
-    }
-    return list;
+    if (!this.parsedWeatherData || !this.parsedWeatherData.hourly_forecast) return [];
+    return this.parsedWeatherData.hourly_forecast;
   }
 
   getWeeklyForecast() {
-    if (!this.parsedWeatherData || !this.parsedWeatherData.daily) return [];
-    const daily = this.parsedWeatherData.daily;
-    const list = [];
-    
-    for (let i = 1; i <= 3; i++) {
-      if (!daily.time[i]) break;
-      const dateValue = new Date(daily.time[i]);
-      const dayName = dateValue.toLocaleDateString('mk-MK', { weekday: 'long' });
-      const maxTemp = Math.round(daily.temperature_2m_max[i]);
-      const minTemp = Math.round(daily.temperature_2m_min[i]);
-      const code = daily.weather_code[i];
-
-      list.push({
-        day: i === 1 ? 'Утре' : dayName.charAt(0).toUpperCase() + dayName.slice(1),
-        temps: `${maxTemp}° / ${minTemp}°`,
-        icon: this.weatherService.getWeatherIcon(code, 1) 
-      });
-    }
-    return list;
+    if (!this.parsedWeatherData || !this.parsedWeatherData.weekly_forecast) return [];
+    return this.parsedWeatherData.weekly_forecast;
   }
 
   filterWidgets() {

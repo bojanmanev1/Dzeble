@@ -144,6 +144,20 @@ async getLatestFuelPrices() {
   return data;
 }
 
+async getCachedMetricsForCity(city: string) {
+  const { data, error } = await this.supabase
+    .from('cached_weather_metrics')
+    .select('*')
+    .eq('city_name', city)
+    .single();
+
+  if (error) {
+    console.error(`Error loading cached values for ${city}:`, error.message);
+    return null;
+  }
+  return data;
+}
+
 /**
  * Reads all active currency rates from the database cache table
  */
