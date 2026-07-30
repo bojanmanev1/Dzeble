@@ -200,13 +200,13 @@ fetchLiveMetrics() {
           if (widget.id === 'uv') {
             return { ...widget, value: `${Math.round(metrics.uv_index)}` };
           }
-          if (widget.id === 'aqi') {
-            return { 
-              ...widget, 
-              value: `${metrics.aqi_value}`, 
-              unit: metrics.aqi_status_text 
-            };
-          }
+      if (widget.id === 'aqi') {
+        return { 
+          ...widget, 
+          value: metrics.aqi_status_text, // 🌟 Shows descriptive text (e.g., "Умерен") as the main value
+          unit: `Индекс: ${metrics.aqi_value}` // 🌟 Places the rank index here
+        };
+      }
           return widget;
         });
 
@@ -231,6 +231,17 @@ fetchLiveMetrics() {
   filterWidgets() {
     this.visibleWidgets = [...this.allWidgets];
   }
+
+  getAqiColor(aqiValue: number): string {
+  switch(Number(aqiValue)) {
+    case 1: return '#2a9d8f'; // Одличен - Green
+    case 2: return '#e9c46a'; // Добар - Yellow
+    case 3: return '#f4a261'; // Умерен - Orange
+    case 4: return '#e76f51'; // Загаден - Dark Orange
+    case 5: return '#d62828'; // Штетен - Red
+    default: return '#2a9d8f';
+  }
+}
 
   changeLanguage(event: any) {
     const selectedLang = event.detail.value;
