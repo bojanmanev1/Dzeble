@@ -179,44 +179,48 @@ allWidgets: Widget[] = [
   }
 
 fetchLiveMetrics() {
-    this.weatherSub = this.weatherService.getCityFromDeviceLocation().subscribe({
-      next: async (cityName) => {
-        this.currentCityName = cityName;
+  // Get raw device GPS coordinates from the device location service
+  this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
+    next: async (coords: { latitude: number; longitude: number }) => {
+      // Find nearest city from your Supabase cached dataset dynamically
+      const metrics = await this.supabaseService.getNearestCityMetrics(
+        coords.latitude, 
+        coords.longitude
+      );
 
-        // Pull fully aggregated metrics compiled by your backend cron
-        const metrics = await this.supabaseService.getCachedMetricsForCity(this.currentCityName);
-        if (!metrics) return;
+      if (!metrics) return;
 
-        this.parsedWeatherData = metrics; // Retained to drive detailed weather modals smoothly
+      this.currentCityName = metrics.city_name; // Automatically sets title to nearest city (e.g., "Скопје", "Тетово", etc.)
+      this.parsedWeatherData = metrics;
 
-        this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'weather') {
-            return { 
-              ...widget, 
-              value: `${Math.round(metrics.current_temp)}°`, 
-              unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
-            };
-          }
-          if (widget.id === 'uv') {
-            return { ...widget, value: `${Math.round(metrics.uv_index)}` };
-          }
-      if (widget.id === 'aqi') {
-        return { 
-          ...widget, 
-          value: metrics.aqi_status_text, // 🌟 Shows descriptive text (e.g., "Умерен") as the main value
-          unit: `Индекс: ${metrics.aqi_value}` // 🌟 Places the rank index here
-        };
-      }
-          return widget;
-        });
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'weather') {
+          return { 
+            ...widget, 
+            value: `${Math.round(metrics.current_temp)}°`, 
+            unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
+          };
+        }
+        if (widget.id === 'uv') {
+          return { ...widget, value: `${Math.round(metrics.uv_index)}` };
+        }
+        if (widget.id === 'aqi') {
+          return { 
+            ...widget, 
+            value: metrics.aqi_status_text, 
+            unit: `Индекс: ${metrics.aqi_value}` 
+          };
+        }
+        return widget;
+      });
 
-        this.filterWidgets();
-      },
-      error: (err) => {
-        console.error('Failed to resolve database cache coordinates loop.', err);
-      }
-    });
-  }
+      this.filterWidgets();
+    },
+    error: (err: any) => {
+      console.error('Failed to get device coordinates:', err);
+    }
+  });
+}
 
   getHourlyForecast() {
     if (!this.parsedWeatherData || !this.parsedWeatherData.hourly_forecast) return [];

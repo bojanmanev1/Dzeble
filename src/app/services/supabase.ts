@@ -47,7 +47,7 @@ export class SupabaseService {
     }
   }
 // 1. SIGN UP method
-  async signUp(email: string, password: string) {
+async signUp(email: string, password: string) {
     const cleanEmail = email.trim().replace(/^["']|["']$/g, '');
     
     const { data, error } = await this.supabase.auth.signUp({
@@ -59,7 +59,7 @@ export class SupabaseService {
   }
 
   // 2. SIGN IN method
-  async signIn(email: string, password: string) {
+async signIn(email: string, password: string) {
     const cleanEmail = email.trim().replace(/^["']|["']$/g, '');
 
     const { data, error } = await this.supabase.auth.signInWithPassword({
@@ -84,7 +84,7 @@ async signOut() {
     if (error) throw error;
   }
 
-  async upgradeToPremium(userId: string): Promise<boolean> {
+async upgradeToPremium(userId: string): Promise<boolean> {
     const { error } = await this.supabase
       .from('profiles')
       .update({ is_premium: true })
@@ -104,72 +104,114 @@ async signOut() {
  * Passive sync: Saves the current phone location and weather metrics to the database
  */
 async syncUserWeather(metrics: {
-  userId: string;
-  lat: number;
-  lng: number;
-  temp: number;
-  code: number;
-  uv: number;
-}) {
-  const { data, error } = await this.supabase
-    .from('user_weather_status')
-    .upsert({
-      user_id: metrics.userId,
-      latitude: metrics.lat,
-      longitude: metrics.lng,
-      current_temp: metrics.temp,
-      weather_code: metrics.code,
-      uv_index: metrics.uv,
-      updated_at: new Date().toISOString()
-    });
+    userId: string;
+    lat: number;
+    lng: number;
+    temp: number;
+    code: number;
+    uv: number;
+  }) {
+    const { data, error } = await this.supabase
+      .from('user_weather_status')
+      .upsert({
+        user_id: metrics.userId,
+        latitude: metrics.lat,
+        longitude: metrics.lng,
+        current_temp: metrics.temp,
+        weather_code: metrics.code,
+        uv_index: metrics.uv,
+        updated_at: new Date().toISOString()
+      });
 
-  if (error) {
-    console.error('Error syncing weather to Supabase database:', error.message);
-    throw error;
+    if (error) {
+      console.error('Error syncing weather to Supabase database:', error.message);
+      throw error;
+    }
+    return data;
   }
-  return data;
-}
 
 async getLatestFuelPrices() {
-  const { data, error } = await this.supabase
-    .from('fuel_prices')
-    .select('id, fuel_type, price_mkd, effective_from, updated_at')
-    .order('id', { ascending: true });
+    const { data, error } = await this.supabase
+      .from('fuel_prices')
+      .select('id, fuel_type, price_mkd, effective_from, updated_at')
+      .order('id', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching fuel data:', error.message);
-    throw error;
+    if (error) {
+      console.error('Error fetching fuel data:', error.message);
+      throw error;
+    }
+    
+    return data;
   }
-  
-  return data;
-}
 
 async getCachedMetricsForCity(city: string) {
-  const { data, error } = await this.supabase
-    .from('cached_weather_metrics')
-    .select('*')
-    .eq('city_name', city)
-    .single();
+    const { data, error } = await this.supabase
+      .from('cached_weather_metrics')
+      .select('*')
+      .eq('city_name', city)
+      .single();
 
-  if (error) {
-    console.error(`Error loading cached values for ${city}:`, error.message);
-    return null;
+    if (error) {
+      console.error(`Error loading cached values for ${city}:`, error.message);
+      return null;
+    }
+    return data;
   }
-  return data;
-}
+
+
+/**
+   * 🌟 NEW: Calculates distance and returns cached weather metrics for the city 
+   * closest to the device's current latitude and longitude.
+   */
+  async getNearestCityMetrics(userLat: number, userLon: number): Promise<any> {
+    const { data: allCities, error } = await this.supabase
+      .from('cached_weather_metrics')
+      .select('*');
+
+    if (error || !allCities || allCities.length === 0) {
+      console.error('Error fetching cached weather metrics for nearest city:', error?.message);
+      return null;
+    }
+
+    // Haversine formula calculation helper
+    const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371; // Earth radius in km
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    let nearestCity = allCities[0];
+    let minDistance = getDistanceKm(userLat, userLon, nearestCity.latitude, nearestCity.longitude);
+
+    for (const city of allCities) {
+      const dist = getDistanceKm(userLat, userLon, city.latitude, city.longitude);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearestCity = city;
+      }
+    }
+
+    return nearestCity;
+  }
 
 /**
  * Reads all active currency rates from the database cache table
  */
 async getLatestCurrencyRates() {
-  const { data, error } = await this.supabase
-    .from('currency_rates')
-    .select('target_currency, rate');
+    const { data, error } = await this.supabase
+      .from('currency_rates')
+      .select('target_currency, rate');
 
-  if (error) {
-    console.error('Error fetching currency values:', error.message);
-    throw error;
+    if (error) {
+      console.error('Error fetching currency values:', error.message);
+      throw error;
+    }
+    return data;
   }
-  return data;
-}
 }

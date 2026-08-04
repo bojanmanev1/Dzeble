@@ -1,6 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Geolocation } from '@capacitor/geolocation';
-import { from, Observable, of } from 'rxjs';
+import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 @Injectable({
@@ -10,6 +10,20 @@ export class WeatherService {
   
   private defaultLat = 41.9965; 
   private defaultLng = 21.4314;
+
+  /**
+   * 🌟 NEW: Exposes raw device GPS coordinates as an Observable
+   */
+  getDeviceCoordinates(): Observable<{ latitude: number; longitude: number }> {
+    return from(this.getCoords()).pipe(
+      map((coords) => {
+        return {
+          latitude: coords ? coords.lat : this.defaultLat,
+          longitude: coords ? coords.lng : this.defaultLng
+        };
+      })
+    );
+  }
 
   /**
    * Resolves device GPS coordinates into a localized city name matching our database keys
@@ -37,48 +51,47 @@ export class WeatherService {
       });
       return { lat: position.coords.latitude, lng: position.coords.longitude };
     } catch (e) {
-      console.warn('GPS access bypassed, falling back to database default location.');
+      console.warn('GPS access bypassed, falling back to default location.');
       return null;
     }
   }
 
-// Define the exact coordinates of your seeded database cities
-private macedonianCities = [
-  { name: 'Скопје', lat: 42.0000, lng: 21.4333 },
-  { name: 'Битола', lat: 41.0311, lng: 21.3403 },
-  { name: 'Куманово', lat: 42.1322, lng: 21.7144 },
-  { name: 'Прилеп', lat: 41.3461, lng: 21.5542 },
-  { name: 'Тетово', lat: 42.0106, lng: 20.9714 },
-  { name: 'Охрид', lat: 41.1172, lng: 20.8019 },
-  { name: 'Велес', lat: 41.7156, lng: 21.7756 },
-  { name: 'Штип', lat: 41.7458, lng: 22.1994 },
-  { name: 'Струмица', lat: 41.4375, lng: 22.6433 },
-  { name: 'Гостивар', lat: 41.7961, lng: 20.9083 },
-  { name: 'Кавадарци', lat: 41.4331, lng: 22.0119 },
-  { name: 'Кочани', lat: 41.9167, lng: 22.4125 },
-  { name: 'Кичево', lat: 41.5139, lng: 20.9531 },
-  { name: 'Струга', lat: 41.1778, lng: 20.6789 },
-  { name: 'Гевгелија', lat: 41.1414, lng: 22.5019 }
-];
+  // Define the exact coordinates of your seeded database cities
+  private macedonianCities = [
+    { name: 'Скопје', lat: 42.0000, lng: 21.4333 },
+    { name: 'Битола', lat: 41.0311, lng: 21.3403 },
+    { name: 'Куманово', lat: 42.1322, lng: 21.7144 },
+    { name: 'Прилеп', lat: 41.3461, lng: 21.5542 },
+    { name: 'Тетово', lat: 42.0106, lng: 20.9714 },
+    { name: 'Охрид', lat: 41.1172, lng: 20.8019 },
+    { name: 'Велес', lat: 41.7156, lng: 21.7756 },
+    { name: 'Штип', lat: 41.7458, lng: 22.1994 },
+    { name: 'Струмица', lat: 41.4375, lng: 22.6433 },
+    { name: 'Гостивар', lat: 41.7961, lng: 20.9083 },
+    { name: 'Кавадарци', lat: 41.4331, lng: 22.0119 },
+    { name: 'Кочани', lat: 41.9167, lng: 22.4125 },
+    { name: 'Кичево', lat: 41.5139, lng: 20.9531 },
+    { name: 'Струга', lat: 41.1778, lng: 20.6789 },
+    { name: 'Гевгелија', lat: 41.1414, lng: 22.5019 }
+  ];
 
-private resolveCityName(userLat: number, userLng: number): string {
-  let nearestCity = this.macedonianCities[0].name;
-  let shortestDistance = Number.MAX_VALUE;
+  private resolveCityName(userLat: number, userLng: number): string {
+    let nearestCity = this.macedonianCities[0].name;
+    let shortestDistance = Number.MAX_VALUE;
 
-  // Loop through all tracked cities to find the closest one mathematically
-  for (const city of this.macedonianCities) {
-    const distance = Math.sqrt(
-      Math.pow(userLat - city.lat, 2) + Math.pow(userLng - city.lng, 2)
-    );
+    for (const city of this.macedonianCities) {
+      const distance = Math.sqrt(
+        Math.pow(userLat - city.lat, 2) + Math.pow(userLng - city.lng, 2)
+      );
 
-    if (distance < shortestDistance) {
-      shortestDistance = distance;
-      nearestCity = city.name;
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        nearestCity = city.name;
+      }
     }
-  }
 
-  return nearestCity;
-}
+    return nearestCity;
+  }
 
   /**
    * Maps dynamic OpenWeather weather codes to explicit system UI display vector icons
