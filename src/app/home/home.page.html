@@ -2,17 +2,21 @@
   
   <div class="dashboard-wrapper">
     <!-- 1. UTILITY TOP BAR -->
-    <div class="utility-bar">
-      <div class="utility-left"></div>
-      <div class="utility-right">
-        <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
-          <ion-select-option value="mk">MK</ion-select-option>
-          <ion-select-option value="al">AL</ion-select-option>
-          <ion-select-option value="en">EN</ion-select-option>
-        </ion-select>
-        <div class="user-avatar">👤</div>
-      </div>
+  <div class="utility-bar">
+  <div class="utility-left"></div>
+  <div class="utility-right">
+    <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
+      <ion-select-option value="mk">MK</ion-select-option>
+      <ion-select-option value="al">AL</ion-select-option>
+      <ion-select-option value="en">EN</ion-select-option>
+    </ion-select>
+
+    <!-- 🌟 DYNAMIC AVATAR BUTTON -->
+    <div class="user-avatar" (click)="onAvatarClick()" [title]="currentUser ? 'Одјави се' : 'Најава'">
+      {{ currentUser ? '🚪' : '👤' }}
     </div>
+  </div>
+</div>
 
     <!-- 2. TITLES SECTION -->
     <div class="dashboard-titles">
@@ -20,14 +24,11 @@
       <h1 class="main-title">Денес</h1>
     </div>
 
-    <!-- 3. WIDGETS FIXED GRID LAYER -->
- <!-- 3. WIDGETS 3x3 SHAPED GRID -->
+    <!-- 3. WIDGETS GRID LAYER -->
     <div class="widgets-container premium-grid">
       @for (widget of visibleWidgets; track widget.id) {
         <div class="widget-card-wrapper" (click)="onWidgetClick(widget.id)">
           <div class="interactive-card">
-            
-            <!-- 🌟 CHANGED: Vector Icon Layer replacing flat text emojis -->
             <div class="card-icon-frame">
               <ion-icon [name]="widget.icon" class="widget-vector-icon" [ngClass]="widget.id + '-icon'"></ion-icon>
             </div>
@@ -38,8 +39,8 @@
         </div>
       }
 
-      <!-- Plus Card Anchor remains identical -->
-      <div class="widget-card-wrapper">
+      <!-- 🌟 PLUS CARD: Opens Add Custom Widget Modal or triggers login check -->
+      <div class="widget-card-wrapper" (click)="openAddWidgetModal()">
         <div class="interactive-card dashed-card">
           <div class="plus-icon">+</div>
         </div>
@@ -60,13 +61,58 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- MODAL LAYER: WIDGET DETAILED INTERFACE     -->
+  <!-- MODAL 1: ADD CUSTOM WIDGET (LOGGED-IN USERS) -->
+  <!-- ========================================== -->
+  <ion-modal [isOpen]="isAddWidgetModalOpen" (didDismiss)="setAddWidgetModal(false)" class="premium-modal">
+    <ng-template>
+      <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; padding: 20px;">
+        
+        <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+          <span class="hero-crown">📅</span>
+          <h2>Нов Календар Виџет</h2>
+          <p class="subtitle">Внеси име и избери датум за одбројување</p>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto;">
+          <!-- Widget Title Input -->
+          <div style="background: #f7f7f5; padding: 12px; border-radius: 14px; margin-bottom: 16px;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Наслов на настанот</label>
+            <input type="text" [(ngModel)]="newWidgetTitle" placeholder="пр. Роденден на Петар" style="width: 100%; border: none; background: transparent; font-size: 1.1rem; font-weight: bold; color: #111; outline: none;" />
+          </div>
+
+          <!-- Date Picker -->
+          <div style="background: #f7f7f5; padding: 12px; border-radius: 14px; text-align: center;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 8px;">Избери Датум</label>
+            <ion-datetime 
+              presentation="date" 
+              [(ngModel)]="newWidgetDate" 
+              style="margin: 0 auto; border-radius: 12px;">
+            </ion-datetime>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-footer" style="padding-top: 14px; display: flex; gap: 10px;">
+          <button (click)="setAddWidgetModal(false)" style="background: #e9ecef; color: #333; flex: 1; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
+            Откажи
+          </button>
+          <button (click)="saveCustomWidget()" [disabled]="!newWidgetTitle.trim()" style="background: #111; color: white; flex: 2; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
+            Зачувај Виџет
+          </button>
+        </div>
+
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: DETAIL VIEW MODAL                -->
   <!-- ========================================== -->
   <ion-modal [isOpen]="isDetailModalOpen" (didDismiss)="setDetailModal(false)" class="premium-modal">
     <ng-template>
       <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%;">
         
-        <!-- MODULE A: WEATHER OVERVIEWS -->
+        <!-- WEATHER DETAILS -->
         @if (activeDetailWidgetId === 'weather' || activeDetailWidgetId === 'uv') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">⛈️</span>
@@ -98,79 +144,66 @@
           </div>
         }
 
-        <!-- MODULE A.2: AIR QUALITY OVERVIEWS (AQI) -->
-<!-- MODULE A.2: AIR QUALITY OVERVIEWS (AQI) -->
-@if (activeDetailWidgetId === 'aqi') {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <span class="hero-crown">🍃</span>
-    <h2>Квалитет на Воздухот</h2>
-    <p class="subtitle">Индекс на загаденост на амбиенталниот воздух</p>
-  </div>
-  
-  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-    
-    <!-- Large Status Indicator Box -->
-    <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-      <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">Моментален статус</span>
-      
-      <!-- 🌟 DYNAMIC TEXT COLOR: Now updates color cleanly using the TypeScript method -->
-      <h2 [style.color]="getAqiColor(parsedWeatherData?.aqi_value)" style="font-size: 2.2rem; font-weight: 800; margin: 8px 0; transition: color 0.3s ease;">
-        {{ parsedWeatherData?.aqi_status_text }}
-      </h2>
-      
-      <div style="display: inline-block; background: #e2e2df; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
-        Европски AQI Индекс: {{ parsedWeatherData?.aqi_value }} / 5
-      </div>
-    </div>
+        <!-- AIR QUALITY DETAILS -->
+        @if (activeDetailWidgetId === 'aqi') {
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <span class="hero-crown">🍃</span>
+            <h2>Квалитет на Воздухот</h2>
+            <p class="subtitle">Индекс на загаденост на амбиенталниот воздух</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+            <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">Моментален статус</span>
+              <h2 [style.color]="getAqiColor(parsedWeatherData?.aqi_value)" style="font-size: 2.2rem; font-weight: 800; margin: 8px 0; transition: color 0.3s ease;">
+                {{ parsedWeatherData?.aqi_status_text }}
+              </h2>
+              <div style="display: inline-block; background: #e2e2df; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                Европски AQI Индекс: {{ parsedWeatherData?.aqi_value }} / 5
+              </div>
+            </div>
 
-    <!-- 🌟 NEW: Particulate Matter Density Metrics Breakdown Grid -->
-    <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Честички (Загадувачи)</h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
-      
-      <!-- PM2.5 Grid Element -->
-      <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
-        <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 2.5 честички</span>
-        <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm25_value ?? 0 }}</span>
-        <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
-      </div>
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Честички (Загадувачи)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+              <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
+                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 2.5 честички</span>
+                <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm25_value ?? 0 }}</span>
+                <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
+              </div>
+              <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
+                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 10 честички</span>
+                <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm10_value ?? 0 }}</span>
+                <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
+              </div>
+            </div>
 
-      <!-- PM10 Grid Element -->
-      <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
-        <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 10 честички</span>
-        <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm10_value ?? 0 }}</span>
-        <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
-      </div>
-      
-    </div>
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Легенда на Индекси</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #2a9d8f;">1 • Одличен</span>
+                <span style="color: #888;">Без ризик по здравјето</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #e9c46a;">2 • Добар</span>
+                <span style="color: #888;">Прифатлив квалитет</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #f4a261;">3 • Умерен</span>
+                <span style="color: #888;">Мали респираторни влијанија</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #e76f51;">4 • Загаден</span>
+                <span style="color: #888;">Небезбедно за осетливи групи</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #d62828;">5 • Штетен</span>
+                <span style="color: #888;">Висок ризик и сериозни препораки</span>
+              </li>
+            </ul>
+          </div>
+        }
 
-    <!-- Scale Guide Context Panel -->
-    <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Легенда на Индекси</h3>
-    <ul style="list-style: none; padding: 0; margin: 0;">
-      <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-        <span style="font-weight: 600; color: #2a9d8f;">1 • Одличен</span>
-        <span style="color: #888;">Без ризик по здравјето</span>
-      </li>
-      <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-        <span style="font-weight: 600; color: #e9c46a;">2 • Добар</span>
-        <span style="color: #888;">Прифатлив квалитет</span>
-      </li>
-      <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-        <span style="font-weight: 600; color: #f4a261;">3 • Умерен</span>
-        <span style="color: #888;">Мали респираторни влијанија</span>
-      </li>
-      <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-        <span style="font-weight: 600; color: #e76f51;">4 • Загаден</span>
-        <span style="color: #888;">Небезбедно за осетливи групи</span>
-      </li>
-      <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-        <span style="font-weight: 600; color: #d62828;">5 • Штетен</span>
-        <span style="color: #888;">Висок ризик и сериозни препораки</span>
-      </li>
-    </ul>
-  </div>
-}
-
-        <!-- MODULE B: CURRENCY CONVERTER -->
+        <!-- CURRENCY DETAILS -->
         @if (activeDetailWidgetId === 'currency') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">💶</span>
@@ -199,7 +232,75 @@
           </div>
         }
 
-        <!-- MODULE C: FUEL RATES OVERVIEW -->
+        <!-- Inside <ion-modal [isOpen]="isDetailModalOpen"> template -->
+
+<!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
+@if (activeDetailWidgetId === 'activity') {
+  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+    <span class="hero-crown">🏃</span>
+    <h2>Активност & Чекори</h2>
+    <p class="subtitle">Дневен преглед и статистика за последните 7 дена</p>
+  </div>
+  
+  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+    
+    <!-- Today's Activity Summary Box -->
+    <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+      <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">Денешна активност</span>
+      
+      <h1 style="font-size: 2.8rem; font-weight: 800; color: #111; margin: 6px 0;">
+        {{ todayHealthData.steps.toLocaleString('mk-MK') }}
+      </h1>
+      <span style="font-size: 0.85rem; color: #666; font-weight: bold; display: block; margin-bottom: 12px;">чекори</span>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
+          <span style="font-size: 0.75rem; color: #888; display: block;">🔥 Потрошени</span>
+          <span style="font-size: 1.1rem; font-weight: 800; color: #e63946;">{{ todayHealthData.calories }} kcal</span>
+        </div>
+        <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
+          <span style="font-size: 0.75rem; color: #888; display: block;">📍 Изминати</span>
+          <span style="font-size: 1.1rem; font-weight: 800; color: #2a9d8f;">{{ todayHealthData.distanceKm }} км</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-Day Historical Breakdown -->
+    <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Последни 7 Дена</h3>
+    
+    @if (last7DaysHealth.length === 0) {
+      <p style="text-align: center; color: #888; font-size: 0.85rem; padding: 12px 0;">
+        Нема претходно снимени податоци за изминатите денови.
+      </p>
+    } @else {
+      <ul style="list-style: none; padding: 0; margin: 0;">
+        @for (day of last7DaysHealth; track day.id) {
+          <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
+            <div>
+              <span style="font-weight: 700; font-size: 0.95rem; color: #111; display: block;">
+                {{ formatHistoryDate(day.logged_date) }}
+              </span>
+              <span style="font-size: 0.75rem; color: #888;">
+                📍 {{ day.distance_km }} км
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-weight: 800; font-size: 1.05rem; color: #111; display: block;">
+                👟 {{ day.step_count.toLocaleString('mk-MK') }}
+              </span>
+              <span style="font-size: 0.8rem; font-weight: bold; color: #e63946;">
+                🔥 {{ day.calories_burned }} kcal
+              </span>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+  </div>
+}
+
+        <!-- FUEL DETAILS -->
         @if (activeDetailWidgetId === 'fuel') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">⛽</span>
@@ -237,10 +338,39 @@
             </div>
           </div>
         }
+        @if (getActiveCustomWidget(); as customWidget) {
+  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+    <span class="hero-crown">📅</span>
+    <h2>{{ customWidget.rawTitle }}</h2>
+    <p class="subtitle">Потсетник и одбројување</p>
+  </div>
 
-        <!-- MODAL FOOTER DISMISS ACTION -->
+  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+    
+    <!-- Big Countdown Card -->
+    <div style="background: #f7f7f5; padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+      <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">Преостанато време</span>
+      <h1 style="font-size: 3rem; font-weight: 800; color: #111; margin: 8px 0;">
+        {{ customWidget.value }}
+      </h1>
+      <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+        🗓️ Датум: {{ formatDisplayDate(customWidget.eventDate) }}
+      </div>
+    </div>
+
+    <!-- Delete Widget Action Button -->
+    <button 
+      (click)="deleteCurrentCustomWidget(customWidget.id)" 
+      style="width: 100%; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold; margin-top: 10px;">
+      🗑️ Избриши го овој виџет
+    </button>
+
+  </div>
+}
+
+        <!-- DISMISS FOOTER -->
         <div class="modal-footer" style="padding-top: 10px;">
-          <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold;">
+          <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
             Затвори
           </button>
         </div>

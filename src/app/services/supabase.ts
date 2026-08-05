@@ -214,4 +214,109 @@ async getLatestCurrencyRates() {
     }
     return data;
   }
+
+  // Add these methods to SupabaseService inside src/app/services/supabase.ts
+
+async getUserWidgets(userId: string) {
+  const { data, error } = await this.supabase
+    .from('user_widgets')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error loading custom widgets:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+async addUserWidget(userId: string, title: string, eventDate: string) {
+  const { data, error } = await this.supabase
+    .from('user_widgets')
+    .insert([
+      {
+        user_id: userId,
+        title: title,
+        event_date: eventDate,
+        widget_type: 'calendar',
+        icon: 'calendar-number'
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error inserting custom widget:', error.message);
+    throw error;
+  }
+  return data;
+}
+
+async deleteUserWidget(widgetId: string) {
+  const { error } = await this.supabase
+    .from('user_widgets')
+    .delete()
+    .eq('id', widgetId);
+
+  if (error) {
+    console.error('Error deleting widget:', error.message);
+    throw error;
+  }
+  return true;
+}
+
+/**
+ * Saves or updates today's health metrics for the user
+ */
+async syncTodayHealthMetrics(userId: string, metrics: {
+  steps: number;
+  calories: number;
+  distanceKm: number;
+  notified10k: boolean;
+  notified15k: boolean;
+}) {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await this.supabase
+    .from('user_health_metrics')
+    .upsert(
+      {
+        user_id: userId,
+        step_count: metrics.steps,
+        calories_burned: metrics.calories,
+        distance_km: metrics.distanceKm,
+        milestone_10k_notified: metrics.notified10k,
+        milestone_15k_notified: metrics.notified15k,
+        logged_date: todayStr,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'user_id,logged_date' }
+    )
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error syncing health metrics:', error.message);
+  }
+  return data;
+}
+
+/**
+ * Retrieves the last 7 recorded days of health activity for the user
+ */
+async getLast7DaysHealthMetrics(userId: string) {
+  const { data, error } = await this.supabase
+    .from('user_health_metrics')
+    .select('*')
+    .eq('user_id', userId)
+    .order('logged_date', { ascending: false })
+    .limit(7);
+
+  if (error) {
+    console.error('Error fetching 7-day health history:', error.message);
+    return [];
+  }
+  return data || [];
+}
 }

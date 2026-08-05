@@ -39,32 +39,32 @@ export class LoginPage {
     this.errorMessage = '';
   }
 
-  async onSubmit() {
-    if (!this.email || !this.password) return;
-    
-    this.isLoading = true;
-    this.errorMessage = '';
+// inside login.page.ts
 
-    try {
-      if (this.isSignUpMode) {
-        // Sign Up
-        await this.supabaseService.signUp(this.email, this.password);
-        alert('Успешна регистрација! Проверете ја вашата е-пошта за потврда.');
-        this.isSignUpMode = false; // Switch them to login view
-      } else {
-        // Sign In
-        await this.supabaseService.signIn(this.email, this.password);
-        this.router.navigate(['/dashboard']); // Go straight back to home dashboard!
-      }
-    } catch (err: any) {
-      console.error('Auth Error:', err);
-      this.errorMessage = err.message || 'AUTH.ERROR';
-    } finally {
-      this.isLoading = false;
+async onSubmit() {
+  if (!this.email || !this.password) return;
+  
+  this.isLoading = true;
+  this.errorMessage = '';
+
+  try {
+    if (this.isSignUpMode) {
+      await this.supabaseService.signUp(this.email, this.password);
+      alert('Успешна регистрација! Проверете ја вашата е-пошта за потврда.');
+      this.isSignUpMode = false;
+    } else {
+      await this.supabaseService.signIn(this.email, this.password);
+      this.router.navigate(['/']); // Redirects straight back to your main page
     }
+  } catch (err: any) {
+    console.error('Auth Error:', err);
+    this.errorMessage = err.message || 'AUTH.ERROR';
+  } finally {
+    this.isLoading = false;
   }
+}
 
-  goBack() {
-    this.router.navigate(['/dashboard']);
-  }
+goBack() {
+  this.router.navigate(['/']); // Go back to main home dashboard
+}
 }
