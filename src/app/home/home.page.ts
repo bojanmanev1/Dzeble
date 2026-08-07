@@ -3,11 +3,13 @@ import { Router } from '@angular/router';
 import { SupabaseService } from '../services/supabase';
 import { WeatherService } from '../services/weather';
 import { CommonModule } from '@angular/common';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 import { User } from '@supabase/supabase-js';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { addIcons } from 'ionicons';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+
 import { 
   leaf, 
   cloudy, 
@@ -17,9 +19,11 @@ import {
   calendarNumber, 
   gift, 
   notifications, 
-  checkmarkCircleOutline ,
-  footsteps
+  checkmarkCircleOutline,
+  footsteps,
+  card
 } from 'ionicons/icons';
+
 import { 
   IonContent, 
   IonSelect, 
@@ -29,7 +33,11 @@ import {
   IonDatetime,
   AlertController
 } from '@ionic/angular/standalone';
+
 import { HealthData, HealthService } from '../services/health';
+import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
+import { BarcodeRenderDirective } from '../directives/barcode-render';
+import { MACEDONIAN_STORES, StorePreset } from '../config/loyalty-stores.config';
 
 interface Widget {
   id: string;
@@ -56,7 +64,9 @@ interface Widget {
     IonModal,
     IonIcon,
     IonDatetime,
-    FormsModule
+    FormsModule,
+    BarcodeRenderDirective,
+    TranslatePipe
   ]
 })
 export class HomePage implements OnInit, OnDestroy {
@@ -64,9 +74,10 @@ export class HomePage implements OnInit, OnDestroy {
   private weatherService = inject(WeatherService);
   private translate = inject(TranslateService);
   private healthService = inject(HealthService);
+  private loyaltyService = inject(LoyaltyService);
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
-  
+
   parsedWeatherData: any = null;
   isDetailModalOpen = false;
   activeDetailWidgetId: string | null = null;
@@ -78,23 +89,49 @@ export class HomePage implements OnInit, OnDestroy {
   rawDatabaseFuel: any[] = [];
   private weatherSub: Subscription | null = null;
 
-  // 🌟 NEW: Custom Widget Creation State
+  // Custom Widget State
   isAddWidgetModalOpen = false;
   newWidgetTitle = '';
   newWidgetDate: string = new Date().toISOString();
-
+  inputMkdAmount: number = 100;
   todayHealthData: HealthData = { steps: 0, calories: 0, distanceKm: 0 };
   last7DaysHealth: any[] = [];
   notified10k = false;
   notified15k = false;
 
+  private storeColorMap: { [key: string]: string } = {
+    'tinex': '#D32F2F',
+    'ramstore': '#E65100',
+    'vero': '#1976D2',
+    'neptun': '#0D47A1',
+    'sport reality': '#212121',
+    'sport vision': '#D50000',
+    'kam': '#FF6F00',
+    'stokomak': '#C2185B',
+    'dm': '#3F51B5',
+    'cosmo': '#8E24AA'
+  };
+
+  // 🌟 Loyalty Cards State
+  loyaltyCards: LoyaltyCard[] = [];
+  selectedLoyaltyCard: LoyaltyCard | null = null;
+  loyaltyModalView: 'list' | 'view' | 'add' = 'list';
+  
+  stores: StorePreset[] = MACEDONIAN_STORES;
+  newCardStore: string = 'Tinex';
+  newCustomStoreName: string = '';
+  newBarcodeData: string = '';
+  newBarcodeFormat: string = 'CODE128';
+  newCardColor: string = '#D32F2F';
+
   allWidgets: Widget[] = [
-    { id: 'aqi', translationKey: 'AQI', value: '42', unit: 'AQI', icon: 'leaf' },
-    { id: 'weather', translationKey: 'Време', value: '--°', unit: 'Вчитување...', icon: 'cloudy' },
-    { id: 'currency', translationKey: 'EUR', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
-    { id: 'fuel', translationKey: 'Гориво', value: '--.-', unit: 'МКД', icon: 'speedometer' },
-    { id: 'uv', translationKey: 'UV', value: '-', unit: 'UV', icon: 'sunny' },
-    { id: 'activity', translationKey: 'Чекори', value: '0', unit: '0 kcal', icon: 'footsteps' },
+    { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
+    { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
+    { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
+    { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
+    { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
+    { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
+    { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
   ];
 
   visibleWidgets: Widget[] = [];
@@ -112,17 +149,22 @@ export class HomePage implements OnInit, OnDestroy {
       'gift': gift,
       'notifications': notifications,
       'checkmark-circle-outline': checkmarkCircleOutline,
-      'footsteps': footsteps
+      'footsteps': footsteps,
+      'card': card
     });
   }
 
-ngOnInit() {
+  ngOnInit() {
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
+
       if (user) {
+        await this.healthService.requestHealthPermissions();
         await this.loadUserCustomWidgets(user.id);
-        await this.syncHealthData(user.id); // 👈 Sync steps on login/load
+        await this.syncHealthData(user.id);
+        await this.loadLoyaltyCards(user.id);
       } else {
+        this.loyaltyCards = [];
         this.filterWidgets();
       }
     });
@@ -132,48 +174,138 @@ ngOnInit() {
     this.fetchDatabaseFuelPrices();
   }
 
+  // --- LOYALTY CARD METHODS ---
 
-// inside home.page.ts
+  async loadLoyaltyCards(userId: string) {
+    this.loyaltyCards = await this.loyaltyService.getUserCards(userId);
+    this.updateLoyaltyWidgetValue();
+  }
 
-async syncHealthData(userId: string) {
-  console.log('Starting syncHealthData for user:', userId);
-  const hardwareSteps = await this.healthService.getTodayDeviceSteps();
-  console.log('Fetched hardware steps:', hardwareSteps);
+  updateLoyaltyWidgetValue() {
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'loyalty') {
+        return {
+          ...widget,
+          value: `${this.loyaltyCards.length}`,
+          unit: 'CARD_UNIT'
+        };
+      }
+      return widget;
+    });
+    this.filterWidgets();
+  }
 
-  const calculated = this.healthService.calculateMetrics(hardwareSteps);
-  this.todayHealthData = calculated;
+  openLoyaltyCardView(card: LoyaltyCard) {
+    this.selectedLoyaltyCard = card;
+    this.loyaltyModalView = 'view';
+    this.loyaltyService.setMaxBrightness();
+  }
 
-  const milestoneRes = await this.healthService.checkAndNotifyMilestones(
-    calculated.steps, 
-    this.notified10k, 
-    this.notified15k
-  );
-  this.notified10k = milestoneRes.update10k;
-  this.notified15k = milestoneRes.update15k;
+  openAddLoyaltyCardView() {
+    this.newBarcodeData = '';
+    this.newCustomStoreName = '';
+    this.newCardColor = '#1e293b';
+    this.loyaltyModalView = 'add';
+  }
 
-  // Always sync to Supabase so the record exists
-  await this.supabaseService.syncTodayHealthMetrics(userId, {
-    steps: calculated.steps,
-    calories: calculated.calories,
-    distanceKm: calculated.distanceKm,
-    notified10k: this.notified10k,
-    notified15k: this.notified15k
-  });
+  closeLoyaltySubView() {
+    this.loyaltyModalView = 'list';
+    this.selectedLoyaltyCard = null;
+    this.loyaltyService.resetBrightness();
+  }
 
-  this.allWidgets = this.allWidgets.map(widget => {
-    if (widget.id === 'activity') {
-      return {
-        ...widget,
-        value: calculated.steps.toLocaleString('mk-MK'),
-        unit: `${calculated.calories} kcal`
-      };
+  onStoreNameInput() {
+    const cleanName = this.newCustomStoreName.trim().toLowerCase();
+    this.newCardColor = this.storeColorMap[cleanName] || '#1e293b';
+  }
+
+  async scanBarcode() {
+    try {
+      const perm = await BarcodeScanner.checkPermissions();
+      if (perm.camera !== 'granted') {
+        const req = await BarcodeScanner.requestPermissions();
+        if (req.camera !== 'granted') return;
+      }
+
+      const isAvailable = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+      if (!isAvailable.available) {
+        await BarcodeScanner.installGoogleBarcodeScannerModule();
+      }
+
+      const result = await BarcodeScanner.scan();
+      if (result.barcodes && result.barcodes.length > 0) {
+        const code = result.barcodes[0];
+        this.newBarcodeData = code.rawValue || '';
+        this.newBarcodeFormat = code.format || 'CODE128';
+      }
+    } catch (e) {
+      console.error('Barcode scan error:', e);
     }
-    return widget;
-  });
-  this.filterWidgets();
-}
+  }
 
-  // 🌟 Helper: Calculates remaining days until event date
+  async saveLoyaltyCard() {
+    if (!this.currentUser || !this.newBarcodeData.trim() || !this.newCustomStoreName.trim()) return;
+
+    const saved = await this.loyaltyService.addCard({
+      user_id: this.currentUser.id,
+      store_name: this.newCustomStoreName.trim(),
+      barcode_data: this.newBarcodeData.trim(),
+      barcode_format: this.newBarcodeFormat,
+      card_color: this.newCardColor
+    });
+
+    if (saved) {
+      await this.loadLoyaltyCards(this.currentUser.id);
+      this.closeLoyaltySubView();
+    }
+  }
+
+  async deleteLoyaltyCard(cardId?: string) {
+    if (!cardId || !this.currentUser) return;
+
+    const success = await this.loyaltyService.deleteCard(cardId);
+    if (success) {
+      await this.loadLoyaltyCards(this.currentUser.id);
+      this.closeLoyaltySubView();
+    }
+  }
+
+  // --- HEALTH & METRICS ---
+
+  async syncHealthData(userId: string) {
+    const hardwareSteps = await this.healthService.getTodayDeviceSteps();
+    const calculated = this.healthService.calculateMetrics(hardwareSteps);
+    this.todayHealthData = calculated;
+
+    const milestoneRes = await this.healthService.checkAndNotifyMilestones(
+      calculated.steps, 
+      this.notified10k, 
+      this.notified15k
+    );
+    this.notified10k = milestoneRes.update10k;
+    this.notified15k = milestoneRes.update15k;
+
+    await this.supabaseService.syncTodayHealthMetrics(userId, {
+      steps: calculated.steps,
+      calories: calculated.calories,
+      distanceKm: calculated.distanceKm,
+      notified10k: this.notified10k,
+      notified15k: this.notified15k
+    });
+
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'activity') {
+        return {
+          ...widget,
+          value: calculated.steps.toLocaleString('mk-MK'),
+          unit: `${calculated.calories} kcal`
+        };
+      }
+      return widget;
+    });
+    this.filterWidgets();
+  }
+
   private calculateDaysUntil(dateString: string): string {
     const target = new Date(dateString);
     const today = new Date();
@@ -183,38 +315,32 @@ async syncHealthData(userId: string) {
     const diffTime = target.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Денес!';
-    if (diffDays < 0) return 'Помина';
-    return `${diffDays}д`;
-  }
-// 🌟 Updated Alert Redirect for Guest Users clicking the '+' Widget Card
-async openAddWidgetModal() {
-  if (!this.currentUser) {
-    const alert = await this.alertCtrl.create({
-      header: 'Најавата е задолжителна',
-      message: 'За да креирате ваши виџети, ве молиме најавете се на вашиот профил.',
-      buttons: [
-        { text: 'Откажи', role: 'cancel' },
-        { text: 'Најава', handler: () => this.router.navigate(['/login']) } // Points to /login
-      ]
-    });
-    await alert.present();
-    return;
+    if (diffDays === 0) return this.translate.instant('CUSTOM_WIDGET.TODAY_EVENT');
+    if (diffDays < 0) return this.translate.instant('CUSTOM_WIDGET.PASSED_EVENT');
+    return `${diffDays}d`;
   }
 
-  this.newWidgetTitle = '';
-  this.newWidgetDate = new Date().toISOString();
-  this.isAddWidgetModalOpen = true;
-}
+  async openAddWidgetModal() {
+    if (!this.currentUser) {
+      const alert = await this.alertCtrl.create({
+        header: this.translate.instant('HOME.LOGIN_REQUIRED_TITLE'),
+        message: this.translate.instant('HOME.LOGIN_REQUIRED_MSG'),
+        buttons: [
+          { text: this.translate.instant('HOME.CANCEL'), role: 'cancel' },
+          { text: this.translate.instant('HOME.LOGIN'), handler: () => this.router.navigate(['/login']) }
+        ]
+      });
+      await alert.present();
+      return;
+    }
+
+    this.newWidgetTitle = '';
+    this.newWidgetDate = new Date().toISOString();
+    this.isAddWidgetModalOpen = true;
+  }
 
   setAddWidgetModal(isOpen: boolean) {
     this.isAddWidgetModalOpen = isOpen;
-  }
-
-  openAuthModal() {
-    if (!this.currentUser) {
-      this.router.navigate(['/auth']);
-    }
   }
 
   getCurrencyFlag(currency: string): string {
@@ -226,13 +352,9 @@ async openAddWidgetModal() {
   }
 
   getCurrencyNameLocal(currency: string): string {
-    const names: { [key: string]: string } = {
-      'MKD': 'Македонски Денар', 'USD': 'УС Долар', 'CHF': 'Швајцарски Франк', 
-      'GBP': 'Британска Фунта', 'RSD': 'Сербиски Динар', 'TRY': 'Турска Лира', 
-      'AUD': 'Австралиски Долар', 'CAD': 'Канадски Долар', 'ALL': 'Албански Лек', 
-      'BGN': 'Бугарски Лев'
-    };
-    return names[currency] || currency;
+    const translationKey = `CURRENCIES.${currency}`;
+    const translated = this.translate.instant(translationKey);
+    return translated !== translationKey ? translated : currency;
   }
 
   async fetchDatabaseFuelPrices() {
@@ -242,7 +364,7 @@ async openAddWidgetModal() {
 
       if (this.rawDatabaseFuel.length === 0) return;
 
-      const dieselRecord = this.rawDatabaseFuel.find((f: any) => f.fuel_type === 'Дизел');
+      const dieselRecord = this.rawDatabaseFuel.find((f: any) => f.fuel_type === 'Дизел' || f.fuel_type === 'Diesel');
       const displayPrice = dieselRecord ? dieselRecord.price_mkd.toFixed(1) : '82.5';
 
       this.allWidgets = this.allWidgets.map(widget => {
@@ -270,9 +392,19 @@ async openAddWidgetModal() {
     return recordWithDate ? recordWithDate.effective_from : '--.--.----';
   }
 
-  getCalculatedRateDynamic(rate: number): string {
-    const total = this.inputEuroAmount * rate;
-    return total.toLocaleString('mk-MK', { maximumFractionDigits: 2 });
+  getCalculatedRateDynamic(targetRate: number): string {
+    if (!this.inputMkdAmount || this.inputMkdAmount <= 0) return '0.00';
+
+    const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+    const mkdRate = mkdRecord ? mkdRecord.rate : 61.50;
+
+    const eurValue = this.inputMkdAmount / mkdRate;
+    const finalValue = eurValue * targetRate;
+
+    return finalValue.toLocaleString('mk-MK', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
   }
 
   fetchLiveMetrics() {
@@ -302,8 +434,8 @@ async openAddWidgetModal() {
           if (widget.id === 'aqi') {
             return { 
               ...widget, 
-              value: metrics.aqi_status_text, 
-              unit: `Индекс: ${metrics.aqi_value}` 
+              value: `${metrics.aqi_value}`,
+              unit: metrics.aqi_status_text
             };
           }
           return widget;
@@ -317,6 +449,35 @@ async openAddWidgetModal() {
     });
   }
 
+  Math = Math;
+
+  getUvColor(uvValue: number): string {
+    const uv = Math.round(uvValue || 0);
+    if (uv <= 2) return '#2a9d8f';
+    if (uv <= 5) return '#e9c46a';
+    if (uv <= 7) return '#f4a261';
+    if (uv <= 10) return '#e76f51';
+    return '#d62828';
+  }
+
+  getUvStatusText(uvValue: number): string {
+    const uv = Math.round(uvValue || 0);
+    if (uv <= 2) return this.translate.instant('UV_MODAL.STATUS_LOW');
+    if (uv <= 5) return this.translate.instant('UV_MODAL.STATUS_MODERATE');
+    if (uv <= 7) return this.translate.instant('UV_MODAL.STATUS_HIGH');
+    if (uv <= 10) return this.translate.instant('UV_MODAL.STATUS_VERY_HIGH');
+    return this.translate.instant('UV_MODAL.STATUS_EXTREME');
+  }
+
+  getUvProtectionAdvice(uvValue: number): string {
+    const uv = Math.round(uvValue || 0);
+    if (uv <= 2) return this.translate.instant('UV_MODAL.ADVICE_LOW');
+    if (uv <= 5) return this.translate.instant('UV_MODAL.ADVICE_MODERATE');
+    if (uv <= 7) return this.translate.instant('UV_MODAL.ADVICE_HIGH');
+    if (uv <= 10) return this.translate.instant('UV_MODAL.ADVICE_VERY_HIGH');
+    return this.translate.instant('UV_MODAL.ADVICE_EXTREME');
+  }
+
   getHourlyForecast() {
     if (!this.parsedWeatherData || !this.parsedWeatherData.hourly_forecast) return [];
     return this.parsedWeatherData.hourly_forecast;
@@ -328,29 +489,37 @@ async openAddWidgetModal() {
   }
 
   filterWidgets() {
-    this.visibleWidgets = [...this.allWidgets];
+    if (!this.currentUser) {
+      this.visibleWidgets = this.allWidgets.filter(
+        widget => widget.id !== 'activity' && widget.id !== 'loyalty' && !widget.isCustom
+      );
+    } else {
+      this.visibleWidgets = [...this.allWidgets];
+    }
   }
 
   getAqiColor(aqiValue: number): string {
-    switch(Number(aqiValue)) {
-      case 1: return '#2a9d8f';
-      case 2: return '#e9c46a';
-      case 3: return '#f4a261';
-      case 4: return '#e76f51';
-      case 5: return '#d62828';
-      default: return '#2a9d8f';
-    }
+    const val = Number(aqiValue);
+    if (val <= 50) return '#2a9d8f';
+    if (val <= 100) return '#e9c46a';
+    if (val <= 150) return '#f4a261';
+    if (val <= 200) return '#e76f51';
+    return '#d62828';
   }
 
   changeLanguage(event: any) {
     const selectedLang = event.detail.value;
     this.currentLang = selectedLang;
     this.translate.use(selectedLang);
+    this.filterWidgets();
   }
 
   setDetailModal(isOpen: boolean) {
     this.isDetailModalOpen = isOpen;
-    if (!isOpen) this.activeDetailWidgetId = null; 
+    if (!isOpen) {
+      this.activeDetailWidgetId = null;
+      this.closeLoyaltySubView();
+    }
   }
 
   async fetchDatabaseCurrencyRates() {
@@ -376,144 +545,151 @@ async openAddWidgetModal() {
     }
   }
 
-async onWidgetClick(widgetId: string) {
+  async onWidgetClick(widgetId: string) {
+    if ((widgetId === 'activity' || widgetId === 'loyalty') && !this.currentUser) {
+      return;
+    }
+
     this.activeDetailWidgetId = widgetId;
-    
+
+    if (widgetId === 'loyalty') {
+      this.loyaltyModalView = 'list';
+    }
+
     if (widgetId === 'activity' && this.currentUser) {
       this.last7DaysHealth = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
     }
+    
     if (widgetId === 'currency') {
       try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
     }
+    
     if (widgetId === 'fuel') {
       try { await this.fetchDatabaseFuelPrices(); } catch (e) {}
     }
+    
     this.isDetailModalOpen = true;
   }
 
   formatHistoryDate(dateStr: string): string {
     if (!dateStr) return '';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('mk-MK', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    const locale = this.currentLang === 'mk' ? 'mk-MK' : (this.currentLang === 'al' ? 'sq-AL' : 'en-US');
+    return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
 
   ngOnDestroy() {
     if (this.weatherSub) this.weatherSub.unsubscribe();
   }
 
-  // 🌟 Avatar Action: Toggles Login or Signs Out
-async onAvatarClick() {
-  if (this.currentUser) {
+  async onAvatarClick() {
+    if (this.currentUser) {
+      const alert = await this.alertCtrl.create({
+        header: this.translate.instant('HOME.CONFIRM_LOGOUT_TITLE'),
+        message: this.translate.instant('HOME.CONFIRM_LOGOUT_MSG'),
+        buttons: [
+          { text: this.translate.instant('HOME.CANCEL'), role: 'cancel' },
+          { 
+            text: this.translate.instant('HOME.LOGOUT'), 
+            handler: async () => {
+              await this.supabaseService.signOut();
+              this.allWidgets = this.allWidgets.filter(w => !w.isCustom);
+              this.filterWidgets();
+            } 
+          }
+        ]
+      });
+      await alert.present();
+    } else {
+      this.router.navigate(['/login']);
+    }
+  }
+
+  async loadUserCustomWidgets(userId: string) {
+    try {
+      const dbWidgets = await this.supabaseService.getUserWidgets(userId);
+      
+      const customMappedWidgets: Widget[] = dbWidgets.map((w: any) => ({
+        id: w.id,
+        translationKey: w.title,
+        rawTitle: w.title,
+        eventDate: w.event_date,
+        value: this.calculateDaysUntil(w.event_date),
+        unit: 'WIDGETS.DAYS_UNIT',
+        icon: w.icon || 'calendar-number',
+        isCustom: true
+      }));
+
+      const baseWidgets = this.allWidgets.filter(w => !w.isCustom);
+      this.allWidgets = [...baseWidgets, ...customMappedWidgets];
+      this.filterWidgets();
+    } catch (err) {
+      console.error('Error binding custom user widgets:', err);
+    }
+  }
+
+  async saveCustomWidget() {
+    if (!this.newWidgetTitle.trim() || !this.currentUser) return;
+
+    try {
+      const newWidget = await this.supabaseService.addUserWidget(
+        this.currentUser.id,
+        this.newWidgetTitle.trim(),
+        this.newWidgetDate
+      );
+
+      const createdWidget: Widget = {
+        id: newWidget.id,
+        translationKey: newWidget.title,
+        rawTitle: newWidget.title,
+        eventDate: newWidget.event_date,
+        value: this.calculateDaysUntil(newWidget.event_date),
+        unit: 'WIDGETS.DAYS_UNIT',
+        icon: newWidget.icon,
+        isCustom: true
+      };
+
+      this.allWidgets.push(createdWidget);
+      this.filterWidgets();
+      this.setAddWidgetModal(false);
+    } catch (err) {
+      console.error('Failed to create widget:', err);
+    }
+  }
+
+  getActiveCustomWidget(): Widget | undefined {
+    return this.allWidgets.find(w => w.id === this.activeDetailWidgetId && w.isCustom);
+  }
+
+  formatDisplayDate(dateStr?: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const locale = this.currentLang === 'mk' ? 'mk-MK' : (this.currentLang === 'al' ? 'sq-AL' : 'en-US');
+    return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  async deleteCurrentCustomWidget(widgetId: string) {
     const alert = await this.alertCtrl.create({
-      header: 'Одјава',
-      message: 'Дали сте сигурни дека сакате да се одјавите?',
+      header: this.translate.instant('CUSTOM_WIDGET.DELETE_CONFIRM_TITLE'),
+      message: this.translate.instant('CUSTOM_WIDGET.DELETE_CONFIRM_MSG'),
       buttons: [
-        { text: 'Откажи', role: 'cancel' },
-        { 
-          text: 'Одјави се', 
+        { text: this.translate.instant('HOME.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CUSTOM_WIDGET.DELETE_BTN'),
+          role: 'destructive',
           handler: async () => {
-            await this.supabaseService.signOut();
-            this.allWidgets = this.allWidgets.filter(w => !w.isCustom);
-            this.filterWidgets();
-          } 
+            try {
+              await this.supabaseService.deleteUserWidget(widgetId);
+              this.allWidgets = this.allWidgets.filter(w => w.id !== widgetId);
+              this.filterWidgets();
+              this.setDetailModal(false);
+            } catch (e) {
+              console.error('Failed to delete widget', e);
+            }
+          }
         }
       ]
     });
     await alert.present();
-  } else {
-    this.router.navigate(['/login']);
   }
-}
-
-async loadUserCustomWidgets(userId: string) {
-  try {
-    const dbWidgets = await this.supabaseService.getUserWidgets(userId);
-    
-    const customMappedWidgets: Widget[] = dbWidgets.map((w: any) => ({
-      id: w.id,
-      translationKey: w.title,
-      rawTitle: w.title,
-      eventDate: w.event_date,
-      value: this.calculateDaysUntil(w.event_date),
-      unit: 'Днови',
-      icon: w.icon || 'calendar-number',
-      isCustom: true
-    }));
-
-    const baseWidgets = this.allWidgets.filter(w => !w.isCustom);
-    this.allWidgets = [...baseWidgets, ...customMappedWidgets];
-    this.filterWidgets();
-  } catch (err) {
-    console.error('Error binding custom user widgets:', err);
-  }
-}
-
-async saveCustomWidget() {
-  if (!this.newWidgetTitle.trim() || !this.currentUser) return;
-
-  try {
-    const newWidget = await this.supabaseService.addUserWidget(
-      this.currentUser.id,
-      this.newWidgetTitle.trim(),
-      this.newWidgetDate
-    );
-
-    const createdWidget: Widget = {
-      id: newWidget.id,
-      translationKey: newWidget.title,
-      rawTitle: newWidget.title,
-      eventDate: newWidget.event_date,
-      value: this.calculateDaysUntil(newWidget.event_date),
-      unit: 'Днови',
-      icon: newWidget.icon,
-      isCustom: true
-    };
-
-    this.allWidgets.push(createdWidget);
-    this.filterWidgets();
-    this.setAddWidgetModal(false);
-  } catch (err) {
-    console.error('Failed to create widget:', err);
-  }
-}
-
-// 🌟 Get currently selected custom widget for the detail modal
-getActiveCustomWidget(): Widget | undefined {
-  return this.allWidgets.find(w => w.id === this.activeDetailWidgetId && w.isCustom);
-}
-
-// 🌟 Format raw date (e.g. "2026-08-20" -> "20.08.2026")
-formatDisplayDate(dateStr?: string): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('mk-MK', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-// 🌟 Delete Custom Widget Action
-async deleteCurrentCustomWidget(widgetId: string) {
-  const alert = await this.alertCtrl.create({
-    header: 'Избриши Виџет',
-    message: 'Дали сте сигурни дека сакате да го избришете овој виџет?',
-    buttons: [
-      { text: 'Откажи', role: 'cancel' },
-      {
-        text: 'Избриши',
-        role: 'destructive',
-        handler: async () => {
-          try {
-            await this.supabaseService.deleteUserWidget(widgetId);
-            this.allWidgets = this.allWidgets.filter(w => w.id !== widgetId);
-            this.filterWidgets();
-            this.setDetailModal(false);
-          } catch (e) {
-            console.error('Failed to delete widget', e);
-          }
-        }
-      }
-    ]
-  });
-  await alert.present();
-}
-
-
 }

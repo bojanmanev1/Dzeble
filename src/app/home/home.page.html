@@ -2,26 +2,26 @@
   
   <div class="dashboard-wrapper">
     <!-- 1. UTILITY TOP BAR -->
-  <div class="utility-bar">
-  <div class="utility-left"></div>
-  <div class="utility-right">
-    <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
-      <ion-select-option value="mk">MK</ion-select-option>
-      <ion-select-option value="al">AL</ion-select-option>
-      <ion-select-option value="en">EN</ion-select-option>
-    </ion-select>
+    <div class="utility-bar">
+      <div class="utility-left"></div>
+      <div class="utility-right">
+        <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
+          <ion-select-option value="mk">MK</ion-select-option>
+          <ion-select-option value="al">AL</ion-select-option>
+          <ion-select-option value="en">EN</ion-select-option>
+        </ion-select>
 
-    <!-- 🌟 DYNAMIC AVATAR BUTTON -->
-    <div class="user-avatar" (click)="onAvatarClick()" [title]="currentUser ? 'Одјави се' : 'Најава'">
-      {{ currentUser ? '🚪' : '👤' }}
+        <!-- 🌟 DYNAMIC AVATAR BUTTON -->
+        <div class="user-avatar" (click)="onAvatarClick()" [title]="currentUser ? ('HOME.LOGOUT' | translate) : ('HOME.LOGIN' | translate)">
+          {{ currentUser ? '🚪' : '👤' }}
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
     <!-- 2. TITLES SECTION -->
     <div class="dashboard-titles">
       <span class="city-subtitle">{{ currentCityName }}</span>
-      <h1 class="main-title">Денес</h1>
+      <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
     </div>
 
     <!-- 3. WIDGETS GRID LAYER -->
@@ -34,7 +34,7 @@
             </div>
             
             <div class="card-value">{{ widget.value }}</div>
-            <div class="card-label">{{ widget.translationKey }}</div>
+            <div class="card-label">{{ widget.translationKey | translate }}</div>
           </div>
         </div>
       }
@@ -50,39 +50,45 @@
     <!-- 4. BOTTOM NEWS FEED BLOCK -->
     <div class="news-ticker-container">
       <div class="news-header">
-        <span>📰 Вести</span>
+        <span>{{ 'HOME.NEWS' | translate }}</span>
       </div>
       <p class="news-body">Нова автопатска делница Скопје–Тетово</p>
     </div>
 
     <div class="footer-hint-text">
-      <span>Допри за детали</span>
+      <span>{{ 'HOME.FOOTER_HINT' | translate }}</span>
     </div>
   </div>
 
   <!-- ========================================== -->
   <!-- MODAL 1: ADD CUSTOM WIDGET (LOGGED-IN USERS) -->
   <!-- ========================================== -->
-  <ion-modal [isOpen]="isAddWidgetModalOpen" (didDismiss)="setAddWidgetModal(false)" class="premium-modal">
+  <ion-modal [isOpen]="isAddWidgetModalOpen" 
+    (didDismiss)="setAddWidgetModal(false)" 
+    class="premium-modal"
+    [canDismiss]="true"
+    [initialBreakpoint]="1.0"
+    [breakpoints]="[0, 1.0]"
+    [handle]="true">
     <ng-template>
       <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; padding: 20px;">
         
         <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
           <span class="hero-crown">📅</span>
-          <h2>Нов Календар Виџет</h2>
-          <p class="subtitle">Внеси име и избери датум за одбројување</p>
+          <h2>{{ 'CUSTOM_WIDGET.NEW_TITLE' | translate }}</h2>
+          <p class="subtitle">{{ 'CUSTOM_WIDGET.NEW_SUBTITLE' | translate }}</p>
         </div>
 
         <div class="modal-body" style="flex: 1; overflow-y: auto;">
           <!-- Widget Title Input -->
           <div style="background: #f7f7f5; padding: 12px; border-radius: 14px; margin-bottom: 16px;">
-            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Наслов на настанот</label>
-            <input type="text" [(ngModel)]="newWidgetTitle" placeholder="пр. Роденден на Петар" style="width: 100%; border: none; background: transparent; font-size: 1.1rem; font-weight: bold; color: #111; outline: none;" />
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">{{ 'CUSTOM_WIDGET.EVENT_NAME_LABEL' | translate }}</label>
+            <input type="text" [(ngModel)]="newWidgetTitle" [placeholder]="'CUSTOM_WIDGET.EVENT_NAME_PLACEHOLDER' | translate" style="width: 100%; border: none; background: transparent; font-size: 1.1rem; font-weight: bold; color: #111; outline: none;" />
           </div>
 
           <!-- Date Picker -->
           <div style="background: #f7f7f5; padding: 12px; border-radius: 14px; text-align: center;">
-            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 8px;">Избери Датум</label>
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 8px;">{{ 'CUSTOM_WIDGET.SELECT_DATE_LABEL' | translate }}</label>
             <ion-datetime 
               presentation="date" 
               [(ngModel)]="newWidgetDate" 
@@ -94,10 +100,10 @@
         <!-- Action Buttons -->
         <div class="modal-footer" style="padding-top: 14px; display: flex; gap: 10px;">
           <button (click)="setAddWidgetModal(false)" style="background: #e9ecef; color: #333; flex: 1; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
-            Откажи
+            {{ 'HOME.CANCEL' | translate }}
           </button>
           <button (click)="saveCustomWidget()" [disabled]="!newWidgetTitle.trim()" style="background: #111; color: white; flex: 2; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
-            Зачувај Виџет
+            {{ 'CUSTOM_WIDGET.SAVE_WIDGET' | translate }}
           </button>
         </div>
 
@@ -108,20 +114,26 @@
   <!-- ========================================== -->
   <!-- MODAL 2: DETAIL VIEW MODAL                -->
   <!-- ========================================== -->
-  <ion-modal [isOpen]="isDetailModalOpen" (didDismiss)="setDetailModal(false)" class="premium-modal">
+  <ion-modal [isOpen]="isDetailModalOpen" 
+    (didDismiss)="setDetailModal(false)" 
+    class="premium-modal"
+    [canDismiss]="true"
+    [initialBreakpoint]="1.0"
+    [breakpoints]="[0, 1.0]"
+    [handle]="true">
     <ng-template>
       <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%;">
         
         <!-- WEATHER DETAILS -->
-        @if (activeDetailWidgetId === 'weather' || activeDetailWidgetId === 'uv') {
+        @if (activeDetailWidgetId === 'weather') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">⛈️</span>
-            <h2>Временска Прогноза</h2>
-            <p class="subtitle">Детални информации по часови и денови</p>
+            <h2>{{ 'WEATHER_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'WEATHER_MODAL.SUBTITLE' | translate }}</p>
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto;">
-            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Следни неколку часа</h3>
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">{{ 'WEATHER_MODAL.HOURLY' | translate }}</h3>
             <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px;">
               @for (hourItem of getHourlyForecast(); track hourItem.time) {
                 <div style="background: #f7f7f5; padding: 10px 14px; border-radius: 12px; text-align: center; min-width: 65px;">
@@ -132,7 +144,7 @@
               }
             </div>
 
-            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">Неделна прогноза</h3>
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">{{ 'WEATHER_MODAL.WEEKLY' | translate }}</h3>
             <ul class="benefits-list">
               @for (dayItem of getWeeklyForecast(); track dayItem.day) {
                 <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
@@ -144,234 +156,455 @@
           </div>
         }
 
+        <!-- UV INDEX DETAILS -->
+        @if (activeDetailWidgetId === 'uv') {
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <span class="hero-crown">☀️</span>
+            <h2>{{ 'UV_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'UV_MODAL.SUBTITLE' | translate }}</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+            <!-- Main Index Card -->
+            <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">{{ 'UV_MODAL.CURRENT_INDEX' | translate }}</span>
+              <h1 [style.color]="getUvColor(parsedWeatherData?.uv_index)" style="font-size: 3.2rem; font-weight: 800; margin: 4px 0; transition: color 0.3s ease;">
+                {{ Math.round(parsedWeatherData?.uv_index ?? 0) }}
+              </h1>
+              <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 800; color: #111;">
+                {{ getUvStatusText(parsedWeatherData?.uv_index) }}
+              </div>
+            </div>
+
+            <!-- Health Advice Box -->
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'UV_MODAL.ADVICE_HEADER' | translate }}</h3>
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; border-radius: 14px; margin-bottom: 24px;">
+              <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: #1c1c1e; line-height: 1.4;">
+                {{ getUvProtectionAdvice(parsedWeatherData?.uv_index) }}
+              </p>
+            </div>
+
+            <!-- UV Index Scale Legend -->
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'UV_MODAL.SCALE_HEADER' | translate }}</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #2a9d8f;">{{ 'UV_MODAL.LOW' | translate }}</span>
+                <span style="color: #888;">{{ 'UV_MODAL.LOW_DESC' | translate }}</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #e9c46a;">{{ 'UV_MODAL.MODERATE' | translate }}</span>
+                <span style="color: #888;">{{ 'UV_MODAL.MODERATE_DESC' | translate }}</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #f4a261;">{{ 'UV_MODAL.HIGH' | translate }}</span>
+                <span style="color: #888;">{{ 'UV_MODAL.HIGH_DESC' | translate }}</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #e76f51;">{{ 'UV_MODAL.VERY_HIGH' | translate }}</span>
+                <span style="color: #888;">{{ 'UV_MODAL.VERY_HIGH_DESC' | translate }}</span>
+              </li>
+              <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #d62828;">{{ 'UV_MODAL.EXTREME' | translate }}</span>
+                <span style="color: #888;">{{ 'UV_MODAL.EXTREME_DESC' | translate }}</span>
+              </li>
+            </ul>
+          </div>
+        }
+
         <!-- AIR QUALITY DETAILS -->
         @if (activeDetailWidgetId === 'aqi') {
           <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
             <span class="hero-crown">🍃</span>
-            <h2>Квалитет на Воздухот</h2>
-            <p class="subtitle">Индекс на загаденост на амбиенталниот воздух</p>
+            <h2>{{ 'AQI_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'AQI_MODAL.SUBTITLE' | translate }}</p>
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+            <!-- Main Status Card -->
             <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-              <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">Моментален статус</span>
+              <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">{{ 'AQI_MODAL.CURRENT_STATUS' | translate }}</span>
               <h2 [style.color]="getAqiColor(parsedWeatherData?.aqi_value)" style="font-size: 2.2rem; font-weight: 800; margin: 8px 0; transition: color 0.3s ease;">
                 {{ parsedWeatherData?.aqi_status_text }}
               </h2>
-              <div style="display: inline-block; background: #e2e2df; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
-                Европски AQI Индекс: {{ parsedWeatherData?.aqi_value }} / 5
+              <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 800;">
+                {{ 'AQI_MODAL.INDEX_LABEL' | translate }}: {{ parsedWeatherData?.aqi_value }}
               </div>
             </div>
 
-            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Честички (Загадувачи)</h3>
+            <!-- PM Pollutants -->
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'AQI_MODAL.POLLUTANTS' | translate }}</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
               <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
-                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 2.5 честички</span>
+                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">{{ 'AQI_MODAL.PM25' | translate }}</span>
                 <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm25_value ?? 0 }}</span>
                 <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
               </div>
               <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
-                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">PM 10 честички</span>
+                <span style="font-size: 0.75rem; font-weight: bold; color: #6c757d; display: block; margin-bottom: 4px;">{{ 'AQI_MODAL.PM10' | translate }}</span>
                 <span style="font-size: 1.6rem; font-weight: 800; color: #111;">{{ parsedWeatherData?.pm10_value ?? 0 }}</span>
                 <span style="font-size: 0.7rem; color: #888; display: block; margin-top: 2px;">µg/m³</span>
               </div>
             </div>
 
-            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Легенда на Индекси</h3>
+            <!-- US AQI Legend -->
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'AQI_MODAL.LEGEND_TITLE' | translate }}</h3>
             <ul style="list-style: none; padding: 0; margin: 0;">
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #2a9d8f;">1 • Одличен</span>
-                <span style="color: #888;">Без ризик по здравјето</span>
+                <span style="font-weight: 600; color: #2a9d8f;">{{ 'AQI_MODAL.GOOD' | translate }}</span>
+                <span style="color: #888;">{{ 'AQI_MODAL.GOOD_DESC' | translate }}</span>
               </li>
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #e9c46a;">2 • Добар</span>
-                <span style="color: #888;">Прифатлив квалитет</span>
+                <span style="font-weight: 600; color: #e9c46a;">{{ 'AQI_MODAL.MODERATE' | translate }}</span>
+                <span style="color: #888;">{{ 'AQI_MODAL.MODERATE_DESC' | translate }}</span>
               </li>
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #f4a261;">3 • Умерен</span>
-                <span style="color: #888;">Мали респираторни влијанија</span>
+                <span style="font-weight: 600; color: #f4a261;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE' | translate }}</span>
+                <span style="color: #888;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE_DESC' | translate }}</span>
               </li>
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #e76f51;">4 • Загаден</span>
-                <span style="color: #888;">Небезбедно за осетливи групи</span>
+                <span style="font-weight: 600; color: #e76f51;">{{ 'AQI_MODAL.UNHEALTHY' | translate }}</span>
+                <span style="color: #888;">{{ 'AQI_MODAL.UNHEALTHY_DESC' | translate }}</span>
               </li>
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #d62828;">5 • Штетен</span>
-                <span style="color: #888;">Висок ризик и сериозни препораки</span>
+                <span style="font-weight: 600; color: #d62828;">{{ 'AQI_MODAL.HAZARDOUS' | translate }}</span>
+                <span style="color: #888;">{{ 'AQI_MODAL.HAZARDOUS_DESC' | translate }}</span>
               </li>
             </ul>
           </div>
         }
 
-        <!-- CURRENCY DETAILS -->
+        <!-- CURRENCY DETAILS MODAL -->
         @if (activeDetailWidgetId === 'currency') {
-          <div class="modal-hero" style="padding-bottom: 10px;">
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
             <span class="hero-crown">💶</span>
-            <h2>Курсна Листа</h2>
-            <p class="subtitle">Официјален среден курс во однос на ЕВРО (EUR)</p>
+            <h2>{{ 'CURRENCY_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'CURRENCY_MODAL.SUBTITLE' | translate }}</p>
           </div>
 
-          <div style="background: #f7f7f5; padding: 12px; border-radius: 16px; margin-bottom: 12px;">
-            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">Внеси износ во ЕВРА (EUR)</label>
-            <input type="number" [(ngModel)]="inputEuroAmount" style="width: 100%; border: none; background: transparent; font-size: 1.4rem; font-weight: bold; color: #111; outline: none;" placeholder="1" />
+          <!-- Input Field for MKD -->
+          <div style="background: #f7f7f5; padding: 14px; border-radius: 16px; margin-bottom: 16px;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">
+              {{ 'CURRENCY_MODAL.INPUT_LABEL' | translate }}
+            </label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input 
+                type="number" 
+                [(ngModel)]="inputMkdAmount" 
+                style="width: 100%; border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #111; outline: none;" 
+                placeholder="100" />
+              <span style="font-weight: 800; color: #666;">{{ 'CURRENCY_MODAL.DENAR_SYMBOL' | translate }}</span>
+            </div>
           </div>
 
+          <!-- Converted Results List -->
           <div class="modal-body" style="flex: 1; overflow-y: auto;">
             <ul class="benefits-list">
+              <!-- Standard EUR row if not present in DB list -->
+              <li style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
+                <span style="font-weight: 600;">
+                  🇪🇺 {{ 'CURRENCY_MODAL.EURO_NAME' | translate }}
+                </span>
+                <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
+                  {{ getCalculatedRateDynamic(1.0) }} €
+                </span>
+              </li>
+
+              <!-- Dynamic Rows from Database -->
               @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
-                <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                  <span style="font-weight: 600;">
-                    {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
-                  </span>
-                  <span style="font-weight: 800; font-size: 1.1rem;">
-                    {{ getCalculatedRateDynamic(rateRow.rate) }} ден
-                  </span>
-                </li>
+                @if (rateRow.target_currency !== 'MKD') {
+                  <li style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
+                    <span style="font-weight: 600;">
+                      {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
+                    </span>
+                    <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
+                      {{ getCalculatedRateDynamic(rateRow.rate) }} {{ rateRow.target_currency }}
+                    </span>
+                  </li>
+                }
               }
             </ul>
           </div>
         }
 
-        <!-- Inside <ion-modal [isOpen]="isDetailModalOpen"> template -->
+        <!-- LOYALTY CARDS MODULE -->
+        @if (activeDetailWidgetId === 'loyalty' && currentUser) {
 
-<!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
-@if (activeDetailWidgetId === 'activity') {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <span class="hero-crown">🏃</span>
-    <h2>Активност & Чекори</h2>
-    <p class="subtitle">Дневен преглед и статистика за последните 7 дена</p>
-  </div>
-  
-  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-    
-    <!-- Today's Activity Summary Box -->
-    <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-      <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">Денешна активност</span>
-      
-      <h1 style="font-size: 2.8rem; font-weight: 800; color: #111; margin: 6px 0;">
-        {{ todayHealthData.steps.toLocaleString('mk-MK') }}
-      </h1>
-      <span style="font-size: 0.85rem; color: #666; font-weight: bold; display: block; margin-bottom: 12px;">чекори</span>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
-          <span style="font-size: 0.75rem; color: #888; display: block;">🔥 Потрошени</span>
-          <span style="font-size: 1.1rem; font-weight: 800; color: #e63946;">{{ todayHealthData.calories }} kcal</span>
-        </div>
-        <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
-          <span style="font-size: 0.75rem; color: #888; display: block;">📍 Изминати</span>
-          <span style="font-size: 1.1rem; font-weight: 800; color: #2a9d8f;">{{ todayHealthData.distanceKm }} км</span>
-        </div>
-      </div>
-    </div>
+          <!-- 1. LIST VIEW -->
+          @if (loyaltyModalView === 'list') {
+            <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+              <span class="hero-crown">💳</span>
+              <h2>{{ 'LOYALTY_MODAL.TITLE' | translate }}</h2>
+              <p class="subtitle">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
+            </div>
 
-    <!-- 7-Day Historical Breakdown -->
-    <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">Последни 7 Дена</h3>
-    
-    @if (last7DaysHealth.length === 0) {
-      <p style="text-align: center; color: #888; font-size: 0.85rem; padding: 12px 0;">
-        Нема претходно снимени податоци за изминатите денови.
-      </p>
-    } @else {
-      <ul style="list-style: none; padding: 0; margin: 0;">
-        @for (day of last7DaysHealth; track day.id) {
-          <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
-            <div>
-              <span style="font-weight: 700; font-size: 0.95rem; color: #111; display: block;">
-                {{ formatHistoryDate(day.logged_date) }}
-              </span>
-              <span style="font-size: 0.75rem; color: #888;">
-                📍 {{ day.distance_km }} км
-              </span>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+              @if (loyaltyCards.length > 0) {
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                  @for (card of loyaltyCards; track card.id) {
+                    <div 
+                      [style.background-color]="card.card_color || '#1e293b'" 
+                      style="padding: 16px; border-radius: 16px; color: white; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 95px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                      (click)="openLoyaltyCardView(card)">
+                      <h4 style="margin: 0; font-weight: 800; font-size: 1.1rem;">{{ card.store_name }}</h4>
+                      <span style="font-family: monospace; font-size: 0.85rem; opacity: 0.85; letter-spacing: 1px;">
+                        •••• {{ card.barcode_data.slice(-4) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div style="text-align: center; padding: 30px 10px; background: #f7f7f5; border-radius: 16px; margin-bottom: 20px;">
+                  <p style="margin: 0 0 6px 0; font-weight: bold; color: #111;">{{ 'LOYALTY_MODAL.NO_CARDS' | translate }}</p>
+                  <span style="font-size: 0.8rem; color: #666;">{{ 'LOYALTY_MODAL.NO_CARDS_HINT' | translate }}</span>
+                </div>
+              }
+
+              <button 
+                (click)="openAddLoyaltyCardView()" 
+                style="width: 100%; background: #111; color: white; border: none; padding: 14px; border-radius: 14px; font-weight: bold; font-size: 0.95rem;">
+                {{ 'LOYALTY_MODAL.ADD_NEW_BTN' | translate }}
+              </button>
             </div>
-            <div style="text-align: right;">
-              <span style="font-weight: 800; font-size: 1.05rem; color: #111; display: block;">
-                👟 {{ day.step_count.toLocaleString('mk-MK') }}
-              </span>
-              <span style="font-size: 0.8rem; font-weight: bold; color: #e63946;">
-                🔥 {{ day.calories_burned }} kcal
-              </span>
+          }
+
+          <!-- 2. BARCODE DISPLAY VIEW -->
+          @if (loyaltyModalView === 'view' && selectedLoyaltyCard) {
+            <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+              <div [style.background-color]="selectedLoyaltyCard.card_color || '#1e293b'" style="padding: 16px; border-radius: 16px; color: white; margin-bottom: 12px;">
+                <h2 style="margin: 0;">{{ selectedLoyaltyCard.store_name }}</h2>
+              </div>
             </div>
-          </li>
+
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px; text-align: center;">
+              <div style="background: #ffffff; padding: 20px; border-radius: 16px; display: inline-block; width: 100%; border: 1px solid #e2e2df; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <svg appBarcodeRender [value]="selectedLoyaltyCard.barcode_data" [format]="selectedLoyaltyCard.barcode_format || 'CODE128'"></svg>
+              </div>
+
+              <p style="font-size: 0.8rem; color: #888; margin-top: 12px;">
+                {{ 'LOYALTY_MODAL.BRIGHTNESS_HINT' | translate }}
+              </p>
+
+              <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button 
+                  (click)="closeLoyaltySubView()" 
+                  style="flex: 1; background: #e9ecef; color: #333; border: none; padding: 14px; border-radius: 14px; font-weight: bold;">
+                  {{ 'LOYALTY_MODAL.BACK_BTN' | translate }}
+                </button>
+                <button 
+                  (click)="deleteLoyaltyCard(selectedLoyaltyCard.id)" 
+                  style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold;">
+                  {{ 'LOYALTY_MODAL.DELETE_BTN' | translate }}
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- 3. ADD NEW CARD FORM VIEW -->
+          @if (loyaltyModalView === 'add') {
+            <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+              <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 4px;">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
+              <p class="subtitle" style="font-size: 0.8rem; color: #666; margin: 0;">{{ 'LOYALTY_MODAL.NEW_CARD_SUBTITLE' | translate }}</p>
+            </div>
+
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 10px 16px;">
+              
+              <!-- Custom Store Name Input -->
+              <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 10px;">
+                <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.STORE_NAME_LABEL' | translate }}</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="newCustomStoreName" 
+                  (input)="onStoreNameInput()"
+                  [placeholder]="'LOYALTY_MODAL.STORE_NAME_PLACEHOLDER' | translate" 
+                  style="width: 100%; border: none; background: transparent; font-size: 0.95rem; font-weight: 700; color: #111; outline: none;" />
+              </div>
+
+              <!-- Barcode Input + Compact Scanner Button -->
+              <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;">
+                <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.BARCODE_LABEL' | translate }}</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input 
+                    type="text" 
+                    [(ngModel)]="newBarcodeData" 
+                    [placeholder]="'LOYALTY_MODAL.BARCODE_PLACEHOLDER' | translate" 
+                    style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 0.9rem; font-weight: 700; color: #111; outline: none;" />
+                  <button 
+                    (click)="scanBarcode()" 
+                    style="background: #111; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                    {{ 'LOYALTY_MODAL.SCAN_BTN' | translate }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dynamic Card Preview Card -->
+              <div 
+                [style.background-color]="newCardColor" 
+                style="padding: 14px; border-radius: 14px; color: white; height: 80px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
+                <span style="font-weight: 800; font-size: 1rem;">{{ newCustomStoreName.trim() || ('LOYALTY_MODAL.PREVIEW_DEFAULT_NAME' | translate) }}</span>
+                <span style="font-family: monospace; font-size: 0.85rem; letter-spacing: 2px; opacity: 0.9;">{{ newBarcodeData || '•••• •••• ••••' }}</span>
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display: flex; gap: 8px;">
+                <button 
+                  (click)="closeLoyaltySubView()" 
+                  style="flex: 1; background: #e9ecef; color: #333; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9rem;">
+                  {{ 'HOME.CANCEL' | translate }}
+                </button>
+                <button 
+                  (click)="saveLoyaltyCard()" 
+                  [disabled]="!newBarcodeData.trim() || !newCustomStoreName.trim()" 
+                  [style.opacity]="(!newBarcodeData.trim() || !newCustomStoreName.trim()) ? 0.5 : 1"
+                  style="flex: 2; background: #111; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9rem;">
+                  {{ 'LOYALTY_MODAL.SAVE_BTN' | translate }}
+                </button>
+              </div>
+
+            </div>
+          }
+
         }
-      </ul>
-    }
 
-  </div>
-}
+        <!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
+        @if (activeDetailWidgetId === 'activity' && currentUser) {
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <span class="hero-crown">🏃</span>
+            <h2>{{ 'ACTIVITY_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'ACTIVITY_MODAL.SUBTITLE' | translate }}</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+            
+            <!-- Today's Activity Summary Box -->
+            <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">{{ 'ACTIVITY_MODAL.TODAY_SUMMARY' | translate }}</span>
+              
+              <h1 style="font-size: 2.8rem; font-weight: 800; color: #111; margin: 6px 0;">
+                {{ todayHealthData.steps.toLocaleString('mk-MK') }}
+              </h1>
+              <span style="font-size: 0.85rem; color: #666; font-weight: bold; display: block; margin-bottom: 12px;">{{ 'ACTIVITY_MODAL.STEPS_LABEL' | translate }}</span>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
+                  <span style="font-size: 0.75rem; color: #888; display: block;">{{ 'ACTIVITY_MODAL.CALORIES' | translate }}</span>
+                  <span style="font-size: 1.1rem; font-weight: 800; color: #e63946;">{{ todayHealthData.calories }} kcal</span>
+                </div>
+                <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
+                  <span style="font-size: 0.75rem; color: #888; display: block;">{{ 'ACTIVITY_MODAL.DISTANCE' | translate }}</span>
+                  <span style="font-size: 1.1rem; font-weight: 800; color: #2a9d8f;">{{ todayHealthData.distanceKm }} км</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7-Day Historical Breakdown -->
+            <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'ACTIVITY_MODAL.LAST_7_DAYS' | translate }}</h3>
+            
+            @if (last7DaysHealth.length === 0) {
+              <p style="text-align: center; color: #888; font-size: 0.85rem; padding: 12px 0;">
+                {{ 'ACTIVITY_MODAL.NO_HISTORY' | translate }}
+              </p>
+            } @else {
+              <ul style="list-style: none; padding: 0; margin: 0;">
+                @for (day of last7DaysHealth; track day.id) {
+                  <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
+                    <div>
+                      <span style="font-weight: 700; font-size: 0.95rem; color: #111; display: block;">
+                        {{ formatHistoryDate(day.logged_date) }}
+                      </span>
+                      <span style="font-size: 0.75rem; color: #888;">
+                        📍 {{ day.distance_km }} км
+                      </span>
+                    </div>
+                    <div style="text-align: right;">
+                      <span style="font-weight: 800; font-size: 1.05rem; color: #111; display: block;">
+                        👟 {{ day.step_count.toLocaleString('mk-MK') }}
+                      </span>
+                      <span style="font-size: 0.8rem; font-weight: bold; color: #e63946;">
+                        🔥 {{ day.calories_burned }} kcal
+                      </span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+
+          </div>
+        }
 
         <!-- FUEL DETAILS -->
         @if (activeDetailWidgetId === 'fuel') {
           <div class="modal-hero" style="padding-bottom: 10px;">
             <span class="hero-crown">⛽</span>
-            <h2>Цени на Горива</h2>
-            <p class="subtitle">Максимални малопродажни цени утврдени од РКЕ</p>
+            <h2>{{ 'FUEL_MODAL.TITLE' | translate }}</h2>
+            <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto;">
             <ul class="benefits-list">
               <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуросупер БС-95</span>
-                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} ден/лит</span>
+                <span style="font-weight: 600;">{{ 'FUEL_MODAL.PETROL_95' | translate }}</span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
               </li>
               <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуросупер БС-98</span>
-                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} ден/лит</span>
+                <span style="font-weight: 600;">{{ 'FUEL_MODAL.PETROL_98' | translate }}</span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
               </li>
               <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Еуродизел (Д-Е V)</span>
-                <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} ден/лит</span>
+                <span style="font-weight: 600;">{{ 'FUEL_MODAL.DIESEL' | translate }}</span>
+                <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
               </li>
               <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Екстра Лесно Гориво (ЕЛ-1)</span>
-                <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} ден/лит</span>
+                <span style="font-weight: 600;">{{ 'FUEL_MODAL.LIGHT_OIL' | translate }}</span>
+                <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
               </li>
               <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span style="font-weight: 600;">Мазут М-1 НС</span>
-                <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} ден/кг</span>
+                <span style="font-weight: 600;">{{ 'FUEL_MODAL.HEATING_OIL' | translate }}</span>
+                <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
               </li>
             </ul>
             
             <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
-              <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">🗓️ Одлуката е во сила од:</span>
-              <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} година</span>
+              <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
+              <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
             </div>
           </div>
         }
+
+        <!-- CUSTOM WIDGET DETAIL -->
         @if (getActiveCustomWidget(); as customWidget) {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <span class="hero-crown">📅</span>
-    <h2>{{ customWidget.rawTitle }}</h2>
-    <p class="subtitle">Потсетник и одбројување</p>
-  </div>
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <span class="hero-crown">📅</span>
+            <h2>{{ customWidget.rawTitle }}</h2>
+            <p class="subtitle">{{ 'CUSTOM_WIDGET.NEW_SUBTITLE' | translate }}</p>
+          </div>
 
-  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-    
-    <!-- Big Countdown Card -->
-    <div style="background: #f7f7f5; padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-      <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">Преостанато време</span>
-      <h1 style="font-size: 3rem; font-weight: 800; color: #111; margin: 8px 0;">
-        {{ customWidget.value }}
-      </h1>
-      <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
-        🗓️ Датум: {{ formatDisplayDate(customWidget.eventDate) }}
-      </div>
-    </div>
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+            
+            <!-- Big Countdown Card -->
+            <div style="background: #f7f7f5; padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">{{ 'CUSTOM_WIDGET.REMAINING_TIME' | translate }}</span>
+              <h1 style="font-size: 3rem; font-weight: 800; color: #111; margin: 8px 0;">
+                {{ customWidget.value }}
+              </h1>
+              <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                🗓️ {{ 'CUSTOM_WIDGET.EVENT_DATE' | translate }}: {{ formatDisplayDate(customWidget.eventDate) }}
+              </div>
+            </div>
 
-    <!-- Delete Widget Action Button -->
-    <button 
-      (click)="deleteCurrentCustomWidget(customWidget.id)" 
-      style="width: 100%; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold; margin-top: 10px;">
-      🗑️ Избриши го овој виџет
-    </button>
+            <!-- Delete Widget Action Button -->
+            <button 
+              (click)="deleteCurrentCustomWidget(customWidget.id)" 
+              style="width: 100%; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold; margin-top: 10px;">
+              {{ 'CUSTOM_WIDGET.DELETE_WIDGET' | translate }}
+            </button>
 
-  </div>
-}
+          </div>
+        }
 
         <!-- DISMISS FOOTER -->
         <div class="modal-footer" style="padding-top: 10px;">
           <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold; border: none;">
-            Затвори
+            {{ 'HOME.CLOSE' | translate }}
           </button>
         </div>
 

@@ -313,3 +313,36 @@
 .custom-reminder-icon, .custom-task-icon {
   color: #6c757d; // Neutral Slate tint for user-created task blocks
 }
+/* 5. Sheet Modal Setup configurations */
+.premium-modal {
+  --height: 85%;
+  --width: 100%;
+  --max-width: 100%;
+  --border-radius: 28px 28px 0px 0px;
+  --box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.15);
+  --backdrop-opacity: 0.4;
+
+  &::part(backdrop) {
+    background: #000;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.9s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  &::part(content) {
+    position: absolute;
+    bottom: 0;
+    transition: transform 0.98s cubic-bezier(0.32, 0.72, 0, 1);
+    border-radius: 28px 28px 0 0;
+    overflow: hidden;
+  }
+
+  /* Custom styling for Ionic's top drag handle bar */
+  &::part(handle) {
+    background: #d1d1d6;
+    width: 38px;
+    height: 5px;
+    border-radius: 3px;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+}

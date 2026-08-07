@@ -314,9 +314,10 @@ async getLast7DaysHealthMetrics(userId: string) {
     .limit(7);
 
   if (error) {
-    console.error('Error fetching 7-day health history:', error.message);
+    console.error('Error fetching 7-day health history:', error);
     return [];
   }
+
   return data || [];
 }
 }

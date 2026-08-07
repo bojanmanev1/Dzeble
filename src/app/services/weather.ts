@@ -38,23 +38,26 @@ export class WeatherService {
     );
   }
 
-  private async getCoords(): Promise<{ lat: number; lng: number } | null> {
-    try {
-      const checkPerms = await Geolocation.checkPermissions();
-      if (checkPerms.location !== 'granted') {
-        const reqPerms = await Geolocation.requestPermissions();
-        if (reqPerms.location !== 'granted') return null;
-      }
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: false,
-        timeout: 4000
-      });
-      return { lat: position.coords.latitude, lng: position.coords.longitude };
-    } catch (e) {
-      console.warn('GPS access bypassed, falling back to default location.');
-      return null;
+private async getCoords(): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const checkPerms = await Geolocation.checkPermissions();
+    if (checkPerms.location !== 'granted') {
+      // Prompt user for fine/coarse location permissions immediately
+      const reqPerms = await Geolocation.requestPermissions();
+      if (reqPerms.location !== 'granted') return null;
     }
+
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: false,
+      timeout: 5000
+    });
+
+    return { lat: position.coords.latitude, lng: position.coords.longitude };
+  } catch (e) {
+    console.warn('GPS access bypassed, falling back to default Skopje location.', e);
+    return null;
   }
+}
 
   // Define the exact coordinates of your seeded database cities
   private macedonianCities = [
