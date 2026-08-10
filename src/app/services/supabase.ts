@@ -320,4 +320,26 @@ async getLast7DaysHealthMetrics(userId: string) {
 
   return data || [];
 }
+
+// Fetch all holidays for the current year
+async getHolidays(): Promise<any[]> {
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+
+  const startDate = `${currentYear}-01-01`;
+  const endDate = `${nextYear}-12-31`; 
+
+  const { data, error } = await this.client
+    .from('macedonian_holidays')
+    .select('*')
+    .gte('holiday_date', startDate)
+    .lte('holiday_date', endDate)
+    .order('holiday_date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching holidays from Supabase:', error);
+    return [];
+  }
+  return data || [];
+}
 }

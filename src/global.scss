@@ -35,3 +35,31 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+
+/* 1. Make the modal backdrop area transparent so it doesn't show a black block */
+ion-modal {
+  --background: transparent;
+  
+  &::part(backdrop) {
+    background: rgba(0, 0, 0, 0.4); /* Smooth semi-transparent overlay */
+  }
+
+  &::part(content) {
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    background: #ffffff; /* Ensures the modal card itself is crisp white */
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* 2. Fix inner modal sheet layout */
+.detail-modal-container {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  /* Push content smoothly above safe area without forcing a dark background */
+  padding-bottom: max(16px, env(safe-area-inset-bottom)); 
+}

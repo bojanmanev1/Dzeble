@@ -22,7 +22,8 @@
     "STEPS": "Hapat",
     "LOYALTY": "Kartelat",
     "DAYS_UNIT": "Ditë",
-    "CARD_UNIT": "Të ruajtura"
+    "CARD_UNIT": "Të ruajtura",
+    "HOLIDAY": "Pushimet"
   },
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "Widget i ri Kalendari",
@@ -153,5 +154,38 @@
     "CAD": "Dollar Kanadez",
     "ALL": "Lek Shqiptar",
     "BGN": "Lev Bullgar"
-  }
+  },
+  "HOLIDAYS_MODAL": {
+  "TITLE": "Festat & Ditët Jo-Pune",
+  "SUBTITLE": "Kalendari i festave shtetërore dhe fetare",
+  "LEGEND_ALL": "Të gjithë Qytetarët",
+  "LEGEND_ORTHODOX": "Ortodokse",
+  "LEGEND_MUSLIM": "Muslimane",
+  "LEGEND_CATHOLIC": "Katolike",
+  "LEGEND_COMMUNITIES": "Komunitetet"
+},
+"FUEL_TYPES": {
+  "Бензин 95": "Benzinë 95",
+  "Бензин 98+": "Benzinë 98+",
+  "Дизел": "Dizel",
+  "Екстра Лесно": "Vaj i Lehtë",
+  "Мазут": "Mazut"
+},
+"TICKER": {
+  "NEWS_HEADER": "📰 Lajme",
+  "HOLIDAY_HEADER": "📅 Festa e Ardhshme",
+  "NEWS_1": "Aks i ri autostradal Shkup–Tetovë",
+  "NEWS_2": "Paralajmërohet ulje e çmimeve për produktet ushqimore bazë",
+  "DAYS_LEFT": "edhe"
+},
+"AUTH": {
+  "LOGIN_TITLE": "Kycja",
+  "REGISTER_TITLE": "Regjistrimi",
+  "EMAIL": "E-mail",
+  "PASSWORD": "Fjalëkalimi",
+  "SIGN_IN": "Kyçu",
+  "SIGN_UP": "Regjistrohu",
+  "NEED_ACCOUNT": "Nuk keni llogari? Regjistrohu",
+  "HAVE_ACCOUNT": "Keni tashmë llogari? Kyçu"
+}
 }

@@ -22,7 +22,8 @@
     "STEPS": "Steps",
     "LOYALTY": "Cards",
     "DAYS_UNIT": "Days",
-    "CARD_UNIT": "Saved"
+    "CARD_UNIT": "Saved",
+    "HOLIDAY": "Holidays"
   },
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "New Calendar Widget",
@@ -153,5 +154,39 @@
     "CAD": "Canadian Dollar",
     "ALL": "Albanian Lek",
     "BGN": "Bulgarian Lev"
-  }
+  },
+  "HOLIDAYS_MODAL": {
+  "TITLE": "Holidays & Non-Working Days",
+  "SUBTITLE": "Calendar of national and religious holidays",
+  "LEGEND_ALL": "All Citizens",
+  "LEGEND_ORTHODOX": "Orthodox",
+  "LEGEND_MUSLIM": "Muslim",
+  "LEGEND_CATHOLIC": "Catholic",
+  "LEGEND_COMMUNITIES": "Communities"
+},
+"FUEL_TYPES": {
+  "Бензин 95": "Petrol 95",
+  "Бензин 98+": "Petrol 98+",
+  "Дизел": "Diesel",
+  "Екстра Лесно": "Extra Light",
+  "Мазут": "Mazut"
+},
+"TICKER": {
+  "NEWS_HEADER": "📰 News",
+  "HOLIDAY_HEADER": "📅 Upcoming Holiday",
+  "NEWS_1": "New highway section Skopje–Tetovo",
+  "NEWS_2": "Announced price reductions for basic food products",
+  "DAYS_LEFT": "in"
+},
+"AUTH": {
+  "LOGIN_TITLE": "Sign In",
+  "REGISTER_TITLE": "Create Account",
+  "EMAIL": "Email",
+  "PASSWORD": "Password",
+  "SIGN_IN": "Sign In",
+  "SIGN_UP": "Sign Up",
+  "NEED_ACCOUNT": "Don't have an account? Sign Up",
+  "HAVE_ACCOUNT": "Already have an account? Sign In"
+}
+
 }

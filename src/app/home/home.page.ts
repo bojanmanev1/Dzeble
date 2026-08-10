@@ -42,12 +42,22 @@ import { MACEDONIAN_STORES, StorePreset } from '../config/loyalty-stores.config'
 interface Widget {
   id: string;
   translationKey: string;
-  value: string;
+  value?: string;
   unit: string;
   icon: string;
   isCustom?: boolean;
   rawTitle?: string;
   eventDate?: string;
+}
+
+export interface TickerItem {
+  id: string;
+  type: 'news' | 'holiday' | 'alert' | 'system';
+  headerKey?: string;     // Translation key for categories (e.g., 'TICKER.NEWS_HEADER')
+  rawHeader?: string;    // Direct header text from external RSS/News feeds
+  title: string;         // News body / Holiday description
+  linkUrl?: string;      // Optional URL to open when tapped
+  date?: string;
 }
 
 @Component({
@@ -77,8 +87,13 @@ export class HomePage implements OnInit, OnDestroy {
   private loyaltyService = inject(LoyaltyService);
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
-
+currentYear = new Date().getFullYear();
+minCalendarDate = `${this.currentYear}-01-01`;
+maxCalendarDate = `${this.currentYear + 1}-12-31`; // 👈 Allows navigation up to Dec 31, 2027
   parsedWeatherData: any = null;
+  tickerItems: TickerItem[] = [];
+currentTickerIndex = 0;
+private tickerIntervalSub: any = null;
   isDetailModalOpen = false;
   activeDetailWidgetId: string | null = null;
   inputEuroAmount: number = 1;
@@ -88,7 +103,8 @@ export class HomePage implements OnInit, OnDestroy {
   currentCityName = 'Скопје'; 
   rawDatabaseFuel: any[] = [];
   private weatherSub: Subscription | null = null;
-
+  selectedDefaultFuel = localStorage.getItem('default_fuel_type') || 'Дизел';
+  selectedDefaultCurrency = localStorage.getItem('default_currency') || 'EUR';
   // Custom Widget State
   isAddWidgetModalOpen = false;
   newWidgetTitle = '';
@@ -123,12 +139,16 @@ export class HomePage implements OnInit, OnDestroy {
   newBarcodeData: string = '';
   newBarcodeFormat: string = 'CODE128';
   newCardColor: string = '#D32F2F';
+  holidaysList: any[] = [];
+  highlightedHolidayDates: any[] = [];
+  selectedHolidayDetail: any = null;
 
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
-    { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
-    { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
+    { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
+    { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
+    { id: 'holidays', translationKey: 'WIDGETS.HOLIDAY',value: '--.--', unit: 'Празник', icon: 'calendar-number' },    
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
@@ -168,7 +188,7 @@ export class HomePage implements OnInit, OnDestroy {
         this.filterWidgets();
       }
     });
-
+    this.fetchHolidays();
     this.fetchLiveMetrics();
     this.fetchDatabaseCurrencyRates();
     this.fetchDatabaseFuelPrices();
@@ -360,21 +380,12 @@ export class HomePage implements OnInit, OnDestroy {
   async fetchDatabaseFuelPrices() {
     try {
       const fuelData = await this.supabaseService.getLatestFuelPrices();
-      this.rawDatabaseFuel = fuelData || []; 
+      this.rawDatabaseFuel = fuelData || [];
 
       if (this.rawDatabaseFuel.length === 0) return;
 
-      const dieselRecord = this.rawDatabaseFuel.find((f: any) => f.fuel_type === 'Дизел' || f.fuel_type === 'Diesel');
-      const displayPrice = dieselRecord ? dieselRecord.price_mkd.toFixed(1) : '82.5';
-
-      this.allWidgets = this.allWidgets.map(widget => {
-        if (widget.id === 'fuel') {
-          return { ...widget, value: `${displayPrice}` };
-        }
-        return widget;
-      });
-      
-      this.filterWidgets();
+      // Update widget value and label based on the user's saved default fuel type
+      this.updateFuelWidgetDisplay();
     } catch (err) {
       console.error('Failed to resolve local fuel matrices.', err);
     }
@@ -522,28 +533,20 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  async fetchDatabaseCurrencyRates() {
-    try {
-      const ratesData = await this.supabaseService.getLatestCurrencyRates();
-      if (!ratesData) return;
+async fetchDatabaseCurrencyRates() {
+  try {
+    const ratesData = await this.supabaseService.getLatestCurrencyRates();
+    if (!ratesData) return;
 
-      const mkdRecord = ratesData.find((r: any) => r.target_currency === 'MKD');
-      if (mkdRecord) {
-        const liveMkdRate = mkdRecord.rate.toFixed(2); 
+    // Store raw rates so updateCurrencyWidgetDisplay() and the converter can use them
+    this.rawDatabaseRates = ratesData;
 
-        this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'currency') {
-            return { ...widget, value: `${liveMkdRate}` };
-          }
-          return widget;
-        });
-        
-        this.filterWidgets();
-      }
-    } catch (err) {
-      console.error('Failed to resolve currency rates.', err);
-    }
+    // Update widget value and label based on the user's saved default currency
+    this.updateCurrencyWidgetDisplay();
+  } catch (err) {
+    console.error('Failed to resolve currency rates.', err);
   }
+}
 
   async onWidgetClick(widgetId: string) {
     if ((widgetId === 'activity' || widgetId === 'loyalty') && !this.currentUser) {
@@ -580,6 +583,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.weatherSub) this.weatherSub.unsubscribe();
+    if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
   }
 
   async onAvatarClick() {
@@ -692,4 +696,208 @@ export class HomePage implements OnInit, OnDestroy {
     });
     await alert.present();
   }
+
+  setDefaultFuel(fuelType: string) {
+  this.selectedDefaultFuel = fuelType;
+  localStorage.setItem('default_fuel_type', fuelType);
+  this.updateFuelWidgetDisplay();
+}
+
+// Save currency default and update widget label/value instantly
+setDefaultCurrency(currencyCode: string) {
+  this.selectedDefaultCurrency = currencyCode;
+  localStorage.setItem('default_currency', currencyCode);
+  this.updateCurrencyWidgetDisplay();
+}
+
+updateFuelWidgetDisplay() {
+  const match = this.rawDatabaseFuel.find(f => f.fuel_type === this.selectedDefaultFuel);
+  const displayPrice = match ? match.price_mkd.toFixed(1) : '--.-';
+
+  this.allWidgets = this.allWidgets.map(widget => {
+    if (widget.id === 'fuel') {
+      return {
+        ...widget,
+        translationKey: `FUEL_TYPES.${this.selectedDefaultFuel}`, // 👈 Prefixed with translation namespace
+        value: `${displayPrice}`
+      };
+    }
+    return widget;
+  });
+  this.filterWidgets();
+}
+
+// Update Currency Widget Card Display
+updateCurrencyWidgetDisplay() {
+  if (this.selectedDefaultCurrency === 'EUR') {
+    const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+    const eurRate = mkdRecord ? mkdRecord.rate.toFixed(2) : '61.49';
+
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'currency') {
+        return { ...widget, translationKey: 'EUR', value: `${eurRate}` };
+      }
+      return widget;
+    });
+  } else {
+    const targetRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === this.selectedDefaultCurrency);
+    const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+
+    if (targetRecord && mkdRecord) {
+      // Direct rate of 1 Foreign Currency to MKD
+      const rateToMkd = (mkdRecord.rate / targetRecord.rate).toFixed(2);
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'currency') {
+          return { ...widget, translationKey: this.selectedDefaultCurrency, value: `${rateToMkd}` };
+        }
+        return widget;
+      });
+    }
+  }
+  this.filterWidgets();
+}
+
+  formatHolidayDateDDMMYYYY(dateStr?: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+async fetchHolidays() {
+  try {
+    this.holidaysList = await this.supabaseService.getHolidays();
+    
+    if (this.holidaysList && this.holidaysList.length > 0) {
+      this.updateHolidayWidgetDisplay();
+
+      this.loadTickerData();
+
+      this.highlightedHolidayDates = this.holidaysList.map(h => ({
+        date: h.holiday_date,
+        textColor: '#ffffff',
+        backgroundColor: h.color_code || '#ef4444'
+      }));
+    }
+  } catch (err) {
+    console.error('Error fetching holidays:', err);
+  }
+}
+
+// When user taps a date inside the Ionic Calendar
+onCalendarDateChange(event: any) {
+  const selectedDateStr = event.detail.value.split('T')[0];
+  this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
+}
+
+
+updateHolidayWidgetDisplay() {
+  if (!this.holidaysList || this.holidaysList.length === 0) return;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
+
+  if (upcomingHoliday) {
+    const [year, month, day] = upcomingHoliday.holiday_date.split('-');
+    const formattedDate = `${day}.${month}`; // Output: "28.08"
+
+    // Update allWidgets array
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'holidays') {
+        return {
+          ...widget,
+          value: formattedDate
+        };
+      }
+      return widget;
+    });
+
+    // Also update visibleWidgets directly to ensure instant template refresh
+    this.visibleWidgets = this.visibleWidgets.map(widget => {
+      if (widget.id === 'holidays') {
+        return {
+          ...widget,
+          value: formattedDate
+        };
+      }
+      return widget;
+    });
+  }
+}
+
+
+// Start 5-Second Interval Timer
+startTickerRotation() {
+  if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
+
+  this.tickerIntervalSub = setInterval(() => {
+    if (this.tickerItems.length > 0) {
+      this.currentTickerIndex = (this.currentTickerIndex + 1) % this.tickerItems.length;
+    }
+  }, 5000);
+}
+
+
+
+async loadTickerData() {
+  const combinedItems: TickerItem[] = [];
+
+  // A. Fetch Real News from Supabase / External API (Placeholder for future implementation)
+  const newsFromDb = await this.fetchLatestNewsFromDatabase();
+  
+  if (newsFromDb.length > 0) {
+    combinedItems.push(...newsFromDb);
+  } else {
+    // Fallback Dummy News until real feed is connected
+    combinedItems.push({
+      id: 'dummy-1',
+      type: 'news',
+      headerKey: 'TICKER.NEWS_HEADER',
+      title: this.translate.instant('TICKER.NEWS_1')
+    });
+  }
+
+  // B. Dynamically Inject Upcoming Holiday from Calendar
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
+
+  if (upcomingHoliday) {
+    const holidayTitle = upcomingHoliday[`title_${this.currentLang}`] || upcomingHoliday.title_mk;
+    const formattedDate = this.formatHolidayDateDDMMYYYY(upcomingHoliday.holiday_date);
+
+    combinedItems.splice(1, 0, {
+      id: `holiday-${upcomingHoliday.id}`,
+      type: 'holiday',
+      headerKey: 'TICKER.HOLIDAY_HEADER',
+      title: `${holidayTitle} (${formattedDate})`
+    });
+  }
+
+  this.tickerItems = combinedItems;
+  this.startTickerRotation();
+}
+
+// Dummy database query function ready for your future Supabase table / Scraper API
+async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
+  try {
+    // Future integration example:
+    // const { data } = await this.supabaseService.client.from('latest_news').select('*').limit(5);
+    // return data.map(n => ({ id: n.id, type: 'news', rawHeader: n.source_name, title: n.title, linkUrl: n.url }));
+    return [];
+  } catch (err) {
+    return [];
+  }
+}
+
+
+onTickerItemClick(item: TickerItem) {
+  if (!item) return;
+
+  if (item.type === 'holiday') {
+    // Opens Holiday Calendar Modal
+    this.onWidgetClick('holidays');
+  } else if (item.linkUrl) {
+    // Opens External News Link
+    window.open(item.linkUrl, '_blank');
+  }
+}
 }
