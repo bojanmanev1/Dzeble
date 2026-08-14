@@ -1,17 +1,31 @@
 <ion-content [fullscreen]="true" class="auth-content">
 
   <div class="back-btn-container">
-    <button class="btn-back" (click)='goBack()'>←</button>
+    <button class="btn-back" (click)="goBack()">←</button>
   </div>
 
   <div class="auth-wrapper">
     <div class="auth-header">
       <span class="auth-logo">📱</span>
-      <h1>{{ 'AUTH.LOGIN_TITLE' | translate }}</h1>
+      <h1>{{ (isSignUpMode ? 'AUTH.REGISTER_TITLE' : 'AUTH.LOGIN_TITLE') | translate }}</h1>
     </div>
 
     <form (submit)="onSubmit(); $event.preventDefault()" class="auth-form">
       
+      <!-- Full Name Field (Only in Sign Up Mode) -->
+      @if (isSignUpMode) {
+        <div class="input-group">
+          <label>{{ 'AUTH.FULL_NAME' | translate }}</label>
+          <input 
+            type="text" 
+            name="fullName" 
+            [(ngModel)]="fullName" 
+            required 
+            placeholder="John Doe"
+          />
+        </div>
+      }
+
       <div class="input-group">
         <label>{{ 'AUTH.EMAIL' | translate }}</label>
         <input 
@@ -38,6 +52,10 @@
         <p class="error-text">{{ errorMessage | translate }}</p>
       }
 
+      @if (successMessage) {
+        <p class="success-text">{{ successMessage | translate }}</p>
+      }
+
       <button type="submit" class="btn-submit" [disabled]="isLoading">
         @if (isLoading) {
           <ion-spinner name="crescent"></ion-spinner>
@@ -48,6 +66,18 @@
 
     </form>
 
+    <!-- Divider -->
+    <div class="auth-divider">
+      <span>{{ 'AUTH.OR' | translate }}</span>
+    </div>
+
+    <!-- Google Sign-In Button -->
+    <button class="btn-google" (click)="signInWithGoogle()" [disabled]="isLoading">
+      <img src="assets/icon/google-logo.svg" alt="Google" class="google-icon" />
+      <span>{{ 'AUTH.CONTINUE_WITH_GOOGLE' | translate }}</span>
+    </button>
+
+    <!-- Toggle Mode -->
     <button class="btn-toggle-mode" (click)="toggleMode()">
       {{ (isSignUpMode ? 'AUTH.HAVE_ACCOUNT' : 'AUTH.NEED_ACCOUNT') | translate }}
     </button>

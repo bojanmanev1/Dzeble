@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { AuthChangeEvent, createClient, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { BehaviorSubject } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
@@ -14,21 +14,25 @@ export class SupabaseService {
   public currentUser$ = new BehaviorSubject<User | null>(null);
   public isPremium$ = new BehaviorSubject<boolean>(false);
 
-  constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+constructor() {
+  this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
 
-    // Listen to Auth changes automatically (e.g., when a guest logs in)
-    this.supabase.auth.onAuthStateChange((event, session) => {
-      const user = session?.user ?? null;
+  // Listen to Auth changes automatically
+  this.supabase.auth.onAuthStateChange((event, session) => {
+    const user = session?.user ?? null;
+
+    // ONLY log in user if email is confirmed (or provider is OAuth like Google)
+    const isEmailConfirmed = user?.email_confirmed_at != null || user?.app_metadata?.provider === 'google';
+
+    if (user && isEmailConfirmed) {
       this.currentUser$.next(user);
-      
-      if (user) {
-        this.checkPremiumStatus(user.id);
-      } else {
-        this.isPremium$.next(false);
-      }
-    });
-  }
+      this.checkPremiumStatus(user.id);
+    } else {
+      this.currentUser$.next(null);
+      this.isPremium$.next(false);
+    }
+  });
+}
 
   get client(): SupabaseClient {
     return this.supabase;
@@ -46,43 +50,87 @@ export class SupabaseService {
       this.isPremium$.next(data.is_premium);
     }
   }
+
+  onAuthStateChange(callback: (event: AuthChangeEvent, session: Session | null) => void) {
+    return this.supabase.auth.onAuthStateChange(callback);
+  }
 // 1. SIGN UP method
-async signUp(email: string, password: string) {
-    const cleanEmail = email.trim().replace(/^["']|["']$/g, '');
-    
+async signUp(email: string, password: string, fullName: string) {
     const { data, error } = await this.supabase.auth.signUp({
-      email: cleanEmail,
-      password
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName
+        },
+        emailRedirectTo: window.location.origin
+      }
     });
     if (error) throw error;
     return data;
   }
 
+// 2. Sign In with Google OAuth
+async signInWithGoogle() {
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/login`
+      }
+    });
+    if (error) throw error;
+    return data;
+  }
+
+async registerNewDeviceSession(userId: string) {
+    const newSessionId = crypto.randomUUID();
+    localStorage.setItem('app_device_session_id', newSessionId);
+
+    const { error } = await this.supabase
+      .from('profiles')
+      .update({ active_session_id: newSessionId })
+      .eq('id', userId);
+
+    if (error) console.error('Failed to register device session:', error);
+  }
+
   // 2. SIGN IN method
 async signIn(email: string, password: string) {
-    const cleanEmail = email.trim().replace(/^["']|["']$/g, '');
-
     const { data, error } = await this.supabase.auth.signInWithPassword({
-      email: cleanEmail,
+      email,
       password
+    });
+    if (error) throw error;
+    
+    if (data.user) {
+      await this.registerNewDeviceSession(data.user.id);
+    }
+    return data;
+  }
+
+
+  async getCurrentUser() {
+    return await this.supabase.auth.getUser();
+  }
+
+async resendConfirmationEmail(email: string) {
+    const { data, error } = await this.supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
     });
     if (error) throw error;
     return data;
   }
   // Sign out the current user
 async signOut() {
-    // 1. Remove our local device tracking session
-    await Preferences.remove({ key: 'active_app_session_id' });
-    
-    // 2. Await the sign out call to resolve the promise, then get the error
+    localStorage.removeItem('app_device_session_id');
     const { error } = await this.supabase.auth.signOut();
-    
-    // 3. Update local observables so the UI reacts instantly
-    this.currentUser$.next(null);
-    this.isPremium$.next(false);
-
     if (error) throw error;
   }
+
 
 async upgradeToPremium(userId: string): Promise<boolean> {
     const { error } = await this.supabase
@@ -97,6 +145,28 @@ async upgradeToPremium(userId: string): Promise<boolean> {
 
     // Push the updated state instantly to our app stream
     this.isPremium$.next(true);
+    return true;
+  }
+
+
+async validateSession(user: User): Promise<boolean> {
+    const localSessionId = localStorage.getItem('app_device_session_id');
+
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('active_session_id')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !data) return true; // Fallback if record missing
+
+    // Return false if session mismatch detected
+    if (data.active_session_id && data.active_session_id !== localSessionId) {
+      await this.supabase.auth.signOut();
+      localStorage.removeItem('app_device_session_id');
+      return false;
+    }
+
     return true;
   }
 
