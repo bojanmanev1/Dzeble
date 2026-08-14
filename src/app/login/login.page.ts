@@ -53,54 +53,59 @@ ngOnInit() {
     this.successMessage = '';
   }
 
-  async onSubmit() {
-    this.errorMessage = '';
-    this.successMessage = '';
+ async onSubmit() {
+  this.errorMessage = '';
+  this.successMessage = '';
 
-    if (!this.email || !this.password) {
-      this.errorMessage = this.translate.instant('AUTH.FILL_REQUIRED_FIELDS');
-      return;
-    }
+  if (!this.email || !this.password) {
+    this.errorMessage = this.translate.instant('AUTH.FILL_REQUIRED_FIELDS');
+    return;
+  }
 
-    this.isLoading = true;
+  this.isLoading = true;
 
-    try {
-      if (this.isSignUpMode) {
-        // --- SIGN UP FLOW ---
-        await this.supabaseService.signUp(this.email, this.password, this.fullName);
-        this.successMessage = this.translate.instant('AUTH.CONFIRM_EMAIL_SENT');
+  try {
+    if (this.isSignUpMode) {
+      // --- SIGN UP FLOW ---
+      const { user, session } = await this.supabaseService.signUp(this.email, this.password, this.fullName);
+
+      // If session is NULL or user needs confirmation, DO NOT navigate!
+      if (!user?.email_confirmed_at) {
+        // Sign out immediately just in case Supabase issued a temporary session
+        await this.supabaseService.signOut();
+        
+        this.successMessage = 'Регистрацијата е успешна! Ве молиме проверете ја вашата е-пошта за да ја потврдите сметката.';
         alert(this.successMessage);
       } else {
-        // --- SIGN IN FLOW ---
-        await this.supabaseService.signIn(this.email, this.password);
+        // Only navigate if already confirmed
         this.router.navigate(['/']);
       }
-    } catch (err: any) {
-      console.error('Auth Error:', err);
-
-      if (err.message?.includes('already registered')) {
-        // Offer to resend confirmation email if account exists but isn't confirmed
-        const resendMsg = this.translate.instant('AUTH.RESEND_PROMPT') || 
-          'Оваа е-пошта е веќе регистрирана, но сè уште не е потврдена. Дали сакате повторно да добиете е-пошта за потврда?';
-        
-        const shouldResend = confirm(resendMsg);
-        
-        if (shouldResend) {
-          try {
-            await this.supabaseService.resendConfirmationEmail(this.email);
-            this.successMessage = this.translate.instant('AUTH.CONFIRM_EMAIL_SENT');
-            alert(this.successMessage);
-          } catch (resendErr: any) {
-            this.errorMessage = resendErr.message;
-          }
-        }
-      } else {
-        this.errorMessage = err.message || this.translate.instant('AUTH.GENERIC_ERROR');
-      }
-    } finally {
-      this.isLoading = false;
+    } else {
+      // --- SIGN IN FLOW ---
+      await this.supabaseService.signIn(this.email, this.password);
+      this.router.navigate(['/']);
     }
+  } catch (err: any) {
+    console.error('Auth Error:', err);
+
+    if (err.message?.includes('already registered')) {
+      const resendMsg = 'Оваа е-пошта е веќе регистрирана, но сè уште не е потврдена. Дали сакате повторно да добиете е-пошта за потврда?';
+      
+      if (confirm(resendMsg)) {
+        try {
+          await this.supabaseService.resendConfirmationEmail(this.email);
+          alert('Е-поштата за потврда е повторно испратена!');
+        } catch (resendErr: any) {
+          this.errorMessage = resendErr.message;
+        }
+      }
+    } else {
+      this.errorMessage = err.message || this.translate.instant('AUTH.GENERIC_ERROR');
+    }
+  } finally {
+    this.isLoading = false;
   }
+}
 
   async signInWithGoogle() {
     try {
