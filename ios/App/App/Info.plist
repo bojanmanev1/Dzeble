@@ -51,5 +51,17 @@
     <string>Џебле има потреба од локација за да прикаже точно време во вашиот град.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Џебле ја користи локацијата за праќање известувања за временски непогоди.</string>
+    <key>CFBundleURLTypes</key>
+	<array>
+	<dict>
+		<key>CFBundleURLName</key>
+		<string>com.dzeble.app</string>
+		<key>CFBundleURLSchemes</key>
+		<array>
+		<string>dzeble</string>
+		</array>
+	</dict>
+	</array>
+
 </dict>
 </plist>
