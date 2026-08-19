@@ -7,7 +7,7 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root'
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  public supabase: SupabaseClient;
   
   public currentUser$ = new BehaviorSubject<User | null>(null);
 
@@ -55,14 +55,24 @@ export class SupabaseService {
 }
 
   // --- SIGN IN WITH GOOGLE ---
-  async signInWithGoogle() {
-    const { data, error } = await this.supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/login` }
-    });
-    if (error) throw error;
-    return data;
-  }
+async signInWithGoogle() {
+  const isNative = (window as any).Capacitor?.isNativePlatform();
+  const redirectTo = isNative ? 'dzeble://auth/callback' : `${window.location.origin}/login`;
+
+  const { data, error } = await this.supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    }
+  });
+
+  if (error) throw error;
+  return data;
+}
 
   // --- SIGN IN WITH PASSWORD ---
   async signIn(email: string, password: string) {
@@ -299,4 +309,27 @@ export class SupabaseService {
     if (error) return [];
     return data || [];
   }
+
+  async resetPasswordForEmail(email: string) {
+  const isNative = (window as any).Capacitor?.isNativePlatform();
+  const redirectTo = isNative 
+    ? 'dzeble://reset-password' 
+    : `${window.location.origin}/reset-password`;
+
+  const { data, error } = await this.supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+async updateUserPassword(newPassword: string) {
+  const { data, error } = await this.supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) throw error;
+  return data;
+}
 }

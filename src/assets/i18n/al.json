@@ -189,6 +189,7 @@
   "NEED_ACCOUNT": "Nuk keni llogari? Regjistrohu",
   "HAVE_ACCOUNT": "Keni tashmë llogari? Kyçu",
   "OR": "ose",
+  "FORGOT_PASSWORD": "Keni harruar fjalëkalimin?",
   "CONTINUE_WITH_GOOGLE": "Vazhdo me Google",
   "LOGGED_OUT_OTHER_DEVICE": "Llogaria juaj u kyç nga një pajisje tjetër.",
   "CONFIRM_EMAIL_SENT": "Regjistrimi u krye me sukses! Ju lutemi kontrolloni e-mailin tuaj për konfirmim."

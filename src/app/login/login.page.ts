@@ -130,4 +130,21 @@ export class LoginPage implements OnInit {
   goBack() {
     this.router.navigate(['/']);
   }
+
+  async onForgotPassword() {
+  if (!this.email) {
+    this.errorMessage = 'Ве молиме внесете ја вашата е-пошта за ресетирање.';
+    return;
+  }
+
+  try {
+    this.isLoading = true;
+    await this.supabaseService.resetPasswordForEmail(this.email);
+    alert('Испратена е порака за ресетирање на вашата е-пошта!');
+  } catch (err: any) {
+    this.errorMessage = err.message;
+  } finally {
+    this.isLoading = false;
+  }
+}
 }

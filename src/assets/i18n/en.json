@@ -189,6 +189,7 @@
   "NEED_ACCOUNT": "Don't have an account? Sign Up",
   "HAVE_ACCOUNT": "Already have an account? Sign In",
   "OR": "or",
+  "FORGOT_PASSWORD": "Forgot password?",
   "CONTINUE_WITH_GOOGLE": "Continue with Google",
   "LOGGED_OUT_OTHER_DEVICE": "Your account was logged in from another device.",
   "CONFIRM_EMAIL_SENT": "Registration successful! Please check your email for confirmation."

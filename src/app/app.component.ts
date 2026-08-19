@@ -19,7 +19,7 @@ export class AppComponent implements OnInit {
   private zone = inject(NgZone);
 
   async ngOnInit() {
-    // 1. Setup Deep Link Listener for Mobile Email Confirmations (dzeble://)
+    // 1. Setup Deep Link Listener for Mobile Auth Confirmations (dzeble://)
     this.setupDeepLinks();
 
     // 2. Background analytics tracking
@@ -32,15 +32,41 @@ export class AppComponent implements OnInit {
   private setupDeepLinks() {
     App.addListener('appUrlOpen', (event: URLOpenListenerEvent) => {
       this.zone.run(async () => {
-        // Example event.url: dzeble://auth/callback#access_token=...
+        // Intercept all native custom scheme redirects
         if (event.url.includes('dzeble://')) {
-          // Allow Supabase to process the URL fragment tokens
-          const { data } = await this.supabaseService.getCurrentUser();
+          
+          // 1. Extract hash fragment or query params from the deep link URL
+          const urlObj = new URL(event.url.replace('dzeble://', 'https://dummy/'));
+          const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+          const queryParams = new URLSearchParams(urlObj.search);
 
-          if (data?.user?.email_confirmed_at) {
-            await this.supabaseService.registerNewDeviceSession(data.user.id);
+          const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+
+          // 2. If OAuth/MagicLink/Reset Link returned session tokens, set them into Supabase SDK
+          if (accessToken && refreshToken) {
+            await this.supabaseService.supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+          }
+
+          // 3. Check if the link target is the Password Reset route
+          if (event.url.includes('reset-password')) {
+            this.router.navigate(['/reset-password']);
+            return;
+          }
+
+          // 4. Standard Login / Sign-up confirmation handling
+          const { data } = await this.supabaseService.getCurrentUser();
+          const user = data?.user;
+          const isVerified = user?.email_confirmed_at != null || user?.app_metadata?.provider === 'google';
+
+          if (user && isVerified) {
+            await this.supabaseService.registerNewDeviceSession(user.id);
             this.router.navigate(['/']);
           } else {
+            await this.supabaseService.signOut();
             this.router.navigate(['/login']);
           }
         }
