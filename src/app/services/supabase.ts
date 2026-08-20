@@ -120,25 +120,25 @@ async signInWithGoogle() {
     if (error) console.error('Failed to register device session:', error);
   }
 
-  async validateSession(user: User): Promise<boolean> {
-    const localSessionId = localStorage.getItem('app_device_session_id');
+async validateSession(user: User): Promise<boolean> {
+  const localSessionId = localStorage.getItem('app_device_session_id');
 
-    const { data, error } = await this.supabase
-      .from('profiles')
-      .select('active_session_id')
-      .eq('id', user.id)
-      .single();
+  const { data, error } = await this.supabase
+    .from('profiles')
+    .select('active_session_id')
+    .eq('id', user.id)
+    .maybeSingle(); 
 
-    if (error || !data) return true;
+  if (error || !data) return true;
 
-    if (data.active_session_id && data.active_session_id !== localSessionId) {
-      await this.supabase.auth.signOut();
-      localStorage.removeItem('app_device_session_id');
-      return false;
-    }
-
-    return true;
+  if (data.active_session_id && data.active_session_id !== localSessionId) {
+    await this.supabase.auth.signOut();
+    localStorage.removeItem('app_device_session_id');
+    return false;
   }
+
+  return true;
+}
 
   // --- APP METRICS & UTILITIES ---
   async syncUserWeather(metrics: { userId: string; lat: number; lng: number; temp: number; code: number; uv: number; }) {

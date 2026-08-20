@@ -2,6 +2,7 @@ import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@a
 import { Router } from '@angular/router';
 import { SupabaseService } from '../services/supabase';
 import { WeatherService } from '../services/weather';
+import { CryptoService, CryptoTicker } from '../services/crypto';
 import { CommonModule } from '@angular/common';
 import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 import { User } from '@supabase/supabase-js';
@@ -9,7 +10,7 @@ import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { addIcons } from 'ionicons';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
-
+import { NetworkService } from '../services/network';
 import { 
   leaf, 
   cloudy, 
@@ -21,7 +22,10 @@ import {
   notifications, 
   checkmarkCircleOutline,
   footsteps,
-  card
+  card,
+  personOutline,
+  statsChart,
+  trendingUp
 } from 'ionicons/icons';
 
 import { 
@@ -31,6 +35,7 @@ import {
   IonModal, 
   IonIcon,
   IonDatetime,
+  IonToggle,
   AlertController
 } from '@ionic/angular/standalone';
 
@@ -53,10 +58,10 @@ interface Widget {
 export interface TickerItem {
   id: string;
   type: 'news' | 'holiday' | 'alert' | 'system';
-  headerKey?: string;     // Translation key for categories (e.g., 'TICKER.NEWS_HEADER')
-  rawHeader?: string;    // Direct header text from external RSS/News feeds
-  title: string;         // News body / Holiday description
-  linkUrl?: string;      // Optional URL to open when tapped
+  headerKey?: string;
+  rawHeader?: string;
+  title: string;
+  linkUrl?: string;
   date?: string;
 }
 
@@ -74,6 +79,7 @@ export interface TickerItem {
     IonModal,
     IonIcon,
     IonDatetime,
+    IonToggle,
     FormsModule,
     BarcodeRenderDirective,
     TranslatePipe
@@ -82,18 +88,22 @@ export interface TickerItem {
 export class HomePage implements OnInit, OnDestroy {
   private supabaseService = inject(SupabaseService);
   private weatherService = inject(WeatherService);
+  private cryptoService = inject(CryptoService);
   private translate = inject(TranslateService);
   private healthService = inject(HealthService);
   private loyaltyService = inject(LoyaltyService);
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
-currentYear = new Date().getFullYear();
-minCalendarDate = `${this.currentYear}-01-01`;
-maxCalendarDate = `${this.currentYear + 1}-12-31`; // 👈 Allows navigation up to Dec 31, 2027
+  public networkService = inject(NetworkService);
+  currentYear = new Date().getFullYear();
+  minCalendarDate = `${this.currentYear}-01-01`;
+  maxCalendarDate = `${this.currentYear + 1}-12-31`;
+
   parsedWeatherData: any = null;
   tickerItems: TickerItem[] = [];
-currentTickerIndex = 0;
-private tickerIntervalSub: any = null;
+  currentTickerIndex = 0;
+  private tickerIntervalSub: any = null;
+
   isDetailModalOpen = false;
   activeDetailWidgetId: string | null = null;
   inputEuroAmount: number = 1;
@@ -103,10 +113,18 @@ private tickerIntervalSub: any = null;
   currentCityName = 'Скопје'; 
   rawDatabaseFuel: any[] = [];
   private weatherSub: Subscription | null = null;
+  private cryptoSub: Subscription | null = null;
   selectedDefaultFuel = localStorage.getItem('default_fuel_type') || 'Дизел';
   selectedDefaultCurrency = localStorage.getItem('default_currency') || 'EUR';
-  // Custom Widget State
+
+  // Live Crypto Map
+  cryptoMap = new Map<string, CryptoTicker>();
+  selectedCryptoPair = localStorage.getItem('crypto_selected_pair') || 'BTCUSDT';
+
   isAddWidgetModalOpen = false;
+  isSettingsSheetOpen = false;
+  isDarkMode = localStorage.getItem('theme_mode') === 'dark';
+
   newWidgetTitle = '';
   newWidgetDate: string = new Date().toISOString();
   inputMkdAmount: number = 100;
@@ -114,7 +132,7 @@ private tickerIntervalSub: any = null;
   last7DaysHealth: any[] = [];
   notified10k = false;
   notified15k = false;
-
+selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_display_currency') as any) || 'MKD';
   private storeColorMap: { [key: string]: string } = {
     'tinex': '#D32F2F',
     'ramstore': '#E65100',
@@ -128,11 +146,11 @@ private tickerIntervalSub: any = null;
     'cosmo': '#8E24AA'
   };
 
-  // 🌟 Loyalty Cards State
   loyaltyCards: LoyaltyCard[] = [];
   selectedLoyaltyCard: LoyaltyCard | null = null;
   loyaltyModalView: 'list' | 'view' | 'add' = 'list';
-  
+  cryptoModalView: 'list' | 'detail' = 'list';
+  selectedCoinDetail: CryptoTicker | null = null;
   stores: StorePreset[] = MACEDONIAN_STORES;
   newCardStore: string = 'Tinex';
   newCustomStoreName: string = '';
@@ -148,7 +166,7 @@ private tickerIntervalSub: any = null;
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
     { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
     { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
-    { id: 'holidays', translationKey: 'WIDGETS.HOLIDAY',value: '--.--', unit: 'Празник', icon: 'calendar-number' },    
+{ id: 'crypto', translationKey: '--', value: 'BTC', unit: 'BTC', icon: 'stats-chart' },    { id: 'holidays', translationKey: 'WIDGETS.HOLIDAY', value: '--.--', unit: 'Празник', icon: 'calendar-number' },    
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
@@ -170,7 +188,10 @@ private tickerIntervalSub: any = null;
       'notifications': notifications,
       'checkmark-circle-outline': checkmarkCircleOutline,
       'footsteps': footsteps,
-      'card': card
+      'card': card,
+      'person-outline': personOutline,
+      'stats-chart': statsChart,
+      'trending-up': trendingUp
     });
   }
 
@@ -188,13 +209,76 @@ private tickerIntervalSub: any = null;
         this.filterWidgets();
       }
     });
+
     this.fetchHolidays();
     this.fetchLiveMetrics();
     this.fetchDatabaseCurrencyRates();
     this.fetchDatabaseFuelPrices();
+    this.initLiveCrypto();
   }
 
-  // --- LOYALTY CARD METHODS ---
+  // --- CRYPTO STREAMING LOGIC ---
+
+initLiveCrypto() {
+  this.cryptoService.connect();
+  this.cryptoSub = this.cryptoService.cryptoData$.subscribe((map) => {
+    this.cryptoMap = map;
+    this.updateCryptoWidgetDisplay();
+  });
+}
+
+updateCryptoWidgetDisplay() {
+  const ticker = this.cryptoMap.get(this.selectedCryptoPair);
+  if (!ticker) return;
+
+  const displayPrice = this.formatCompactPrice(ticker.price, this.selectedCryptoCurrency);
+
+  this.allWidgets = this.allWidgets.map(w => {
+    if (w.id === 'crypto') {
+      return {
+        ...w,
+        value: ticker.symbol,         // 👈 Big center text: "BTC"
+        translationKey: displayPrice  // 👈 Gray subtext: "3.79M ден."
+      };
+    }
+    return w;
+  });
+  this.filterWidgets();
+}
+
+  getCryptoList(): CryptoTicker[] {
+    return Array.from(this.cryptoMap.values());
+  }
+
+ selectCryptoForWidget(pair: string) {
+  this.selectedCryptoPair = pair;
+  localStorage.setItem('crypto_selected_pair', pair);
+  this.updateCryptoWidgetDisplay();
+}
+
+  openSettingsSheet() {
+    this.isSettingsSheetOpen = true;
+  }
+
+  goToLogin() {
+    this.isSettingsSheetOpen = false;
+    setTimeout(() => {
+      this.router.navigate(['/login']);
+    }, 150);
+  }
+
+  toggleDarkMode(event: any) {
+    this.isDarkMode = event.detail.checked;
+    localStorage.setItem('theme_mode', this.isDarkMode ? 'dark' : 'light');
+    document.body.classList.toggle('dark', this.isDarkMode);
+  }
+
+  async handleLogout() {
+    this.isSettingsSheetOpen = false;
+    await this.supabaseService.signOut();
+    this.allWidgets = this.allWidgets.filter(w => !w.isCustom);
+    this.filterWidgets();
+  }
 
   async loadLoyaltyCards(userId: string) {
     this.loyaltyCards = await this.loyaltyService.getUserCards(userId);
@@ -233,6 +317,15 @@ private tickerIntervalSub: any = null;
     this.selectedLoyaltyCard = null;
     this.loyaltyService.resetBrightness();
   }
+  openCoinDetail(coin: CryptoTicker) {
+  this.selectedCoinDetail = coin;
+  this.cryptoModalView = 'detail';
+}
+
+closeCoinDetail() {
+  this.cryptoModalView = 'list';
+  this.selectedCoinDetail = null;
+}
 
   onStoreNameInput() {
     const cleanName = this.newCustomStoreName.trim().toLowerCase();
@@ -289,8 +382,6 @@ private tickerIntervalSub: any = null;
       this.closeLoyaltySubView();
     }
   }
-
-  // --- HEALTH & METRICS ---
 
   async syncHealthData(userId: string) {
     const hardwareSteps = await this.healthService.getTodayDeviceSteps();
@@ -383,8 +474,6 @@ private tickerIntervalSub: any = null;
       this.rawDatabaseFuel = fuelData || [];
 
       if (this.rawDatabaseFuel.length === 0) return;
-
-      // Update widget value and label based on the user's saved default fuel type
       this.updateFuelWidgetDisplay();
     } catch (err) {
       console.error('Failed to resolve local fuel matrices.', err);
@@ -533,20 +622,17 @@ private tickerIntervalSub: any = null;
     }
   }
 
-async fetchDatabaseCurrencyRates() {
-  try {
-    const ratesData = await this.supabaseService.getLatestCurrencyRates();
-    if (!ratesData) return;
+  async fetchDatabaseCurrencyRates() {
+    try {
+      const ratesData = await this.supabaseService.getLatestCurrencyRates();
+      if (!ratesData) return;
 
-    // Store raw rates so updateCurrencyWidgetDisplay() and the converter can use them
-    this.rawDatabaseRates = ratesData;
-
-    // Update widget value and label based on the user's saved default currency
-    this.updateCurrencyWidgetDisplay();
-  } catch (err) {
-    console.error('Failed to resolve currency rates.', err);
+      this.rawDatabaseRates = ratesData;
+      this.updateCurrencyWidgetDisplay();
+    } catch (err) {
+      console.error('Failed to resolve currency rates.', err);
+    }
   }
-}
 
   async onWidgetClick(widgetId: string) {
     if ((widgetId === 'activity' || widgetId === 'loyalty') && !this.currentUser) {
@@ -583,30 +669,9 @@ async fetchDatabaseCurrencyRates() {
 
   ngOnDestroy() {
     if (this.weatherSub) this.weatherSub.unsubscribe();
+    if (this.cryptoSub) this.cryptoSub.unsubscribe();
     if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
-  }
-
-  async onAvatarClick() {
-    if (this.currentUser) {
-      const alert = await this.alertCtrl.create({
-        header: this.translate.instant('HOME.CONFIRM_LOGOUT_TITLE'),
-        message: this.translate.instant('HOME.CONFIRM_LOGOUT_MSG'),
-        buttons: [
-          { text: this.translate.instant('HOME.CANCEL'), role: 'cancel' },
-          { 
-            text: this.translate.instant('HOME.LOGOUT'), 
-            handler: async () => {
-              await this.supabaseService.signOut();
-              this.allWidgets = this.allWidgets.filter(w => !w.isCustom);
-              this.filterWidgets();
-            } 
-          }
-        ]
-      });
-      await alert.present();
-    } else {
-      this.router.navigate(['/login']);
-    }
+    this.cryptoService.disconnect();
   }
 
   async loadUserCustomWidgets(userId: string) {
@@ -698,206 +763,253 @@ async fetchDatabaseCurrencyRates() {
   }
 
   setDefaultFuel(fuelType: string) {
-  this.selectedDefaultFuel = fuelType;
-  localStorage.setItem('default_fuel_type', fuelType);
-  this.updateFuelWidgetDisplay();
-}
+    this.selectedDefaultFuel = fuelType;
+    localStorage.setItem('default_fuel_type', fuelType);
+    this.updateFuelWidgetDisplay();
+  }
 
-// Save currency default and update widget label/value instantly
-setDefaultCurrency(currencyCode: string) {
-  this.selectedDefaultCurrency = currencyCode;
-  localStorage.setItem('default_currency', currencyCode);
-  this.updateCurrencyWidgetDisplay();
-}
+  setDefaultCurrency(currencyCode: string) {
+    this.selectedDefaultCurrency = currencyCode;
+    localStorage.setItem('default_currency', currencyCode);
+    this.updateCurrencyWidgetDisplay();
+  }
 
-updateFuelWidgetDisplay() {
-  const match = this.rawDatabaseFuel.find(f => f.fuel_type === this.selectedDefaultFuel);
-  const displayPrice = match ? match.price_mkd.toFixed(1) : '--.-';
-
-  this.allWidgets = this.allWidgets.map(widget => {
-    if (widget.id === 'fuel') {
-      return {
-        ...widget,
-        translationKey: `FUEL_TYPES.${this.selectedDefaultFuel}`, // 👈 Prefixed with translation namespace
-        value: `${displayPrice}`
-      };
-    }
-    return widget;
-  });
-  this.filterWidgets();
-}
-
-// Update Currency Widget Card Display
-updateCurrencyWidgetDisplay() {
-  if (this.selectedDefaultCurrency === 'EUR') {
-    const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
-    const eurRate = mkdRecord ? mkdRecord.rate.toFixed(2) : '61.49';
+  updateFuelWidgetDisplay() {
+    const match = this.rawDatabaseFuel.find(f => f.fuel_type === this.selectedDefaultFuel);
+    const displayPrice = match ? match.price_mkd.toFixed(1) : '--.-';
 
     this.allWidgets = this.allWidgets.map(widget => {
-      if (widget.id === 'currency') {
-        return { ...widget, translationKey: 'EUR', value: `${eurRate}` };
+      if (widget.id === 'fuel') {
+        return {
+          ...widget,
+          translationKey: `FUEL_TYPES.${this.selectedDefaultFuel}`,
+          value: `${displayPrice}`
+        };
       }
       return widget;
     });
-  } else {
-    const targetRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === this.selectedDefaultCurrency);
-    const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+    this.filterWidgets();
+  }
 
-    if (targetRecord && mkdRecord) {
-      // Direct rate of 1 Foreign Currency to MKD
-      const rateToMkd = (mkdRecord.rate / targetRecord.rate).toFixed(2);
+  updateCurrencyWidgetDisplay() {
+    if (this.selectedDefaultCurrency === 'EUR') {
+      const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+      const eurRate = mkdRecord ? mkdRecord.rate.toFixed(2) : '61.49';
+
       this.allWidgets = this.allWidgets.map(widget => {
         if (widget.id === 'currency') {
-          return { ...widget, translationKey: this.selectedDefaultCurrency, value: `${rateToMkd}` };
+          return { ...widget, translationKey: 'EUR', value: `${eurRate}` };
+        }
+        return widget;
+      });
+    } else {
+      const targetRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === this.selectedDefaultCurrency);
+      const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
+
+      if (targetRecord && mkdRecord) {
+        const rateToMkd = (mkdRecord.rate / targetRecord.rate).toFixed(2);
+        this.allWidgets = this.allWidgets.map(widget => {
+          if (widget.id === 'currency') {
+            return { ...widget, translationKey: this.selectedDefaultCurrency, value: `${rateToMkd}` };
+          }
+          return widget;
+        });
+      }
+    }
+    this.filterWidgets();
+  }
+
+  formatHolidayDateDDMMYYYY(dateStr?: string): string {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  async fetchHolidays() {
+    try {
+      this.holidaysList = await this.supabaseService.getHolidays();
+      
+      if (this.holidaysList && this.holidaysList.length > 0) {
+        this.updateHolidayWidgetDisplay();
+        this.loadTickerData();
+
+        this.highlightedHolidayDates = this.holidaysList.map(h => ({
+          date: h.holiday_date,
+          textColor: '#ffffff',
+          backgroundColor: h.color_code || '#ef4444'
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching holidays:', err);
+    }
+  }
+
+  onCalendarDateChange(event: any) {
+    const selectedDateStr = event.detail.value.split('T')[0];
+    this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
+  }
+
+  updateHolidayWidgetDisplay() {
+    if (!this.holidaysList || this.holidaysList.length === 0) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
+
+    if (upcomingHoliday) {
+      const [year, month, day] = upcomingHoliday.holiday_date.split('-');
+      const formattedDate = `${day}.${month}`;
+
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'holidays') {
+          return {
+            ...widget,
+            value: formattedDate
+          };
+        }
+        return widget;
+      });
+
+      this.visibleWidgets = this.visibleWidgets.map(widget => {
+        if (widget.id === 'holidays') {
+          return {
+            ...widget,
+            value: formattedDate
+          };
         }
         return widget;
       });
     }
   }
-  this.filterWidgets();
-}
 
-  formatHolidayDateDDMMYYYY(dateStr?: string): string {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-}
+  startTickerRotation() {
+    if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
 
-async fetchHolidays() {
-  try {
-    this.holidaysList = await this.supabaseService.getHolidays();
+    this.tickerIntervalSub = setInterval(() => {
+      if (this.tickerItems.length > 0) {
+        this.currentTickerIndex = (this.currentTickerIndex + 1) % this.tickerItems.length;
+      }
+    }, 5000);
+  }
+
+  async loadTickerData() {
+    const combinedItems: TickerItem[] = [];
+
+    const newsFromDb = await this.fetchLatestNewsFromDatabase();
     
-    if (this.holidaysList && this.holidaysList.length > 0) {
-      this.updateHolidayWidgetDisplay();
-
-      this.loadTickerData();
-
-      this.highlightedHolidayDates = this.holidaysList.map(h => ({
-        date: h.holiday_date,
-        textColor: '#ffffff',
-        backgroundColor: h.color_code || '#ef4444'
-      }));
+    if (newsFromDb.length > 0) {
+      combinedItems.push(...newsFromDb);
+    } else {
+      combinedItems.push({
+        id: 'dummy-1',
+        type: 'news',
+        headerKey: 'TICKER.NEWS_HEADER',
+        title: this.translate.instant('TICKER.NEWS_1')
+      });
     }
-  } catch (err) {
-    console.error('Error fetching holidays:', err);
-  }
-}
 
-// When user taps a date inside the Ionic Calendar
-onCalendarDateChange(event: any) {
-  const selectedDateStr = event.detail.value.split('T')[0];
-  this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
-}
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
 
+    if (upcomingHoliday) {
+      const holidayTitle = upcomingHoliday[`title_${this.currentLang}`] || upcomingHoliday.title_mk;
+      const formattedDate = this.formatHolidayDateDDMMYYYY(upcomingHoliday.holiday_date);
 
-updateHolidayWidgetDisplay() {
-  if (!this.holidaysList || this.holidaysList.length === 0) return;
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
-
-  if (upcomingHoliday) {
-    const [year, month, day] = upcomingHoliday.holiday_date.split('-');
-    const formattedDate = `${day}.${month}`; // Output: "28.08"
-
-    // Update allWidgets array
-    this.allWidgets = this.allWidgets.map(widget => {
-      if (widget.id === 'holidays') {
-        return {
-          ...widget,
-          value: formattedDate
-        };
-      }
-      return widget;
-    });
-
-    // Also update visibleWidgets directly to ensure instant template refresh
-    this.visibleWidgets = this.visibleWidgets.map(widget => {
-      if (widget.id === 'holidays') {
-        return {
-          ...widget,
-          value: formattedDate
-        };
-      }
-      return widget;
-    });
-  }
-}
-
-
-// Start 5-Second Interval Timer
-startTickerRotation() {
-  if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
-
-  this.tickerIntervalSub = setInterval(() => {
-    if (this.tickerItems.length > 0) {
-      this.currentTickerIndex = (this.currentTickerIndex + 1) % this.tickerItems.length;
+      combinedItems.splice(1, 0, {
+        id: `holiday-${upcomingHoliday.id}`,
+        type: 'holiday',
+        headerKey: 'TICKER.HOLIDAY_HEADER',
+        title: `${holidayTitle} (${formattedDate})`
+      });
     }
-  }, 5000);
-}
 
+    this.tickerItems = combinedItems;
+    this.startTickerRotation();
+  }
 
+  async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
+    try {
+      return [];
+    } catch (err) {
+      return [];
+    }
+  }
 
-async loadTickerData() {
-  const combinedItems: TickerItem[] = [];
+  onTickerItemClick(item: TickerItem) {
+    if (!item) return;
 
-  // A. Fetch Real News from Supabase / External API (Placeholder for future implementation)
-  const newsFromDb = await this.fetchLatestNewsFromDatabase();
+    if (item.type === 'holiday') {
+      this.onWidgetClick('holidays');
+    } else if (item.linkUrl) {
+      window.open(item.linkUrl, '_blank');
+    }
+  }
+
+  getUserInitial(): string {
+    if (!this.currentUser) return 'U';
+    
+    const fullName = this.currentUser.user_metadata?.['full_name'];
+    if (fullName && fullName.trim().length > 0) {
+      return fullName.trim().charAt(0).toUpperCase();
+    }
+    
+    if (this.currentUser.email && this.currentUser.email.length > 0) {
+      return this.currentUser.email.charAt(0).toUpperCase();
+    }
+
+    return 'U';
+  }
+
+  getCryptoPriceInSelectedCurrency(priceInUsd: number): string {
+  let finalPrice = priceInUsd;
   
-  if (newsFromDb.length > 0) {
-    combinedItems.push(...newsFromDb);
+  if (this.selectedCryptoCurrency === 'MKD') {
+    // 1 USD ≈ 52.7 MKD (or dynamically use rawDatabaseRates if available)
+    finalPrice = priceInUsd * 52.7;
+    return `${Math.round(finalPrice).toLocaleString('mk-MK')} ден.`;
+  }
+  
+  if (this.selectedCryptoCurrency === 'EUR') {
+    // 1 USD ≈ 0.86 EUR
+    finalPrice = priceInUsd * 0.86;
+    return `€${finalPrice > 1000 ? Math.round(finalPrice).toLocaleString('en-US') : finalPrice.toFixed(2)}`;
+  }
+
+  return `$${priceInUsd > 1000 ? Math.round(priceInUsd).toLocaleString('en-US') : priceInUsd.toFixed(2)}`;
+}
+
+setCryptoDisplayCurrency(currency: 'USD' | 'MKD' | 'EUR') {
+  this.selectedCryptoCurrency = currency;
+  localStorage.setItem('crypto_display_currency', currency);
+  this.updateCryptoWidgetDisplay();
+}
+
+formatCompactPrice(price: number, currency: string): string {
+  if (!price || isNaN(price)) return '--';
+
+  let converted = price;
+  let symbolSuffix = '';
+  let prefix = '';
+
+  if (currency === 'MKD') {
+    converted = price * 52.7; // 1 USD ≈ 52.7 MKD
+    symbolSuffix = ' ден.';
+  } else if (currency === 'EUR') {
+    converted = price * 0.86; // 1 USD ≈ 0.86 EUR
+    prefix = '€';
   } else {
-    // Fallback Dummy News until real feed is connected
-    combinedItems.push({
-      id: 'dummy-1',
-      type: 'news',
-      headerKey: 'TICKER.NEWS_HEADER',
-      title: this.translate.instant('TICKER.NEWS_1')
-    });
+    prefix = '$';
   }
 
-  // B. Dynamically Inject Upcoming Holiday from Calendar
-  const todayStr = new Date().toISOString().split('T')[0];
-  const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
-
-  if (upcomingHoliday) {
-    const holidayTitle = upcomingHoliday[`title_${this.currentLang}`] || upcomingHoliday.title_mk;
-    const formattedDate = this.formatHolidayDateDDMMYYYY(upcomingHoliday.holiday_date);
-
-    combinedItems.splice(1, 0, {
-      id: `holiday-${upcomingHoliday.id}`,
-      type: 'holiday',
-      headerKey: 'TICKER.HOLIDAY_HEADER',
-      title: `${holidayTitle} (${formattedDate})`
-    });
+  if (converted >= 1000000) {
+    return `${prefix}${(converted / 1000000).toFixed(2)}M${symbolSuffix}`;
   }
-
-  this.tickerItems = combinedItems;
-  this.startTickerRotation();
-}
-
-// Dummy database query function ready for your future Supabase table / Scraper API
-async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
-  try {
-    // Future integration example:
-    // const { data } = await this.supabaseService.client.from('latest_news').select('*').limit(5);
-    // return data.map(n => ({ id: n.id, type: 'news', rawHeader: n.source_name, title: n.title, linkUrl: n.url }));
-    return [];
-  } catch (err) {
-    return [];
+  if (converted >= 10000) {
+    return `${prefix}${(converted / 1000).toFixed(1)}K${symbolSuffix}`;
   }
-}
-
-
-onTickerItemClick(item: TickerItem) {
-  if (!item) return;
-
-  if (item.type === 'holiday') {
-    // Opens Holiday Calendar Modal
-    this.onWidgetClick('holidays');
-  } else if (item.linkUrl) {
-    // Opens External News Link
-    window.open(item.linkUrl, '_blank');
+  if (converted >= 1000) {
+    return `${prefix}${Math.round(converted).toLocaleString('en-US')}${symbolSuffix}`;
   }
+  
+  return `${prefix}${converted.toFixed(2)}${symbolSuffix}`;
 }
 }

@@ -1,19 +1,17 @@
 .dashboard-content {
   --background: #fcfcfc;
-  --overflow: hidden; // Shuts down scroll engine locks on standard Ionic wrappers
+  --overflow: hidden;
   
-  // Target underlying Shadow DOM component parts to guarantee no scrolling artifacts leak out
   &::part(scroll) {
     overflow: hidden;
   }
 }
 
-/* Master full viewport lock wrapper layout configuration */
 .dashboard-wrapper {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh; // Perfect device fallback targeting screen height caps precisely
+  height: 100dvh;
   padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom) 24px;
   box-sizing: border-box;
   overflow: hidden;
@@ -24,41 +22,204 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 6%; // Explicit percentage footprint bounds
-  min-height: 40px;
+  height: 6%;
+  min-height: 42px;
+
+  .app-brand-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+  }
 }
 
-.utility-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.lang-select {
-  --background: #f1f3f5;
-  --border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #495057;
-  max-height: 34px;
-}
-
-.user-avatar {
-  background: white;
-  width: 34px;
-  height: 34px;
+.user-avatar-btn {
+  background: #ffffff;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-  font-size: 1.1rem;
-  border: 1px solid #eaeaea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  .avatar-initial {
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #0f172a;
+  }
+
+  .guest-avatar-icon {
+    font-size: 1rem;
+    color: #64748b;
+  }
 }
 
-/* 2. Bold Titles Section layout properties */
+/* 2. Settings Sheet Modal Styling */
+.settings-wrapper {
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+
+  .avatar-large {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #0f172a;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+
+  .profile-info {
+    h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+  }
+}
+
+.settings-group {
+  background: #f8fafc;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .row-icon {
+      font-size: 1.1rem;
+    }
+
+    .row-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+  }
+}
+
+.lang-select-pill {
+  --background: #ffffff;
+  --color: #0f172a;
+  --placeholder-color: #0f172a;
+  --padding-start: 14px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --border-radius: 12px; /* Smoother, modern radius */
+  
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid #e2e8f0; /* Lighter slate border */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+
+  &:active {
+    background: #f8fafc;
+  }
+
+  &::part(text) {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  &::part(icon) {
+    color: #64748b; /* Subtle arrow icon */
+    opacity: 1;
+    font-size: 14px;
+  }
+}
+
+ion-toggle {
+  --background: #cbd5e1;
+  --background-checked: #0f172a;
+  --handle-background: #ffffff;
+  --handle-background-checked: #ffffff;
+  --border-radius: 20px;
+  padding: 2px;
+  
+  /* Adds a subtle outline so it pops off the card background */
+  border: 1.5px solid #94a3b8;
+  border-radius: 20px;
+}
+
+.settings-actions {
+  margin-top: 8px;
+
+  button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .btn-settings-login {
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  .btn-settings-logout {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+}
+
+/* 3. Titles Section */
 .dashboard-titles {
-  height: 10%; // Explicit percentage footprint bounds
+  height: 10%;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -70,31 +231,30 @@
   }
 
   .main-title {
-    font-size: 1.85rem;
+    font-size: 1.40rem;
     font-weight: 800;
     color: #111;
     margin: 0;
   }
 }
 
-/* 3. Auto-stretching grid layout framework configuration */
+/* 4. Widgets Grid Layer */
 .widgets-container {
-  flex: 1; // Explicitly forces the grid to fill the absolute maximum available workspace area
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr); // Locks down precisely to three grid levels
+  grid-template-rows: repeat(3, 1fr);
   gap: 12px;
   box-sizing: border-box;
   padding-bottom: 12px;
 }
 
-/* Widget Card wrapper setups */
 .widget-card-wrapper {
   background: white;
   border-radius: 18px;
   border: 1px solid #f0f0f0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
-  height: 100%; // Fill the container row height bounds perfectly
+  height: 100%;
   width: 100%;
   overflow: hidden;
 
@@ -115,7 +275,6 @@
   box-sizing: border-box;
 }
 
-/* Icon Frame Configuration */
 .card-icon-frame {
   height: 32px;
   display: flex;
@@ -126,11 +285,10 @@
 
 .widget-vector-icon {
   font-size: 1.65rem;
-  color: #4e4e50; // Flat minimalist modern default tone
+  color: #4e4e50;
   transition: color 0.2s ease;
 }
 
-/* Typography Rules */
 .card-value {
   font-size: 1.25rem;
   font-weight: 800;
@@ -156,37 +314,36 @@
   }
 }
 
-/* 4. Bottom News Footer elements */
-
-.footer-hint-text {
-  height: 4%; // Explicit percentage footprint bounds
-  text-align: center;
-  font-size: 0.78rem;
-  color: #8e8e93;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 5. Sheet Modal Setup configurations */
+/* 5. Sheet Modal Setup Configurations */
 .premium-modal {
   --height: 85%;
   --width: 100%;
   --max-width: 100%;
   --border-radius: 28px 28px 0px 0px;
-  --box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.12);
-  align-items: flex-end;
+  --box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.15);
   --backdrop-opacity: 0.4;
 
   &::part(backdrop) {
     background: #000;
     backdrop-filter: blur(8px);
+    transition: opacity 0.9s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   &::part(content) {
     position: absolute;
     bottom: 0;
+    transition: transform 0.98s cubic-bezier(0.32, 0.72, 0, 1);
+    border-radius: 28px 28px 0 0;
+    overflow: hidden;
+  }
+
+  &::part(handle) {
+    background: #d1d1d6;
+    width: 38px;
+    height: 5px;
+    border-radius: 3px;
+    margin-top: 10px;
+    margin-bottom: 4px;
   }
 }
 
@@ -215,12 +372,12 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px; // Clean spacing between list rows
+    gap: 4px;
 
     li {
       font-size: 0.95rem;
       font-weight: 600;
-      color: #1c1c1e !important; // Forces crisp dark text in modal rows
+      color: #1c1c1e !important;
       display: flex !important;
       align-items: center;
       width: 100%;
@@ -257,68 +414,16 @@
   }
 }
 
-/* --- Category Accent Mappings Directly from Mockup Design Guidelines --- */
-.aqi-icon {
-  color: #2a9d8f; // Organic Green for breathing metrics
-}
+/* Category Accent Icons */
+.aqi-icon { color: #2a9d8f; }
+.weather-icon { color: #2196f3; }
+.currency-icon { color: #ffb703; }
+.fuel-icon { color: #e63946; }
+.uv-icon { color: #fb8500; }
+.holiday-icon, .nameday-icon { color: #7209b7; }
+.custom-reminder-icon, .custom-task-icon { color: #6c757d; }
 
-.weather-icon {
-  color: #2196f3; // Sky Blue for local forecast tracking
-}
-
-.currency-icon {
-  color: #ffb703; // Sovereign Gold for exchange values
-}
-
-.fuel-icon {
-  color: #e63946; // Warning Alert Red for utility indicators
-}
-
-.uv-icon {
-  color: #fb8500; // Vibrant Orange for intense radiation indexes
-}
-
-.holiday-icon, .nameday-icon {
-  color: #7209b7; // Event Purple for calendar alerts
-}
-
-.custom-reminder-icon, .custom-task-icon {
-  color: #6c757d; // Neutral Slate tint for user-created task blocks
-}
-/* 5. Sheet Modal Setup configurations */
-.premium-modal {
-  --height: 85%;
-  --width: 100%;
-  --max-width: 100%;
-  --border-radius: 28px 28px 0px 0px;
-  --box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.15);
-  --backdrop-opacity: 0.4;
-
-  &::part(backdrop) {
-    background: #000;
-    backdrop-filter: blur(8px);
-    transition: opacity 0.9s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  &::part(content) {
-    position: absolute;
-    bottom: 0;
-    transition: transform 0.98s cubic-bezier(0.32, 0.72, 0, 1);
-    border-radius: 28px 28px 0 0;
-    overflow: hidden;
-  }
-
-  /* Custom styling for Ionic's top drag handle bar */
-  &::part(handle) {
-    background: #d1d1d6;
-    width: 38px;
-    height: 5px;
-    border-radius: 3px;
-    margin-top: 10px;
-    margin-bottom: 4px;
-  }
-}
-
+/* 6. News Ticker Footer */
 .news-ticker-container {
   background: #ffffff;
   border-radius: 18px;
@@ -365,25 +470,15 @@
 }
 
 @-webkit-keyframes slideFadeIn {
-  0% {
-    opacity: 0;
-    -webkit-transform: translateY(14px);
-    transform: translateY(14px);
-  }
-  100% {
-    opacity: 1;
-    -webkit-transform: translateY(0);
-    transform: translateY(0);
-  }
+  0% { opacity: 0; -webkit-transform: translateY(14px); transform: translateY(14px); }
+  100% { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
 }
 
 @keyframes slideFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.crypto-icon { 
+  color: #f59e0b;
 }

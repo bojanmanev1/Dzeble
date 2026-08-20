@@ -11,7 +11,8 @@
     "CANCEL": "Cancel",
     "LOGIN_REQUIRED_TITLE": "Login Required",
     "LOGIN_REQUIRED_MSG": "Please log in to your account to create custom widgets.",
-    "CLOSE": "Close"
+    "CLOSE": "Close",
+    "OFFLINE_BANNER": "No internet connection. Some data may not be up to date."
   },
   "WIDGETS": {
     "AQI": "AQI",
@@ -23,8 +24,19 @@
     "LOYALTY": "Cards",
     "DAYS_UNIT": "Days",
     "CARD_UNIT": "Saved",
-    "HOLIDAY": "Holidays"
+    "HOLIDAY": "Holidays",
+    "CRYPTO": "Crypto"
   },
+"CRYPTO_MODAL": {
+  "TITLE": "Crypto Market",
+  "SUBTITLE": "Live market prices",
+  "HIGH_24H": "24h",
+  "BACK": "← Back",
+  "CURRENT_PRICE": "Current Price",
+  "HIGH_LABEL": "24h High",
+  "LOW_LABEL": "24h Low",
+  "VOLUME_LABEL": "24h Volume"
+},
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "New Calendar Widget",
     "NEW_SUBTITLE": "Enter title and pick a date for countdown",
@@ -193,6 +205,12 @@
   "CONTINUE_WITH_GOOGLE": "Continue with Google",
   "LOGGED_OUT_OTHER_DEVICE": "Your account was logged in from another device.",
   "CONFIRM_EMAIL_SENT": "Registration successful! Please check your email for confirmation."
+},
+"SETTINGS": {
+  "GUEST_TITLE": "Welcome to Dzeble",
+  "GUEST_SUBTITLE": "Sign in to sync widgets & loyalty cards",
+  "LANGUAGE": "Language",
+  "DARK_MODE": "Dark Mode"
 }
 
 }

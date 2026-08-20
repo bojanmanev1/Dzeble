@@ -11,7 +11,8 @@
     "CANCEL": "Откажи",
     "LOGIN_REQUIRED_TITLE": "Најавата е задолжителна",
     "LOGIN_REQUIRED_MSG": "За да креирате ваши виџети, ве молиме најавете се на вашиот профил.",
-    "CLOSE": "Затвори"
+    "CLOSE": "Затвори",
+    "OFFLINE_BANNER": "Немате интернет врска. Дел од податоците може да не се ажурирани."
   },
   "WIDGETS": {
     "AQI": "AQI",
@@ -23,7 +24,8 @@
     "LOYALTY": "Картички",
     "DAYS_UNIT": "Днови",
     "CARD_UNIT": "Зачувани",
-    "HOLIDAY": "Празници"
+    "HOLIDAY": "Празници",
+    "CRYPTO": "Крипто"
   },
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "Нов Календар Виџет",
@@ -193,6 +195,24 @@
   "CONTINUE_WITH_GOOGLE": "Продолжи со Google",
   "LOGGED_OUT_OTHER_DEVICE": "Вашата сметка беше најавена од друг уред.",
   "CONFIRM_EMAIL_SENT": "Успешна регистрација! Проверете ја вашата е-пошта за потврда."
+},
+
+"SETTINGS": {
+  "GUEST_TITLE": "Добредојдовте во Dzeble",
+  "GUEST_SUBTITLE": "Најавете се за зачувување картички и додатоци",
+  "LANGUAGE": "Јазик",
+  "DARK_MODE": "Темна тема"
+},
+
+"CRYPTO_MODAL": {
+  "TITLE": "Крипто Пазар",
+  "SUBTITLE": "Пазарни цени во живо",
+  "HIGH_24H": "24ч",
+  "BACK": "← Назад",
+  "CURRENT_PRICE": "Тековна цена",
+  "HIGH_LABEL": "24ч Највисоко",
+  "LOW_LABEL": "24ч Најниско",
+  "VOLUME_LABEL": "24ч Волумен"
 }
 
   

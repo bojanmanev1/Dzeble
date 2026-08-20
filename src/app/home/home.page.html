@@ -2,19 +2,24 @@
   
   <div class="dashboard-wrapper">
     <!-- 1. UTILITY TOP BAR -->
+ @if (!(networkService.isOnline$ | async)) {
+  <div style="background: #ef4444; color: white; padding: 8px 12px; border-radius: 12px; text-align: center; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+    <span>{{ 'HOME.OFFLINE_BANNER' | translate }}</span>
+  </div>
+}
     <div class="utility-bar">
-      <div class="utility-left"></div>
+      <div class="utility-left">
+        <span class="app-brand-title">Dzeble</span>
+      </div>
       <div class="utility-right">
-        <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select">
-          <ion-select-option value="mk">MK</ion-select-option>
-          <ion-select-option value="al">AL</ion-select-option>
-          <ion-select-option value="en">EN</ion-select-option>
-        </ion-select>
-
-        <!-- 🌟 DYNAMIC AVATAR BUTTON -->
-        <div class="user-avatar" (click)="onAvatarClick()" [title]="currentUser ? ('HOME.LOGOUT' | translate) : ('HOME.LOGIN' | translate)">
-          {{ currentUser ? '🚪' : '👤' }}
-        </div>
+        <!-- Clean Interactive Avatar Button -->
+      <div class="user-avatar-btn" (click)="openSettingsSheet()">
+      @if (currentUser) {
+        <span class="avatar-initial">{{ getUserInitial() }}</span>
+      } @else {
+        <ion-icon name="person-outline" class="guest-avatar-icon"></ion-icon>
+      }
+    </div>
       </div>
     </div>
 
@@ -47,23 +52,99 @@
       </div>
     </div>
 
-<!-- 4. BOTTOM NEWS & HOLIDAY TICKER FEED -->
-<div class="news-ticker-container" (click)="onTickerItemClick(tickerItems[currentTickerIndex])" style="cursor: pointer;">
-  @for (item of [tickerItems[currentTickerIndex]]; track currentTickerIndex + '-' + item?.id) {
-    @if (item) {
-      <div class="news-body-wrapper">
-        <div class="news-header">
-          <span>{{ item.headerKey ? (item.headerKey | translate) : item.rawHeader }}</span>
-        </div>
-        <p class="news-body">
-          {{ item.title }}
-        </p>
-      </div>
-    }
-  }
-</div>
+    <!-- 4. BOTTOM NEWS & HOLIDAY TICKER FEED -->
+    <div class="news-ticker-container" (click)="onTickerItemClick(tickerItems[currentTickerIndex])" style="cursor: pointer;">
+      @for (item of [tickerItems[currentTickerIndex]]; track currentTickerIndex + '-' + item?.id) {
+        @if (item) {
+          <div class="news-body-wrapper">
+            <div class="news-header">
+              <span>{{ item.headerKey ? (item.headerKey | translate) : item.rawHeader }}</span>
+            </div>
+            <p class="news-body">
+              {{ item.title }}
+            </p>
+          </div>
+        }
+      }
+    </div>
 
   </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: PROFILE & APP SETTINGS SHEET        -->
+  <!-- ========================================== -->
+  <ion-modal [isOpen]="isSettingsSheetOpen" 
+    (didDismiss)="isSettingsSheetOpen = false" 
+    class="premium-modal settings-modal"
+    [initialBreakpoint]="0.6"
+    [breakpoints]="[0, 0.6, 0.95]"
+    [handle]="true">
+    <ng-template>
+      <div class="settings-wrapper">
+        
+        <!-- User Profile Header -->
+        <div class="settings-profile-card">
+         <div class="avatar-large">
+        @if (currentUser) {
+          <span>{{ getUserInitial() }}</span>
+        } @else {
+          <ion-icon name="person-outline"></ion-icon>
+        }
+      </div>
+         <div class="profile-info">
+        @if (currentUser) {
+          <h3>{{ currentUser.user_metadata['full_name'] || 'User' }}</h3>
+          <p>{{ currentUser.email }}</p>
+        } @else {
+          <h3>{{ 'SETTINGS.GUEST_TITLE' | translate }}</h3>
+          <p>{{ 'SETTINGS.GUEST_SUBTITLE' | translate }}</p>
+        }
+      </div>
+        </div>
+
+        <!-- Quick Settings Group -->
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="row-left">
+              <span class="row-icon">🌐</span>
+              <span class="row-label">{{ 'SETTINGS.LANGUAGE' | translate }}</span>
+            </div>
+            <div class="row-right">
+              <ion-select [value]="currentLang" interface="popover" (ionChange)="changeLanguage($event)" class="lang-select-pill">
+                <ion-select-option value="mk">Македонски</ion-select-option>
+                <ion-select-option value="al">Shqip</ion-select-option>
+                <ion-select-option value="en">English</ion-select-option>
+              </ion-select>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="row-left">
+              <span class="row-icon">🌙</span>
+              <span class="row-label">{{ 'SETTINGS.DARK_MODE' | translate }}</span>
+            </div>
+            <div class="row-right">
+              <ion-toggle [checked]="isDarkMode" (ionChange)="toggleDarkMode($event)"></ion-toggle>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button (Login or Logout) -->
+        <div class="settings-actions">
+          @if (currentUser) {
+            <button class="btn-settings-logout" (click)="handleLogout()">
+              🚪 {{ 'HOME.LOGOUT' | translate }}
+            </button>
+          } @else {
+            <button class="btn-settings-login" (click)="goToLogin()">
+              👤 {{ 'HOME.LOGIN' | translate }} / {{ 'AUTH.SIGN_UP' | translate }}
+            </button>
+          }
+        </div>
+
+      </div>
+    </ng-template>
+  </ion-modal>
 
   <!-- ========================================== -->
   <!-- MODAL 1: ADD CUSTOM WIDGET (LOGGED-IN USERS) -->
@@ -157,15 +238,134 @@
           </div>
         }
 
+        <!-- CRYPTO LIVE MARKET DETAILS -->
+        @if (activeDetailWidgetId === 'crypto') {
+          
+          <!-- VIEW 1: COIN LIST -->
+          @if (cryptoModalView === 'list') {
+            <div class="modal-hero" style="padding-bottom: 14px; text-align: center;">
+              <!-- Header Row: Title & Currency Switcher -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <ion-icon name="stats-chart" style="font-size: 1.2rem; color: #f59e0b;"></ion-icon>
+                  <h2 style="font-size: 1rem; font-weight: 700; margin: 0; color: #0f172a;">
+                    {{ 'CRYPTO_MODAL.TITLE' | translate }}
+                  </h2>
+                </div>
+
+                <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 10px; gap: 2px;">
+                  <button (click)="setCryptoDisplayCurrency('MKD')" [style.background]="selectedCryptoCurrency === 'MKD' ? '#ffffff' : 'transparent'" [style.color]="selectedCryptoCurrency === 'MKD' ? '#0f172a' : '#64748b'" style="border: none; padding: 5px 9px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">MKD</button>
+                  <button (click)="setCryptoDisplayCurrency('USD')" [style.background]="selectedCryptoCurrency === 'USD' ? '#ffffff' : 'transparent'" [style.color]="selectedCryptoCurrency === 'USD' ? '#0f172a' : '#64748b'" style="border: none; padding: 5px 9px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">USD</button>
+                  <button (click)="setCryptoDisplayCurrency('EUR')" [style.background]="selectedCryptoCurrency === 'EUR' ? '#ffffff' : 'transparent'" [style.color]="selectedCryptoCurrency === 'EUR' ? '#0f172a' : '#64748b'" style="border: none; padding: 5px 9px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">EUR</button>
+                </div>
+              </div>
+
+              <!-- Live Subtitle Row -->
+              <div style="display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center;">
+                <span style="width: 7px; height: 7px; background-color: #10b981; border-radius: 50%; display: inline-block;"></span>
+                <p class="subtitle" style="font-size: 0.78rem; color: #64748b; margin: 0; font-weight: 600;">
+                  {{ 'CRYPTO_MODAL.SUBTITLE' | translate }}
+                </p>
+              </div>
+            </div>
+
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 8px 0;">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                @for (coin of getCryptoList(); track coin.pair) {
+                  <div 
+                    style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;"
+                    (click)="openCoinDetail(coin)">
+                    
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span (click)="$event.stopPropagation(); selectCryptoForWidget(coin.pair)" style="font-size: 1.2rem; color: #f59e0b; cursor: pointer;">
+                        {{ selectedCryptoPair === coin.pair ? '★' : '☆' }}
+                      </span>
+                      <div>
+                        <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">{{ coin.symbol }}</span>
+                        <span style="font-size: 0.72rem; color: #64748b;">24h: {{ formatCompactPrice(coin.high24h, selectedCryptoCurrency) }}</span>
+                      </div>
+                    </div>
+
+                    <div style="text-align: right;">
+                      <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">{{ formatCompactPrice(coin.price, selectedCryptoCurrency) }}</span>
+                      <span [style.color]="coin.change24h >= 0 ? '#10b981' : '#ef4444'" style="font-size: 0.78rem; font-weight: 700;">
+                        {{ coin.change24h >= 0 ? '▲ +' : '▼ ' }}{{ coin.change24h }}%
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- VIEW 2: COIN DETAIL VIEW WITH METRICS GRID -->
+          @if (cryptoModalView === 'detail' && selectedCoinDetail) {
+            <div class="modal-hero" style="padding-top: 16px; padding-bottom: 10px; text-align: center;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <button (click)="closeCoinDetail()" style="background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; cursor: pointer;">
+                  {{ 'CRYPTO_MODAL.BACK' | translate }}
+                </button>
+                <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: #0f172a;">{{ selectedCoinDetail.symbol }} / USDT</h2>
+                <button (click)="selectCryptoForWidget(selectedCoinDetail.pair)" style="background: transparent; border: none; font-size: 1.3rem; color: #f59e0b; cursor: pointer;">
+                  {{ selectedCryptoPair === selectedCoinDetail.pair ? '★' : '☆' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 8px 0;">
+              <!-- Hero Price Card -->
+              <div style="background: #0f172a; color: white; padding: 20px; border-radius: 18px; text-align: center; margin-bottom: 16px;">
+                <span style="font-size: 0.8rem; opacity: 0.7; font-weight: 600;">
+                  {{ 'CRYPTO_MODAL.CURRENT_PRICE' | translate }}
+                </span>
+                <h1 style="font-size: 2.2rem; font-weight: 800; margin: 4px 0;">
+                  {{ formatCompactPrice(selectedCoinDetail.price, selectedCryptoCurrency) }}
+                </h1>
+                <span [style.color]="selectedCoinDetail.change24h >= 0 ? '#34d399' : '#f87171'" style="font-weight: 800; font-size: 0.95rem;">
+                  {{ selectedCoinDetail.change24h >= 0 ? '▲ +' : '▼ ' }}{{ selectedCoinDetail.change24h }}% (24h)
+                </span>
+              </div>
+
+              <!-- Detailed Metrics 2x2 Grid -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                  <span style="font-size: 0.72rem; color: #64748b; display: block; font-weight: 600;">
+                    {{ 'CRYPTO_MODAL.HIGH_LABEL' | translate }}
+                  </span>
+                  <span style="font-size: 1rem; font-weight: 800; color: #0f172a;">
+                    {{ formatCompactPrice(selectedCoinDetail.high24h, selectedCryptoCurrency) }}
+                  </span>
+                </div>
+
+                <div style="background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                  <span style="font-size: 0.72rem; color: #64748b; display: block; font-weight: 600;">
+                    {{ 'CRYPTO_MODAL.LOW_LABEL' | translate }}
+                  </span>
+                  <span style="font-size: 1rem; font-weight: 800; color: #0f172a;">
+                    {{ formatCompactPrice(selectedCoinDetail.low24h, selectedCryptoCurrency) }}
+                  </span>
+                </div>
+
+                <div style="background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0; grid-column: span 2;">
+                  <span style="font-size: 0.72rem; color: #64748b; display: block; font-weight: 600;">
+                    {{ 'CRYPTO_MODAL.VOLUME_LABEL' | translate }}
+                  </span>
+                  <span style="font-size: 1rem; font-weight: 800; color: #0f172a;">
+                    ${{ Math.round(selectedCoinDetail.volume).toLocaleString('en-US') }} USDT
+                  </span>
+                </div>
+              </div>
+            </div>
+          }
+        }
+
         <!-- UV INDEX DETAILS -->
         @if (activeDetailWidgetId === 'uv') {
           <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-
             <p class="subtitle">{{ 'UV_MODAL.SUBTITLE' | translate }}</p>
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-            <!-- Main Index Card -->
             <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
               <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">{{ 'UV_MODAL.CURRENT_INDEX' | translate }}</span>
               <h1 [style.color]="getUvColor(parsedWeatherData?.uv_index)" style="font-size: 3.2rem; font-weight: 800; margin: 4px 0; transition: color 0.3s ease;">
@@ -176,7 +376,6 @@
               </div>
             </div>
 
-            <!-- Health Advice Box -->
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'UV_MODAL.ADVICE_HEADER' | translate }}</h3>
             <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; border-radius: 14px; margin-bottom: 24px;">
               <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: #1c1c1e; line-height: 1.4;">
@@ -184,7 +383,6 @@
               </p>
             </div>
 
-            <!-- UV Index Scale Legend -->
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'UV_MODAL.SCALE_HEADER' | translate }}</h3>
             <ul style="list-style: none; padding: 0; margin: 0;">
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
@@ -218,7 +416,6 @@
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-            <!-- Main Status Card -->
             <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
               <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">{{ 'AQI_MODAL.CURRENT_STATUS' | translate }}</span>
               <h2 [style.color]="getAqiColor(parsedWeatherData?.aqi_value)" style="font-size: 2.2rem; font-weight: 800; margin: 8px 0; transition: color 0.3s ease;">
@@ -229,7 +426,6 @@
               </div>
             </div>
 
-            <!-- PM Pollutants -->
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'AQI_MODAL.POLLUTANTS' | translate }}</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
               <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px; border-radius: 14px; text-align: center;">
@@ -244,7 +440,6 @@
               </div>
             </div>
 
-            <!-- US AQI Legend -->
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'AQI_MODAL.LEGEND_TITLE' | translate }}</h3>
             <ul style="list-style: none; padding: 0; margin: 0;">
               <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
@@ -272,63 +467,56 @@
         }
 
         <!-- CURRENCY DETAILS MODAL -->
-@if (activeDetailWidgetId === 'currency') {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <p class="subtitle">{{ 'CURRENCY_MODAL.SUBTITLE' | translate }}</p>
-  </div>
+        @if (activeDetailWidgetId === 'currency') {
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <p class="subtitle">{{ 'CURRENCY_MODAL.SUBTITLE' | translate }}</p>
+          </div>
 
-  <!-- Input Field for MKD -->
-  <div style="background: #f7f7f5; padding: 14px; border-radius: 16px; margin-bottom: 16px;">
-    <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">
-      {{ 'CURRENCY_MODAL.INPUT_LABEL' | translate }}
-    </label>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <input 
-        type="number" 
-        [(ngModel)]="inputMkdAmount" 
-        style="width: 100%; border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #111; outline: none;" 
-        placeholder="100" />
-      <span style="font-weight: 800; color: #666;">{{ 'CURRENCY_MODAL.DENAR_SYMBOL' | translate }}</span>
-    </div>
-  </div>
+          <div style="background: #f7f7f5; padding: 14px; border-radius: 16px; margin-bottom: 16px;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">
+              {{ 'CURRENCY_MODAL.INPUT_LABEL' | translate }}
+            </label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input 
+                type="number" 
+                [(ngModel)]="inputMkdAmount" 
+                style="width: 100%; border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #111; outline: none;" 
+                placeholder="100" />
+              <span style="font-weight: 800; color: #666;">{{ 'CURRENCY_MODAL.DENAR_SYMBOL' | translate }}</span>
+            </div>
+          </div>
 
-  <!-- Converted Results List -->
-  <div class="modal-body" style="flex: 1; overflow-y: auto;">
-    <ul class="benefits-list">
-      
-      <!-- Standard EUR row -->
-      <li (click)="setDefaultCurrency('EUR')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultCurrency === 'EUR' ? '⭐' : '☆' }}</span>
-          🇪🇺 {{ 'CURRENCY_MODAL.EURO_NAME' | translate }}
-        </span>
-        <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
-          {{ getCalculatedRateDynamic(1.0) }} €
-        </span>
-      </li>
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              <li (click)="setDefaultCurrency('EUR')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultCurrency === 'EUR' ? '⭐' : '☆' }}</span>
+                  🇪🇺 {{ 'CURRENCY_MODAL.EURO_NAME' | translate }}
+                </span>
+                <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
+                  {{ getCalculatedRateDynamic(1.0) }} €
+                </span>
+              </li>
 
-      <!-- Dynamic Currency Rows from Database -->
-      @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
-        @if (rateRow.target_currency !== 'MKD') {
-          <li (click)="setDefaultCurrency(rateRow.target_currency)" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-            <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-              <span>{{ selectedDefaultCurrency === rateRow.target_currency ? '⭐' : '☆' }}</span>
-              {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
-            </span>
-            <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
-              {{ getCalculatedRateDynamic(rateRow.rate) }} {{ rateRow.target_currency }}
-            </span>
-          </li>
+              @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
+                @if (rateRow.target_currency !== 'MKD') {
+                  <li (click)="setDefaultCurrency(rateRow.target_currency)" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                    <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                      <span>{{ selectedDefaultCurrency === rateRow.target_currency ? '⭐' : '☆' }}</span>
+                      {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
+                    </span>
+                    <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
+                      {{ getCalculatedRateDynamic(rateRow.rate) }} {{ rateRow.target_currency }}
+                    </span>
+                  </li>
+                }
+              }
+            </ul>
+          </div>
         }
-      }
-    </ul>
-  </div>
-}
 
         <!-- LOYALTY CARDS MODULE -->
         @if (activeDetailWidgetId === 'loyalty' && currentUser) {
-
-          <!-- 1. LIST VIEW -->
           @if (loyaltyModalView === 'list') {
             <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
               <p class="subtitle">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
@@ -364,7 +552,6 @@
             </div>
           }
 
-          <!-- 2. BARCODE DISPLAY VIEW -->
           @if (loyaltyModalView === 'view' && selectedLoyaltyCard) {
             <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
               <div [style.background-color]="selectedLoyaltyCard.card_color || '#1e293b'" style="padding: 16px; border-radius: 16px; color: white; margin-bottom: 12px;">
@@ -396,7 +583,6 @@
             </div>
           }
 
-          <!-- 3. ADD NEW CARD FORM VIEW -->
           @if (loyaltyModalView === 'add') {
             <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
               <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 4px;">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
@@ -404,8 +590,6 @@
             </div>
 
             <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 10px 16px;">
-              
-              <!-- Custom Store Name Input -->
               <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 10px;">
                 <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.STORE_NAME_LABEL' | translate }}</label>
                 <input 
@@ -416,7 +600,6 @@
                   style="width: 100%; border: none; background: transparent; font-size: 0.95rem; font-weight: 700; color: #111; outline: none;" />
               </div>
 
-              <!-- Barcode Input + Compact Scanner Button -->
               <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;">
                 <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.BARCODE_LABEL' | translate }}</label>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -433,7 +616,6 @@
                 </div>
               </div>
 
-              <!-- Dynamic Card Preview Card -->
               <div 
                 [style.background-color]="newCardColor" 
                 style="padding: 14px; border-radius: 14px; color: white; height: 80px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
@@ -441,7 +623,6 @@
                 <span style="font-family: monospace; font-size: 0.85rem; letter-spacing: 2px; opacity: 0.9;">{{ newBarcodeData || '•••• •••• ••••' }}</span>
               </div>
 
-              <!-- Action Buttons -->
               <div style="display: flex; gap: 8px;">
                 <button 
                   (click)="closeLoyaltySubView()" 
@@ -459,7 +640,6 @@
 
             </div>
           }
-
         }
 
         <!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
@@ -469,8 +649,6 @@
           </div>
           
           <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-            
-            <!-- Today's Activity Summary Box -->
             <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
               <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">{{ 'ACTIVITY_MODAL.TODAY_SUMMARY' | translate }}</span>
               
@@ -491,7 +669,6 @@
               </div>
             </div>
 
-            <!-- 7-Day Historical Breakdown -->
             <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'ACTIVITY_MODAL.LAST_7_DAYS' | translate }}</h3>
             
             @if (last7DaysHealth.length === 0) {
@@ -525,135 +702,122 @@
 
           </div>
         }
+
         <!-- HOLIDAYS WIDGET MODULE -->
-@if (activeDetailWidgetId === 'holidays') {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <p class="subtitle">{{ 'HOLIDAYS_MODAL.SUBTITLE' | translate }}</p>
-  </div>
+        @if (activeDetailWidgetId === 'holidays') {
+          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+            <p class="subtitle">{{ 'HOLIDAYS_MODAL.SUBTITLE' | translate }}</p>
+          </div>
 
-  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 12px;">
-    
-    <!-- Ionic Calendar -->
-    <div style="background: #ffffff; border-radius: 16px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 16px;">
-      <ion-datetime 
-  presentation="date" 
-  [min]="minCalendarDate"
-  [max]="maxCalendarDate"
-  [highlightedDates]="highlightedHolidayDates" 
-  (ionChange)="onCalendarDateChange($event)"
-  style="width: 100%; border-radius: 12px;">
-</ion-datetime>
-    </div>
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 12px;">
+            <div style="background: #ffffff; border-radius: 16px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 16px;">
+              <ion-datetime 
+                presentation="date" 
+                [min]="minCalendarDate"
+                [max]="maxCalendarDate"
+                [highlightedDates]="highlightedHolidayDates" 
+                (ionChange)="onCalendarDateChange($event)"
+                style="width: 100%; border-radius: 12px;">
+              </ion-datetime>
+            </div>
 
-    <!-- Selected Date Details Card -->
-    @if (selectedHolidayDetail) {
-      <div 
-        [style.border-left]="'5px solid ' + selectedHolidayDetail.color_code" 
-        style="background: #f7f7f5; padding: 14px; border-radius: 12px; margin-bottom: 16px;">
-        
-        <!-- Target Audience Badge -->
-        <span 
-          [style.color]="selectedHolidayDetail.color_code" 
-          style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 4px;">
-          🏷️ {{ selectedHolidayDetail['target_group_' + currentLang] || selectedHolidayDetail.target_group_mk }}
-        </span>
+            @if (selectedHolidayDetail) {
+              <div 
+                [style.border-left]="'5px solid ' + selectedHolidayDetail.color_code" 
+                style="background: #f7f7f5; padding: 14px; border-radius: 12px; margin-bottom: 16px;">
+                
+                <span 
+                  [style.color]="selectedHolidayDetail.color_code" 
+                  style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 4px;">
+                  🏷️ {{ selectedHolidayDetail['target_group_' + currentLang] || selectedHolidayDetail.target_group_mk }}
+                </span>
 
-        <!-- Title -->
-        <h3 style="margin: 2px 0 6px 0; font-size: 1.15rem; font-weight: 800; color: #111;">
-          {{ selectedHolidayDetail['title_' + currentLang] || selectedHolidayDetail.title_mk }}
-        </h3>
+                <h3 style="margin: 2px 0 6px 0; font-size: 1.15rem; font-weight: 800; color: #111;">
+                  {{ selectedHolidayDetail['title_' + currentLang] || selectedHolidayDetail.title_mk }}
+                </h3>
 
-        <!-- Formatted Date (dd/mm/yyyy) -->
-        <span style="font-size: 0.85rem; color: #666; font-weight: 600;">
-          🗓️ {{ formatHolidayDateDDMMYYYY(selectedHolidayDetail.holiday_date) }}
-        </span>
-      </div>
-    }
+                <span style="font-size: 0.85rem; color: #666; font-weight: 600;">
+                  🗓️ {{ formatHolidayDateDDMMYYYY(selectedHolidayDetail.holiday_date) }}
+                </span>
+              </div>
+            }
 
-    <!-- Translated Color Legend -->
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; background: #f8f9fa; padding: 12px; border-radius: 14px; margin-top: 12px;">
-      <span style="font-size: 0.72rem; font-weight: 700; color: #9f1239; background: #ffe4e6; padding: 4px 10px; border-radius: 20px;">
-        ● {{ 'HOLIDAYS_MODAL.LEGEND_ALL' | translate }}
-      </span>
-      <span style="font-size: 0.72rem; font-weight: 700; color: #d97706; background: #fef3c7; padding: 4px 10px; border-radius: 20px;">
-        ● {{ 'HOLIDAYS_MODAL.LEGEND_ORTHODOX' | translate }}
-      </span>
-      <span style="font-size: 0.72rem; font-weight: 700; color: #065f46; background: #d1fae5; padding: 4px 10px; border-radius: 20px;">
-        ● {{ 'HOLIDAYS_MODAL.LEGEND_MUSLIM' | translate }}
-      </span>
-      <span style="font-size: 0.72rem; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px;">
-        ● {{ 'HOLIDAYS_MODAL.LEGEND_CATHOLIC' | translate }}
-      </span>
-      <span style="font-size: 0.72rem; font-weight: 700; color: #581c87; background: #f3e8ff; padding: 4px 10px; border-radius: 20px;">
-        ● {{ 'HOLIDAYS_MODAL.LEGEND_COMMUNITIES' | translate }}
-      </span>
-    </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; background: #f8f9fa; padding: 12px; border-radius: 14px; margin-top: 12px;">
+              <span style="font-size: 0.72rem; font-weight: 700; color: #9f1239; background: #ffe4e6; padding: 4px 10px; border-radius: 20px;">
+                ● {{ 'HOLIDAYS_MODAL.LEGEND_ALL' | translate }}
+              </span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #d97706; background: #fef3c7; padding: 4px 10px; border-radius: 20px;">
+                ● {{ 'HOLIDAYS_MODAL.LEGEND_ORTHODOX' | translate }}
+              </span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #065f46; background: #d1fae5; padding: 4px 10px; border-radius: 20px;">
+                ● {{ 'HOLIDAYS_MODAL.LEGEND_MUSLIM' | translate }}
+              </span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px;">
+                ● {{ 'HOLIDAYS_MODAL.LEGEND_CATHOLIC' | translate }}
+              </span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #581c87; background: #f3e8ff; padding: 4px 10px; border-radius: 20px;">
+                ● {{ 'HOLIDAYS_MODAL.LEGEND_COMMUNITIES' | translate }}
+              </span>
+            </div>
 
-  </div>
-}
+          </div>
+        }
 
         <!-- FUEL DETAILS -->
-@if (activeDetailWidgetId === 'fuel') {
-  <div class="modal-hero" style="padding-bottom: 10px;">
-    <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
-  </div>
-  
-  <div class="modal-body" style="flex: 1; overflow-y: auto;">
-    <ul class="benefits-list">
-      
-      <!-- Petrol 95 -->
-      <li (click)="setDefaultFuel('Бензин 95')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Бензин 95' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.PETROL_95' | translate }}
-        </span>
-        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-      </li>
+        @if (activeDetailWidgetId === 'fuel') {
+          <div class="modal-hero" style="padding-bottom: 10px;">
+            <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
+          </div>
+          
+          <div class="modal-body" style="flex: 1; overflow-y: auto;">
+            <ul class="benefits-list">
+              <li (click)="setDefaultFuel('Бензин 95')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultFuel === 'Бензин 95' ? '⭐' : '☆' }}</span>
+                  {{ 'FUEL_MODAL.PETROL_95' | translate }}
+                </span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+              </li>
 
-      <!-- Petrol 98 -->
-      <li (click)="setDefaultFuel('Бензин 98+')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Бензин 98+' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.PETROL_98' | translate }}
-        </span>
-        <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-      </li>
+              <li (click)="setDefaultFuel('Бензин 98+')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultFuel === 'Бензин 98+' ? '⭐' : '☆' }}</span>
+                  {{ 'FUEL_MODAL.PETROL_98' | translate }}
+                </span>
+                <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+              </li>
 
-      <!-- Diesel -->
-      <li (click)="setDefaultFuel('Дизел')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Дизел' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.DIESEL' | translate }}
-        </span>
-        <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-      </li>
+              <li (click)="setDefaultFuel('Дизел')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultFuel === 'Дизел' ? '⭐' : '☆' }}</span>
+                  {{ 'FUEL_MODAL.DIESEL' | translate }}
+                </span>
+                <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+              </li>
 
-      <!-- Extra Light -->
-      <li (click)="setDefaultFuel('Екстра Лесно')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Екстра Лесно' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
-        </span>
-        <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-      </li>
+              <li (click)="setDefaultFuel('Екстра Лесно')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultFuel === 'Екстра Лесно' ? '⭐' : '☆' }}</span>
+                  {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
+                </span>
+                <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+              </li>
 
-      <!-- Mazut -->
-      <li (click)="setDefaultFuel('Мазут')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Мазут' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
-        </span>
-        <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
-      </li>
-
-    </ul>
-    
-    <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
-      <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
-      <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
-    </div>
-  </div>
-}
+              <li (click)="setDefaultFuel('Мазут')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+                <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>{{ selectedDefaultFuel === 'Мазут' ? '⭐' : '☆' }}</span>
+                  {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
+                </span>
+                <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
+              </li>
+            </ul>
+            
+            <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
+              <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
+              <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
+            </div>
+          </div>
+        }
 
         <!-- CUSTOM WIDGET DETAIL -->
         @if (getActiveCustomWidget(); as customWidget) {
@@ -664,8 +828,6 @@
           </div>
 
           <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-            
-            <!-- Big Countdown Card -->
             <div style="background: #f7f7f5; padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
               <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">{{ 'CUSTOM_WIDGET.REMAINING_TIME' | translate }}</span>
               <h1 style="font-size: 3rem; font-weight: 800; color: #111; margin: 8px 0;">
@@ -676,13 +838,11 @@
               </div>
             </div>
 
-            <!-- Delete Widget Action Button -->
             <button 
               (click)="deleteCurrentCustomWidget(customWidget.id)" 
               style="width: 100%; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold; margin-top: 10px;">
               {{ 'CUSTOM_WIDGET.DELETE_WIDGET' | translate }}
             </button>
-
           </div>
         }
 

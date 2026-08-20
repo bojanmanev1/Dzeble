@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SupabaseService } from '../services/supabase';
 import { IonContent, IonSpinner } from '@ionic/angular/standalone';
+import { NetworkService } from '../services/network';
 
 @Component({
   selector: 'app-login',
@@ -23,6 +24,7 @@ export class LoginPage implements OnInit {
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
   private translate = inject(TranslateService);
+  public networkService = inject(NetworkService);
 
   fullName = '';
   email = '';

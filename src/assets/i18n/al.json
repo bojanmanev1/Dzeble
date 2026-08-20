@@ -11,7 +11,8 @@
     "CANCEL": "Anulo",
     "LOGIN_REQUIRED_TITLE": "Kërkohet Hyrja",
     "LOGIN_REQUIRED_MSG": "Ju lutemi hyni në llogarinë tuaj për të krijuar widget-e tuaja.",
-    "CLOSE": "Mbyll"
+    "CLOSE": "Mbyll",
+    "OFFLINE_BANNER": "Nuk keni lidhje interneti. Disa të dhëna mund të mos jenë të përditësuara."
   },
   "WIDGETS": {
     "AQI": "AQI",
@@ -23,8 +24,19 @@
     "LOYALTY": "Kartelat",
     "DAYS_UNIT": "Ditë",
     "CARD_UNIT": "Të ruajtura",
-    "HOLIDAY": "Pushimet"
+    "HOLIDAY": "Pushimet",
+    "CRYPTO": "Крипто"
   },
+ "CRYPTO_MODAL": {
+  "TITLE": "Tregu Kripto",
+  "SUBTITLE": "Çmimet e tregut në kohë reale",
+  "HIGH_24H": "24orë",
+  "BACK": "← Prapa",
+  "CURRENT_PRICE": "Çmimi aktual",
+  "HIGH_LABEL": "24orë Më e larta",
+  "LOW_LABEL": "24orë Më e ulëta",
+  "VOLUME_LABEL": "24orë Volumi"
+},
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "Widget i ri Kalendari",
     "NEW_SUBTITLE": "Shkruani emrin dhe zgjidhni datën për numërimin mbrapsht",
@@ -193,5 +205,11 @@
   "CONTINUE_WITH_GOOGLE": "Vazhdo me Google",
   "LOGGED_OUT_OTHER_DEVICE": "Llogaria juaj u kyç nga një pajisje tjetër.",
   "CONFIRM_EMAIL_SENT": "Regjistrimi u krye me sukses! Ju lutemi kontrolloni e-mailin tuaj për konfirmim."
+},
+"SETTINGS": {
+  "GUEST_TITLE": "Mirësevisni në Dzeble",
+  "GUEST_SUBTITLE": "Llogarituni për të ruajtur kartat dhe mepërat",
+  "LANGUAGE": "Gjuha",
+  "DARK_MODE": "Mënyra e errët"
 }
 }
