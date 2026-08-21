@@ -24,8 +24,22 @@
     "LOYALTY": "Картички",
     "DAYS_UNIT": "Днови",
     "CARD_UNIT": "Зачувани",
-    "HOLIDAY": "Празници",
-    "CRYPTO": "Крипто"
+    "CALENDAR": "Календар",
+    "CRYPTO": "Крипто",
+    "STOCK": "Берза"
+  },
+  "STOCK_MODAL": {
+    "TITLE": "Берза (Stocks)",
+    "SUBTITLE": "Пазарни цени во живо",
+    "SEARCH_PLACEHOLDER": "Пребарај симбол (пр. META, NFLX, AMD)",
+    "ADD_BTN": "+ Додај",
+    "SEARCHING": "...",
+    "SEARCH_ERROR": "Невалиден симбол или веќе постои.",
+    "LOADING": "Вчитување берзански податоци...",
+    "CURRENT_PRICE": "Тековна цена",
+    "HIGH_LABEL": "Дневно Највисоко",
+    "LOW_LABEL": "Дневно Најниско",
+    "BACK": "← Назад"
   },
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "Нов Календар Виџет",
@@ -157,15 +171,25 @@
     "ALL": "Албански Лек",
     "BGN": "Бугарски Лев"
   },
-  "HOLIDAYS_MODAL": {
-  "TITLE": "Празници & Неработни Денови",
-  "SUBTITLE": "Календар на државни и верски празници",
-  "LEGEND_ALL": "Сите Граѓани",
-  "LEGEND_ORTHODOX": "Православни",
-  "LEGEND_MUSLIM": "Муслимански",
-  "LEGEND_CATHOLIC": "Католички",
-  "LEGEND_COMMUNITIES": "Заедници"
-},
+"HOLIDAYS_MODAL": {
+    "SUBTITLE": "Календар на државни, верски празници и потсетници",
+    "CANCEL_BTN": "✕ Откажи",
+    "ADD_EVENT_BTN": "+ Настан / Потсетник",
+    "INPUT_PLACEHOLDER": "Внесете настан / потсетник...",
+    "SAVE_BTN": "Зачувај",
+    "ALL_REMINDERS_TITLE": "📌 Сите Потсетници",
+    "REMINDER_LABEL": "Потсетник",
+    "NO_EVENTS": "Нема зачувани празници или потсетници.",
+    "LEGEND_REMINDERS": "● Потсетници",
+    "LEGEND_ALL": "Сите Граѓани",
+    "LEGEND_ORTHODOX": "Православни",
+    "LEGEND_MUSLIM": "Муслимански",
+    "LEGEND_CATHOLIC": "Католички",
+    "CLEANUP_PAST": "🧹 Исчисти изминати",
+  "SHOW_PAST": "📜 Прикажи изминати",
+  "HIDE_PAST": "🙈 Сокриј изминати",
+  "PAST_REMINDERS_TITLE": "📜 Изминати Потсетници"
+  },
 "FUEL_TYPES": {
   "Бензин 95": "Бензин 95",
   "Бензин 98+": "Бензин 98+",
@@ -203,17 +227,20 @@
   "LANGUAGE": "Јазик",
   "DARK_MODE": "Темна тема"
 },
-
-"CRYPTO_MODAL": {
-  "TITLE": "Крипто Пазар",
-  "SUBTITLE": "Пазарни цени во живо",
-  "HIGH_24H": "24ч",
-  "BACK": "← Назад",
-  "CURRENT_PRICE": "Тековна цена",
-  "HIGH_LABEL": "24ч Највисоко",
-  "LOW_LABEL": "24ч Најниско",
-  "VOLUME_LABEL": "24ч Волумен"
-}
+  "CRYPTO_MODAL": {
+    "TITLE": "Крипто Пазар",
+    "SUBTITLE": "Пазарни цени во живо",
+    "SEARCH_PLACEHOLDER": "Пребарај коин (пр. SOL, DOT, NEAR)",
+    "ADD_BTN": "+ Додај",
+    "SEARCHING": "...",
+    "SEARCH_ERROR": "Невалиден коин или веќе постои.",
+    "LOADING": "Вчитување крипто податоци...",
+    "CURRENT_PRICE": "Тековна цена",
+    "HIGH_LABEL": "24h Највисоко",
+    "LOW_LABEL": "24h Најниско",
+    "VOLUME_LABEL": "Volumen (24h)",
+    "BACK": "← Назад"
+  }
 
   
 }

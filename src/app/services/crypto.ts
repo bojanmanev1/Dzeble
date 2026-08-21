@@ -19,20 +19,22 @@ export class CryptoService {
   private cryptoDataSubject = new BehaviorSubject<Map<string, CryptoTicker>>(new Map());
   public cryptoData$: Observable<Map<string, CryptoTicker>> = this.cryptoDataSubject.asObservable();
 
-  // Track target pairs
-  private watchedPairs = [
-    'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 
-    'XRPUSDT', 'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT'
-  ];
+  // Load user pairs or fallback to defaults
+  public watchedPairs: string[] = JSON.parse(
+    localStorage.getItem('user_watched_crypto') || 
+    '["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT"]'
+  );
 
   constructor(private zone: NgZone) {}
 
   public connect(): void {
+    // Initial REST seed to populate list instantly
+    this.fetchInitialPrices();
+
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    // Connect to Binance multi-stream WebSocket for mini-tickers
     const streamUrl = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
     this.ws = new WebSocket(streamUrl);
 
@@ -70,14 +72,86 @@ export class CryptoService {
       });
     };
 
-    this.ws.onerror = (err) => {
-      console.error('Crypto WebSocket error:', err);
-    };
-
     this.ws.onclose = () => {
-      // Reconnect after 3 seconds if disconnected
       setTimeout(() => this.connect(), 3000);
     };
+  }
+
+  public async addCryptoPair(symbolInput: string): Promise<boolean> {
+    let cleanSymbol = symbolInput.trim().toUpperCase();
+    if (!cleanSymbol.endsWith('USDT')) {
+      cleanSymbol += 'USDT';
+    }
+
+    if (this.watchedPairs.includes(cleanSymbol)) return false;
+
+    try {
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${cleanSymbol}`);
+      const data = await res.json();
+
+      if (data && data.symbol && data.lastPrice) {
+        this.watchedPairs.push(cleanSymbol);
+        localStorage.setItem('user_watched_crypto', JSON.stringify(this.watchedPairs));
+
+        const currentMap = new Map(this.cryptoDataSubject.value);
+        currentMap.set(cleanSymbol, {
+          symbol: cleanSymbol.replace('USDT', ''),
+          pair: cleanSymbol,
+          price: parseFloat(data.lastPrice),
+          change24h: parseFloat(data.priceChangePercent),
+          high24h: parseFloat(data.highPrice),
+          low24h: parseFloat(data.lowPrice),
+          volume: parseFloat(data.quoteVolume),
+        });
+
+        this.zone.run(() => {
+          this.cryptoDataSubject.next(currentMap);
+        });
+
+        return true;
+      }
+    } catch (e) {
+      console.error('Crypto symbol lookup failed:', e);
+    }
+    return false;
+  }
+
+  public removeCryptoPair(pair: string): void {
+    this.watchedPairs = this.watchedPairs.filter((p) => p !== pair);
+    localStorage.setItem('user_watched_crypto', JSON.stringify(this.watchedPairs));
+
+    const currentMap = new Map(this.cryptoDataSubject.value);
+    currentMap.delete(pair);
+    this.cryptoDataSubject.next(currentMap);
+  }
+
+  private async fetchInitialPrices() {
+    const currentMap = new Map(this.cryptoDataSubject.value);
+
+    for (const pair of this.watchedPairs) {
+      try {
+        const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
+        const data = await res.json();
+
+        if (data && data.lastPrice) {
+          currentMap.set(pair, {
+            symbol: pair.replace('USDT', ''),
+            pair: pair,
+            price: parseFloat(data.lastPrice),
+            change24h: parseFloat(data.priceChangePercent),
+            high24h: parseFloat(data.highPrice),
+            low24h: parseFloat(data.lowPrice),
+            volume: parseFloat(data.quoteVolume),
+          });
+        }
+      } catch (err) {
+        console.error(`Initial fetch error for ${pair}`, err);
+      }
+    }
+
+    this.zone.run(() => {
+      this.cryptoDataSubject.next(currentMap);
+    });
   }
 
   public disconnect(): void {

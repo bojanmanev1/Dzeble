@@ -24,18 +24,36 @@
     "LOYALTY": "Kartelat",
     "DAYS_UNIT": "Ditë",
     "CARD_UNIT": "Të ruajtura",
-    "HOLIDAY": "Pushimet",
-    "CRYPTO": "Крипто"
+    "CALENDAR": "Kalendari",
+    "CRYPTO": "Kripto",
+    "STOCK": "Bursa"
   },
- "CRYPTO_MODAL": {
-  "TITLE": "Tregu Kripto",
+  "STOCK_MODAL": {
+    "TITLE": "Tregu i Aksioneve",
+    "SUBTITLE": "Çmimet e tregut në kohë reale",
+    "SEARCH_PLACEHOLDER": "Kërko simbolin (m.sh. META, NFLX, AMD)",
+    "ADD_BTN": "+ Shto",
+    "SEARCHING": "...",
+    "SEARCH_ERROR": "Simbol i pavlefshëm ose ekziston tashmë.",
+    "LOADING": "Duke ngarkuar të dhënat e bursës...",
+    "CURRENT_PRICE": "Çmimi Aktual",
+    "HIGH_LABEL": "Më e larta (24o)",
+    "LOW_LABEL": "Më e ulëta (24o)",
+    "BACK": "← Mbrapa"
+  },
+"CRYPTO_MODAL": {
+  "TITLE": "Tregu i Kriptos",
   "SUBTITLE": "Çmimet e tregut në kohë reale",
-  "HIGH_24H": "24orë",
-  "BACK": "← Prapa",
-  "CURRENT_PRICE": "Çmimi aktual",
-  "HIGH_LABEL": "24orë Më e larta",
-  "LOW_LABEL": "24orë Më e ulëta",
-  "VOLUME_LABEL": "24orë Volumi"
+  "SEARCH_PLACEHOLDER": "Kërko kripto (m.sh. SOL, DOT, NEAR)",
+  "ADD_BTN": "+ Shto",
+  "SEARCHING": "...",
+  "SEARCH_ERROR": "Kripto e pavlefshme ose ekziston tashmë.",
+  "LOADING": "Duke ngarkuar të dhënat e kriptos...",
+  "CURRENT_PRICE": "Çmimi Aktual",
+  "HIGH_LABEL": "Më e larta (24o)",
+  "LOW_LABEL": "Më e ulëta (24o)",
+  "VOLUME_LABEL": "Vëllimi (24o)",
+  "BACK": "← Mbrapa"
 },
   "CUSTOM_WIDGET": {
     "NEW_TITLE": "Widget i ri Kalendari",
@@ -168,14 +186,24 @@
     "BGN": "Lev Bullgar"
   },
   "HOLIDAYS_MODAL": {
-  "TITLE": "Festat & Ditët Jo-Pune",
-  "SUBTITLE": "Kalendari i festave shtetërore dhe fetare",
-  "LEGEND_ALL": "Të gjithë Qytetarët",
-  "LEGEND_ORTHODOX": "Ortodokse",
-  "LEGEND_MUSLIM": "Muslimane",
-  "LEGEND_CATHOLIC": "Katolike",
-  "LEGEND_COMMUNITIES": "Komunitetet"
-},
+    "SUBTITLE": "Kalendari i festave shtetërore, fetare dhe kujtesave",
+    "CANCEL_BTN": "✕ Anulo",
+    "ADD_EVENT_BTN": "+ Ngjarje / Kujtesë",
+    "INPUT_PLACEHOLDER": "Shkruaj ngjarjen / kujtesën...",
+    "SAVE_BTN": "Ruaj",
+    "ALL_REMINDERS_TITLE": "📌 Të gjitha Kujtesat",
+    "REMINDER_LABEL": "Kujtesë",
+    "NO_EVENTS": "Nuk ka festa apo kujtesa të ruajtura.",
+    "LEGEND_REMINDERS": "● Kujtesat",
+    "LEGEND_ALL": "Të gjithë Qytetarët",
+    "LEGEND_ORTHODOX": "Ortodokse",
+    "LEGEND_MUSLIM": "Musulmane",
+    "LEGEND_CATHOLIC": "Katolike",
+    "CLEANUP_PAST": "🧹 Pastro të kaluarat",
+    "SHOW_PAST": "📜 Shfaq të kaluarat",
+    "HIDE_PAST": "🙈 Fshih të kaluarat",
+    "PAST_REMINDERS_TITLE": "📜 Kujtesat e Kaluara"
+  },
 "FUEL_TYPES": {
   "Бензин 95": "Benzinë 95",
   "Бензин 98+": "Benzinë 98+",

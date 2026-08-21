@@ -231,22 +231,29 @@ async validateSession(user: User): Promise<boolean> {
     return data || [];
   }
 
-  async addUserWidget(userId: string, title: string, eventDate: string) {
-    const { data, error } = await this.supabase
-      .from('user_widgets')
-      .insert([{
+// src/app/services/supabase.ts
+
+async addUserWidget(userId: string, title: string, eventDate: string, icon: string = 'calendar-number') {
+  const { data, error } = await this.supabase
+    .from('user_widgets')
+    .insert([
+      {
         user_id: userId,
         title: title,
         event_date: eventDate,
-        widget_type: 'calendar',
-        icon: 'calendar-number'
-      }])
-      .select()
-      .single();
+        icon: icon
+      }
+    ])
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
+  if (error) {
+    console.error('Error adding user widget:', error);
+    throw error;
   }
+
+  return data;
+}
 
   async deleteUserWidget(widgetId: string) {
     const { error } = await this.supabase

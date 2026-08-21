@@ -38,7 +38,7 @@ import {
   IonToggle,
   AlertController
 } from '@ionic/angular/standalone';
-
+import { StockService, StockTicker } from '../services/stock';
 import { HealthData, HealthService } from '../services/health';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
@@ -95,15 +95,29 @@ export class HomePage implements OnInit, OnDestroy {
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
   public networkService = inject(NetworkService);
+
+  private stockService = inject(StockService);
+  private stockSub: Subscription | null = null;
   currentYear = new Date().getFullYear();
   minCalendarDate = `${this.currentYear}-01-01`;
   maxCalendarDate = `${this.currentYear + 1}-12-31`;
 
+
+  selectedCalendarDate: string = new Date().toISOString().split('T')[0];
+selectedHolidayDetail: any = null;
+selectedDateEvents: any[] = [];
+userCalendarEvents: any[] = [];
+newEventTitle: string = '';
+isAddingEventInputOpen: boolean = false;
+showPastEvents: boolean = false;
+selectedStockCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('stock_display_currency') as any) || 'USD';
   parsedWeatherData: any = null;
   tickerItems: TickerItem[] = [];
   currentTickerIndex = 0;
   private tickerIntervalSub: any = null;
-
+  stockSearchQuery: string = '';
+  isSearchingStock: boolean = false;
+  stockSearchError: string = '';
   isDetailModalOpen = false;
   activeDetailWidgetId: string | null = null;
   inputEuroAmount: number = 1;
@@ -146,6 +160,16 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
     'cosmo': '#8E24AA'
   };
 
+  private eventColorPalette = [
+  '#8b5cf6', // Violet
+  '#06b6d4', // Cyan
+  '#10b981', // Emerald
+  '#ec4899', // Pink
+  '#6366f1', // Indigo
+  '#0284c7', // Sky Blue
+  '#a855f7'  // Purple
+];
+
   loyaltyCards: LoyaltyCard[] = [];
   selectedLoyaltyCard: LoyaltyCard | null = null;
   loyaltyModalView: 'list' | 'view' | 'add' = 'list';
@@ -159,14 +183,21 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
   newCardColor: string = '#D32F2F';
   holidaysList: any[] = [];
   highlightedHolidayDates: any[] = [];
-  selectedHolidayDetail: any = null;
-
+  stockMap = new Map<string, StockTicker>();
+  selectedStockSymbol = localStorage.getItem('stock_selected_symbol') || 'AAPL';
+  stockModalView: 'list' | 'detail' = 'list';
+  selectedStockDetail: StockTicker | null = null;
+  cryptoSearchQuery: string = '';
+  isSearchingCrypto: boolean = false;
+  cryptoSearchError: string = '';
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
     { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
     { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
-{ id: 'crypto', translationKey: '--', value: 'BTC', unit: 'BTC', icon: 'stats-chart' },    { id: 'holidays', translationKey: 'WIDGETS.HOLIDAY', value: '--.--', unit: 'Празник', icon: 'calendar-number' },    
+    { id: 'crypto', translationKey: '--', value: 'BTC', unit: 'BTC', icon: 'stats-chart' },
+    { id: 'stock', translationKey: 'WIDGETS.STOCK', value: 'AAPL', unit: 'AAPL', icon: 'trending-up' },
+    { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' }, // 👈 Updated key & default label
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
@@ -195,27 +226,32 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
     });
   }
 
-  ngOnInit() {
-    this.supabaseService.currentUser$.subscribe(async (user) => {
-      this.currentUser = user;
+ ngOnInit() {
+  // Load local events for guests immediately
+  const localEvents = JSON.parse(localStorage.getItem('guest_user_events') || '[]');
+  this.userCalendarEvents = localEvents;
+  this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
 
-      if (user) {
-        await this.healthService.requestHealthPermissions();
-        await this.loadUserCustomWidgets(user.id);
-        await this.syncHealthData(user.id);
-        await this.loadLoyaltyCards(user.id);
-      } else {
-        this.loyaltyCards = [];
-        this.filterWidgets();
-      }
-    });
+  this.supabaseService.currentUser$.subscribe(async (user) => {
+    this.currentUser = user;
 
-    this.fetchHolidays();
-    this.fetchLiveMetrics();
-    this.fetchDatabaseCurrencyRates();
-    this.fetchDatabaseFuelPrices();
-    this.initLiveCrypto();
-  }
+    if (user) {
+      await this.healthService.requestHealthPermissions();
+      await this.syncHealthData(user.id);
+      await this.loadLoyaltyCards(user.id);
+      await this.loadUserEvents(user.id);
+    } else {
+      this.combineHighlightedDates();
+    }
+  });
+
+  this.fetchHolidays();
+  this.fetchLiveMetrics();
+  this.fetchDatabaseCurrencyRates();
+  this.fetchDatabaseFuelPrices();
+  this.initLiveCrypto();
+  this.initLiveStock();
+}
 
   // --- CRYPTO STREAMING LOGIC ---
 
@@ -327,6 +363,34 @@ closeCoinDetail() {
   this.selectedCoinDetail = null;
 }
 
+async onAddCryptoSubmit() {
+  if (!this.cryptoSearchQuery.trim()) return;
+
+  this.isSearchingCrypto = true;
+  this.cryptoSearchError = '';
+
+  const added = await this.cryptoService.addCryptoPair(this.cryptoSearchQuery);
+  this.isSearchingCrypto = false;
+
+  if (added) {
+    this.cryptoSearchQuery = '';
+  } else {
+    this.cryptoSearchError = this.translate.instant('CRYPTO_MODAL.SEARCH_ERROR');
+  }
+}
+
+removeCrypto(pair: string, event: Event) {
+  event.stopPropagation();
+  this.cryptoService.removeCryptoPair(pair);
+
+  if (this.selectedCryptoPair === pair) {
+    const list = this.getCryptoList();
+    if (list.length > 0) {
+      this.selectCryptoForWidget(list[0].pair);
+    }
+  }
+}
+
   onStoreNameInput() {
     const cleanName = this.newCustomStoreName.trim().toLowerCase();
     this.newCardColor = this.storeColorMap[cleanName] || '#1e293b';
@@ -429,6 +493,25 @@ closeCoinDetail() {
     if (diffDays === 0) return this.translate.instant('CUSTOM_WIDGET.TODAY_EVENT');
     if (diffDays < 0) return this.translate.instant('CUSTOM_WIDGET.PASSED_EVENT');
     return `${diffDays}d`;
+  }
+
+
+  combineHighlightedDates() {
+    const holidayHighlights = (this.holidaysList || []).map(h => ({
+      date: h.holiday_date,
+      textColor: '#ffffff',
+      backgroundColor: h.color_code || '#ef4444'
+    }));
+
+    // Only highlight ACTIVE (today or upcoming) personal reminders
+    const activeUserEvents = this.getActiveUserEvents();
+    const userEventHighlights = activeUserEvents.map(e => ({
+      date: e.event_date,
+      textColor: '#ffffff',
+      backgroundColor: e.color_code || '#8b5cf6'
+    }));
+
+    this.highlightedHolidayDates = [...holidayHighlights, ...userEventHighlights];
   }
 
   async openAddWidgetModal() {
@@ -660,19 +743,106 @@ closeCoinDetail() {
     this.isDetailModalOpen = true;
   }
 
+  getRandomEventColor(): string {
+  const randomIndex = Math.floor(Math.random() * this.eventColorPalette.length);
+  return this.eventColorPalette[randomIndex];
+}
+
+togglePastEventsView() {
+  this.showPastEvents = !this.showPastEvents;
+}
+
+
+
   formatHistoryDate(dateStr: string): string {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     const locale = this.currentLang === 'mk' ? 'mk-MK' : (this.currentLang === 'al' ? 'sq-AL' : 'en-US');
     return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
+  initLiveStock() {
+  this.stockService.connect();
+  this.stockSub = this.stockService.stockData$.subscribe((map) => {
+    this.stockMap = map;
+    this.updateStockWidgetDisplay();
+  });
+}
+
+updateStockWidgetDisplay() {
+  const ticker = this.stockMap.get(this.selectedStockSymbol);
+  if (!ticker) return;
+
+  const displayPrice = this.formatStockPrice(ticker.price);
+
+  this.allWidgets = this.allWidgets.map(w => {
+    if (w.id === 'stock') {
+      return {
+        ...w,
+        value: ticker.symbol,        // e.g., "AAPL"
+        translationKey: displayPrice // e.g., "11,831.11 ден." or "€193.07"
+      };
+    }
+    return w;
+  });
+  this.filterWidgets();
+}
+
+getStockList(): StockTicker[] {
+  return Array.from(this.stockMap.values());
+}
+
+selectStockForWidget(symbol: string) {
+  this.selectedStockSymbol = symbol;
+  localStorage.setItem('stock_selected_symbol', symbol);
+  this.updateStockWidgetDisplay();
+}
+
+openStockDetail(stock: StockTicker) {
+  this.selectedStockDetail = stock;
+  this.stockModalView = 'detail';
+}
+
+closeStockDetail() {
+  this.stockModalView = 'list';
+  this.selectedStockDetail = null;
+}
 
   ngOnDestroy() {
     if (this.weatherSub) this.weatherSub.unsubscribe();
     if (this.cryptoSub) this.cryptoSub.unsubscribe();
+    if (this.stockSub) this.stockSub.unsubscribe();
     if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
     this.cryptoService.disconnect();
+    this.stockService.disconnect();
   }
+
+async onAddStockSubmit() {
+  if (!this.stockSearchQuery.trim()) return;
+  
+  this.isSearchingStock = true;
+  this.stockSearchError = '';
+
+  const added = await this.stockService.addStockSymbol(this.stockSearchQuery);
+  this.isSearchingStock = false;
+
+  if (added) {
+    this.stockSearchQuery = '';
+  } else {
+    this.stockSearchError = this.translate.instant('STOCK_MODAL.SEARCH_ERROR');
+  }
+}
+
+removeStock(symbol: string, event: Event) {
+  event.stopPropagation();
+  this.stockService.removeStockSymbol(symbol);
+  
+  if (this.selectedStockSymbol === symbol) {
+    const list = this.getStockList();
+    if (list.length > 0) {
+      this.selectStockForWidget(list[0].symbol);
+    }
+  }
+}
 
   async loadUserCustomWidgets(userId: string) {
     try {
@@ -762,6 +932,34 @@ closeCoinDetail() {
     await alert.present();
   }
 
+  setStockDisplayCurrency(currency: 'USD' | 'MKD' | 'EUR') {
+  this.selectedStockCurrency = currency;
+  localStorage.setItem('stock_display_currency', currency);
+  this.updateStockWidgetDisplay();
+}
+
+formatStockPrice(priceInUsd: number): string {
+  if (!priceInUsd || isNaN(priceInUsd)) return '--';
+
+  let converted = priceInUsd;
+  let suffix = '';
+  let prefix = '';
+
+  if (this.selectedStockCurrency === 'MKD') {
+    // 1 USD ≈ 52.7 MKD (or use dynamic rate from rawDatabaseRates if loaded)
+    converted = priceInUsd * 52.7;
+    suffix = ' ден.';
+  } else if (this.selectedStockCurrency === 'EUR') {
+    // 1 USD ≈ 0.86 EUR
+    converted = priceInUsd * 0.86;
+    prefix = '€';
+  } else {
+    prefix = '$';
+  }
+
+  return `${prefix}${converted.toFixed(2)}${suffix}`;
+}
+
   setDefaultFuel(fuelType: string) {
     this.selectedDefaultFuel = fuelType;
     localStorage.setItem('default_fuel_type', fuelType);
@@ -844,10 +1042,72 @@ closeCoinDetail() {
     }
   }
 
-  onCalendarDateChange(event: any) {
-    const selectedDateStr = event.detail.value.split('T')[0];
-    this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
+async onCalendarDateChange(event: any) {
+  const selectedDateStr = event.detail.value.split('T')[0];
+  this.selectedCalendarDate = selectedDateStr;
+
+  // Find holiday on selected date
+  this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
+
+  // Find personal events on selected date
+  this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === selectedDateStr);
+}
+
+async loadUserEvents(userId: string) {
+  try {
+    const rawEvents = await this.supabaseService.getUserWidgets(userId);
+    
+    // Assign a persistent color to each event if not set
+    this.userCalendarEvents = rawEvents.map((e: any, index: number) => ({
+      ...e,
+      color_code: e.icon || this.eventColorPalette[index % this.eventColorPalette.length]
+    }));
+
+    this.combineHighlightedDates();
+    this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
+  } catch (err) {
+    console.error('Failed to load user events:', err);
   }
+}
+
+
+async addEventForSelectedDate() {
+  if (!this.newEventTitle.trim() || !this.currentUser) return;
+
+  const randomColor = this.getRandomEventColor();
+
+  try {
+    await this.supabaseService.addUserWidget(
+      this.currentUser.id,
+      this.newEventTitle.trim(),
+      this.selectedCalendarDate,
+      randomColor
+    );
+
+    await this.loadUserEvents(this.currentUser.id);
+
+    this.newEventTitle = '';
+    this.isAddingEventInputOpen = false;
+  } catch (err) {
+    console.error('Failed to save event:', err);
+  }
+}
+
+toggleAddEventForm() {
+  if (!this.currentUser) return;
+  this.isAddingEventInputOpen = !this.isAddingEventInputOpen;
+}
+
+async deleteUserEvent(eventId: string) {
+  if (!this.currentUser) return;
+
+  try {
+    await this.supabaseService.deleteUserWidget(eventId);
+    await this.loadUserEvents(this.currentUser.id);
+  } catch (err) {
+    console.error('Failed to delete event:', err);
+  }
+}
 
   updateHolidayWidgetDisplay() {
     if (!this.holidaysList || this.holidaysList.length === 0) return;
@@ -880,6 +1140,42 @@ closeCoinDetail() {
       });
     }
   }
+
+
+isDateInPast(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const targetDate = new Date(dateStr);
+  targetDate.setHours(0, 0, 0, 0);
+
+  return targetDate < today;
+}
+
+// Get only active (today & future) reminders
+getActiveUserEvents(): any[] {
+  return this.userCalendarEvents.filter(e => !this.isDateInPast(e.event_date));
+}
+
+// Get past reminders
+getPastUserEvents(): any[] {
+  return this.userCalendarEvents.filter(e => this.isDateInPast(e.event_date));
+}
+
+async cleanupPastEvents() {
+  if (!this.currentUser) return;
+
+  const pastEvents = this.getPastUserEvents();
+  for (const event of pastEvents) {
+    try {
+      await this.supabaseService.deleteUserWidget(event.id);
+    } catch (err) {
+      console.error(`Failed to delete past event ${event.id}:`, err);
+    }
+  }
+
+  await this.loadUserEvents(this.currentUser.id);
+}
 
   startTickerRotation() {
     if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
