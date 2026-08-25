@@ -38,12 +38,14 @@ import {
   IonToggle,
   AlertController
 } from '@ionic/angular/standalone';
+import { Capacitor } from '@capacitor/core';
 import { StockService, StockTicker } from '../services/stock';
 import { HealthData, HealthService } from '../services/health';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
 import { MACEDONIAN_STORES, StorePreset } from '../config/loyalty-stores.config';
-
+import { App } from '@capacitor/app';
+import { PushNotificationService } from '../services/push-notification';
 interface Widget {
   id: string;
   translationKey: string;
@@ -95,7 +97,7 @@ export class HomePage implements OnInit, OnDestroy {
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
   public networkService = inject(NetworkService);
-
+  private pushService = inject(PushNotificationService)
   private stockService = inject(StockService);
   private stockSub: Subscription | null = null;
   currentYear = new Date().getFullYear();
@@ -169,7 +171,6 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
   '#0284c7', // Sky Blue
   '#a855f7'  // Purple
 ];
-
   loyaltyCards: LoyaltyCard[] = [];
   selectedLoyaltyCard: LoyaltyCard | null = null;
   loyaltyModalView: 'list' | 'view' | 'add' = 'list';
@@ -226,14 +227,21 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
     });
   }
 
- ngOnInit() {
-  // Load local events for guests immediately
+async ngOnInit() {
+  // 1. Load local events for guests immediately
   const localEvents = JSON.parse(localStorage.getItem('guest_user_events') || '[]');
   this.userCalendarEvents = localEvents;
   this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
 
+  // 2. Auth state subscription
   this.supabaseService.currentUser$.subscribe(async (user) => {
     this.currentUser = user;
+
+    // 📱 Sync device state first (Guest or Logged-in)
+    await this.syncCurrentDeviceState(user);
+
+    // 🔔 Initialize & register Push Notifications
+    await this.pushService.initPushNotifications();
 
     if (user) {
       await this.healthService.requestHealthPermissions();
@@ -245,12 +253,31 @@ selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_di
     }
   });
 
+  // 3. Listen for app coming from background
+  if (Capacitor.isNativePlatform()) {
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        this.syncCurrentDeviceState(this.currentUser);
+      }
+    });
+  }
+
+  // 4. Widget background data initialization
   this.fetchHolidays();
   this.fetchLiveMetrics();
   this.fetchDatabaseCurrencyRates();
   this.fetchDatabaseFuelPrices();
   this.initLiveCrypto();
   this.initLiveStock();
+}
+
+// Helper method in HomePage class
+private async syncCurrentDeviceState(user: any) {
+  if (user) {
+    await this.supabaseService.syncDeviceRecord(user.id, user.email);
+  } else {
+    await this.supabaseService.syncDeviceRecord();
+  }
 }
 
   // --- CRYPTO STREAMING LOGIC ---
@@ -760,12 +787,8 @@ togglePastEventsView() {
     const locale = this.currentLang === 'mk' ? 'mk-MK' : (this.currentLang === 'al' ? 'sq-AL' : 'en-US');
     return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
-  initLiveStock() {
+initLiveStock() {
   this.stockService.connect();
-  this.stockSub = this.stockService.stockData$.subscribe((map) => {
-    this.stockMap = map;
-    this.updateStockWidgetDisplay();
-  });
 }
 
 updateStockWidgetDisplay() {

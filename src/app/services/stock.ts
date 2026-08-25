@@ -99,37 +99,43 @@ export class StockService {
       this.pollingInterval = null;
     }
   }
+public async fetchAllQuotes(): Promise<void> {
+  const currentMap = new Map(this.stockDataSubject.value);
 
-  public async fetchAllQuotes(): Promise<void> {
-    const currentMap = new Map(this.stockDataSubject.value);
-
-    for (const symbol of this.watchedStocks) {
-      try {
-        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${this.apiKey}`);
-        if (res.status === 429) {
-          console.warn('Finnhub rate limit reached (429).');
-          break;
-        }
-
-        const data = await res.json();
-        if (data && data.c) {
-          currentMap.set(symbol, {
-            symbol: symbol,
-            price: data.c,
-            change24h: data.dp ? parseFloat(data.dp.toFixed(2)) : 0,
-            high24h: data.h || data.c,
-            low24h: data.l || data.c,
-          });
-        }
-      } catch (err) {
-        console.error(`Quote update failed for ${symbol}`, err);
-      }
+  for (let i = 0; i < this.watchedStocks.length; i++) {
+    const symbol = this.watchedStocks[i];
+    
+    // ⏱️ Add 250ms spacing between initial requests to prevent hitting the 429 rate limit
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
 
-    this.zone.run(() => {
-      this.stockDataSubject.next(currentMap);
-    });
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${this.apiKey}`);
+      if (res.status === 429) {
+        console.warn('Finnhub rate limit reached (429). Stopping quote fetch batch.');
+        break;
+      }
+
+      const data = await res.json();
+      if (data && data.c) {
+        currentMap.set(symbol, {
+          symbol: symbol,
+          price: data.c,
+          change24h: data.dp ? parseFloat(data.dp.toFixed(2)) : 0,
+          high24h: data.h || data.c,
+          low24h: data.l || data.c,
+        });
+      }
+    } catch (err) {
+      console.error(`Quote update failed for ${symbol}`, err);
+    }
   }
+
+  this.zone.run(() => {
+    this.stockDataSubject.next(currentMap);
+  });
+}
 
   public async addStockSymbol(symbol: string): Promise<boolean> {
     const cleanSymbol = symbol.trim().toUpperCase();

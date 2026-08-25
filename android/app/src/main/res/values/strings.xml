@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Dzeble</string>
     <string name="title_activity_main">Dzeble</string>
-    <string name="package_name">io.ionic.starter</string>
-    <string name="custom_url_scheme">io.ionic.starter</string>
+    <string name="package_name">com.dzeble.app</string>
+    <string name="custom_url_scheme">com.dzeble.app</string>
 </resources>

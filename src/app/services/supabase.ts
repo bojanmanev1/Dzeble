@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { AuthChangeEvent, createClient, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { BehaviorSubject } from 'rxjs';
-
+import { Device } from '@capacitor/device';
 @Injectable({
   providedIn: 'root'
 })
@@ -220,6 +220,29 @@ async validateSession(user: User): Promise<boolean> {
     return data;
   }
 
+  public async getDeviceId(): Promise<string> {
+    try {
+      const idInfo = await Device.getId();
+      let deviceId = idInfo?.identifier;
+
+      // Fallback UUID for web browser preview
+      if (!deviceId) {
+        deviceId = localStorage.getItem('guest_device_id') || crypto.randomUUID();
+        localStorage.setItem('guest_device_id', deviceId);
+      }
+
+      return deviceId;
+    } catch (e) {
+      console.warn('Capacitor Device plugin unavailable, using web fallback:', e);
+      let fallbackId = localStorage.getItem('guest_device_id');
+      if (!fallbackId) {
+        fallbackId = crypto.randomUUID();
+        localStorage.setItem('guest_device_id', fallbackId);
+      }
+      return fallbackId;
+    }
+  }
+
   async getUserWidgets(userId: string) {
     const { data, error } = await this.supabase
       .from('user_widgets')
@@ -230,6 +253,33 @@ async validateSession(user: User): Promise<boolean> {
     if (error) return [];
     return data || [];
   }
+
+async syncDeviceRecord(userId?: string, userEmail?: string) {
+  try {
+    const deviceId = await this.getDeviceId();
+
+    const payload: any = {
+      device_id: deviceId,
+      last_active: new Date().toISOString() // 👈 Updates timestamp on every app open
+    };
+
+    if (userId && userEmail) {
+      payload.user_id = userId;
+      payload.email = userEmail;
+    }
+
+    const { error } = await this.supabase
+      .from('user_devices')
+      .upsert(payload, { onConflict: 'device_id' });
+
+    if (error) console.error('Device sync error:', error);
+  } catch (err) {
+    console.error('Device resolution failed:', err);
+  }
+}
+
+
+  
 
 // src/app/services/supabase.ts
 
