@@ -3,6 +3,8 @@ import { AuthChangeEvent, createClient, Session, SupabaseClient, User } from '@s
 import { environment } from '../../environments/environment';
 import { BehaviorSubject } from 'rxjs';
 import { Device } from '@capacitor/device';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 @Injectable({
   providedIn: 'root'
 })
@@ -102,11 +104,30 @@ async signInWithGoogle() {
     return data;
   }
 
-  async signOut() {
+async signOut() {
+  try {
+    const deviceId = await this.getDeviceId();
+
+    // 1. Clear push_token from Supabase and native listeners if logged in
+    if (deviceId) {
+      await this.supabase
+        .from('user_devices')
+        .update({ push_token: null, user_id: null })
+        .eq('device_id', deviceId);
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      await PushNotifications.removeAllListeners();
+      await PushNotifications.unregister();
+    }
+  } catch (err) {
+    console.warn('Failed to clear push token during signout:', err);
+  } finally {
     localStorage.removeItem('app_device_session_id');
     const { error } = await this.supabase.auth.signOut();
     if (error) throw error;
   }
+}
 
   async registerNewDeviceSession(userId: string) {
     const newSessionId = crypto.randomUUID();

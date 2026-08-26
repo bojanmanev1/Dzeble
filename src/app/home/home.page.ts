@@ -240,10 +240,10 @@ async ngOnInit() {
     // 📱 Sync device state first (Guest or Logged-in)
     await this.syncCurrentDeviceState(user);
 
-    // 🔔 Initialize & register Push Notifications
-    await this.pushService.initPushNotifications();
-
     if (user) {
+      // 🔔 Initialize & register Push Notifications ONLY for logged-in users
+      await this.pushService.initPushNotifications();
+
       await this.healthService.requestHealthPermissions();
       await this.syncHealthData(user.id);
       await this.loadLoyaltyCards(user.id);

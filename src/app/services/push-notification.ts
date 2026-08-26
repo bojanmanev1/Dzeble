@@ -19,7 +19,6 @@ public async initPushNotifications(): Promise<void> {
   PushNotifications.removeAllListeners();
 
   PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('🔥 FCM Push Registration Token:', token.value);
     await this.saveTokenToSupabase(token.value);
   });
 
@@ -28,7 +27,7 @@ public async initPushNotifications(): Promise<void> {
   });
 
   PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-    console.log('Push Received in Foreground:', notification);
+    // console.log('Push Received in Foreground:', notification);
   });
 
   // 2. Create Default Android Channel
@@ -55,15 +54,44 @@ public async initPushNotifications(): Promise<void> {
   }
 }
 
-  private async saveTokenToSupabase(pushToken: string): Promise<void> {
-    try {
-      const deviceId = await this.supabaseService.getDeviceId();
-      await this.supabaseService.supabase
-        .from('user_devices')
-        .update({ push_token: pushToken })
-        .eq('device_id', deviceId);
-    } catch (err) {
-      console.error('Failed to save push token to device row:', err);
+private async saveTokenToSupabase(pushToken: string): Promise<void> {
+  try {
+    const deviceId = await this.supabaseService.getDeviceId();
+    console.log('🔍 Attempting token save for deviceId:', deviceId);
+    console.log('🔑 Token value:', pushToken);
+
+    const { data, error, count } = await this.supabaseService.supabase
+      .from('user_devices')
+      .update({ push_token: pushToken })
+      .eq('device_id', deviceId)
+      .select();
+
+    if (error) {
+      console.error('❌ Supabase DB Error during token save:', error.message);
+      return;
     }
+
+    if (!data || data.length === 0) {
+      // console.warn('⚠️ No device row matched device_id:', deviceId, '— Attempting upsert fallback.');
+      
+      const { error: upsertErr } = await this.supabaseService.supabase
+        .from('user_devices')
+        .upsert({
+          device_id: deviceId,
+          push_token: pushToken,
+          last_active: new Date().toISOString()
+        }, { onConflict: 'device_id' });
+
+      if (upsertErr) {
+        console.error('❌ Upsert fallback failed:', upsertErr.message);
+      } else {
+        console.log('✅ Push token saved via upsert fallback!');
+      }
+    } else {
+      // console.log('✅ Push token saved successfully to matching row:', data);
+    }
+  } catch (err) {
+    console.error('❌ Exception in saveTokenToSupabase:', err);
   }
+}
 }
