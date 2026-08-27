@@ -1055,60 +1055,111 @@
       }
 
       <!-- FUEL DETAILS -->
-      @if (activeDetailWidgetId === 'fuel') {
-        <div class="modal-hero" style="padding-bottom: 10px;">
-          <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
+@if (activeDetailWidgetId === 'fuel') {
+  <div class="modal-hero" style="padding-bottom: 10px;">
+    <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
+  </div>
+  
+  <div class="modal-body" style="flex: 1; overflow-y: auto;">
+    <ul class="benefits-list" style="list-style: none; padding: 0; margin: 0;">
+      
+      <!-- Бензин 95 -->
+      <li (click)="setDefaultFuel('Бензин 95')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>{{ selectedDefaultFuel === 'Бензин 95' ? '⭐' : '☆' }}</span>
+          {{ 'FUEL_MODAL.PETROL_95' | translate }}
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          @if (getFuelPriceDiff('Бензин 95') !== 0) {
+            <span [style.background-color]="getFuelPriceDiff('Бензин 95') > 0 ? '#ffe3e3' : '#d3f9d8'"
+                  [style.color]="getFuelPriceDiff('Бензин 95') > 0 ? '#e63946' : '#2b8a3e'"
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+              {{ getFuelPriceDiff('Бензин 95') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 95') }}
+            </span>
+          }
+          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
         </div>
-        
-        <div class="modal-body" style="flex: 1; overflow-y: auto;">
-          <ul class="benefits-list">
-            <li (click)="setDefaultFuel('Бензин 95')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultFuel === 'Бензин 95' ? '⭐' : '☆' }}</span>
-                {{ 'FUEL_MODAL.PETROL_95' | translate }}
-              </span>
-              <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-            </li>
+      </li>
 
-            <li (click)="setDefaultFuel('Бензин 98+')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultFuel === 'Бензин 98+' ? '⭐' : '☆' }}</span>
-                {{ 'FUEL_MODAL.PETROL_98' | translate }}
-              </span>
-              <span style="font-weight: bold; color: #e63946;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-            </li>
-
-            <li (click)="setDefaultFuel('Дизел')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultFuel === 'Дизел' ? '⭐' : '☆' }}</span>
-                {{ 'FUEL_MODAL.DIESEL' | translate }}
-              </span>
-              <span style="font-weight: bold; color: #2a9d8f;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-            </li>
-
-            <li (click)="setDefaultFuel('Екстра Лесно')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultFuel === 'Екстра Лесно' ? '⭐' : '☆' }}</span>
-                {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
-              </span>
-              <span style="font-weight: bold; color: #7209b7;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
-            </li>
-
-            <li (click)="setDefaultFuel('Мазут')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultFuel === 'Мазут' ? '⭐' : '☆' }}</span>
-                {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
-              </span>
-              <span style="font-weight: bold; color: #f77f00;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
-            </li>
-          </ul>
-          
-          <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
-            <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
-            <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
-          </div>
+      <!-- Бензин 98+ -->
+      <li (click)="setDefaultFuel('Бензин 98+')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>{{ selectedDefaultFuel === 'Бензин 98+' ? '⭐' : '☆' }}</span>
+          {{ 'FUEL_MODAL.PETROL_98' | translate }}
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          @if (getFuelPriceDiff('Бензин 98+') !== 0) {
+            <span [style.background-color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#ffe3e3' : '#d3f9d8'"
+                  [style.color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#e63946' : '#2b8a3e'"
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+              {{ getFuelPriceDiff('Бензин 98+') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 98+') }}
+            </span>
+          }
+          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
         </div>
-      }
+      </li>
+
+      <!-- Дизел -->
+      <li (click)="setDefaultFuel('Дизел')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>{{ selectedDefaultFuel === 'Дизел' ? '⭐' : '☆' }}</span>
+          {{ 'FUEL_MODAL.DIESEL' | translate }}
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          @if (getFuelPriceDiff('Дизел') !== 0) {
+            <span [style.background-color]="getFuelPriceDiff('Дизел') > 0 ? '#ffe3e3' : '#d3f9d8'"
+                  [style.color]="getFuelPriceDiff('Дизел') > 0 ? '#e63946' : '#2b8a3e'"
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+              {{ getFuelPriceDiff('Дизел') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Дизел') }}
+            </span>
+          }
+          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+        </div>
+      </li>
+
+      <!-- Екстра Лесно -->
+      <li (click)="setDefaultFuel('Екстра Лесно')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>{{ selectedDefaultFuel === 'Екстра Лесно' ? '⭐' : '☆' }}</span>
+          {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          @if (getFuelPriceDiff('Екстра Лесно') !== 0) {
+            <span [style.background-color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#ffe3e3' : '#d3f9d8'"
+                  [style.color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#e63946' : '#2b8a3e'"
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+              {{ getFuelPriceDiff('Екстра Лесно') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Екстра Лесно') }}
+            </span>
+          }
+          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+        </div>
+      </li>
+
+      <!-- Мазут -->
+      <li (click)="setDefaultFuel('Мазут')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
+        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>{{ selectedDefaultFuel === 'Мазут' ? '⭐' : '☆' }}</span>
+          {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          @if (getFuelPriceDiff('Мазут') !== 0) {
+            <span [style.background-color]="getFuelPriceDiff('Мазут') > 0 ? '#ffe3e3' : '#d3f9d8'"
+                  [style.color]="getFuelPriceDiff('Мазут') > 0 ? '#e63946' : '#2b8a3e'"
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+              {{ getFuelPriceDiff('Мазут') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Мазут') }}
+            </span>
+          }
+          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
+        </div>
+      </li>
+    </ul>
+
+    <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
+      <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
+      <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
+    </div>
+  </div>
+}
 
       <!-- CUSTOM WIDGET DETAIL -->
       @if (getActiveCustomWidget(); as customWidget) {

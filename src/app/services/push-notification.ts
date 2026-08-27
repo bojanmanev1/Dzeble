@@ -15,22 +15,37 @@ public async initPushNotifications(): Promise<void> {
     return;
   }
 
-  // 1. Attach Listeners FIRST before registering or checking permissions
-  PushNotifications.removeAllListeners();
+  // 1. Clear existing listeners to avoid duplicate trigger callbacks
+  await PushNotifications.removeAllListeners();
 
-  PushNotifications.addListener('registration', async (token: Token) => {
+  // 2. Token Registration Listener
+  await PushNotifications.addListener('registration', async (token: Token) => {
+    console.log('🔥 FCM Push Token:', token.value);
     await this.saveTokenToSupabase(token.value);
   });
 
-  PushNotifications.addListener('registrationError', (error: any) => {
+  // 3. Registration Error Listener
+  await PushNotifications.addListener('registrationError', (error: any) => {
     console.error('❌ Push Registration Error:', JSON.stringify(error));
   });
 
-  PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-    // console.log('Push Received in Foreground:', notification);
+  // 4. Foreground Notification Received Listener
+  await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+    console.log('🔔 Push Received in Foreground:', notification);
   });
 
-  // 2. Create Default Android Channel
+  // 5. Notification Tap Action Listener (Deep-linking)
+  await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+    console.log('👉 Notification Tapped:', action);
+    const data = action.notification.data;
+
+    if (data?.widgetId) {
+      // Trigger modal or navigation based on target widget payload
+      this.handleNotificationNavigation(data.widgetId, data.city);
+    }
+  });
+
+  // 6. Create Default Android Channel
   await PushNotifications.createChannel({
     id: 'default',
     name: 'General Notifications',
@@ -40,7 +55,7 @@ public async initPushNotifications(): Promise<void> {
     vibration: true,
   });
 
-  // 3. Request permissions & Register
+  // 7. Request permissions & Register
   let permStatus = await PushNotifications.checkPermissions();
 
   if (permStatus.receive === 'prompt') {
@@ -52,6 +67,12 @@ public async initPushNotifications(): Promise<void> {
   } else {
     console.warn('Push notification permission denied by user.');
   }
+}
+
+// Private helper to trigger deep link actions when tapped
+private handleNotificationNavigation(widgetId: string, city?: string): void {
+  console.log(`Opening widget: ${widgetId} for city: ${city}`);
+  // Execute modal/router navigation logic here (e.g., emit an event or call service method)
 }
 
 private async saveTokenToSupabase(pushToken: string): Promise<void> {

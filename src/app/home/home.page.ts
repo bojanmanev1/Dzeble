@@ -1,5 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone } from '@angular/core';import { Router } from '@angular/router';
 import { SupabaseService } from '../services/supabase';
 import { WeatherService } from '../services/weather';
 import { CryptoService, CryptoTicker } from '../services/crypto';
@@ -98,6 +97,7 @@ export class HomePage implements OnInit, OnDestroy {
   private alertCtrl = inject(AlertController);
   public networkService = inject(NetworkService);
   private pushService = inject(PushNotificationService)
+  private zone = inject(NgZone);
   private stockService = inject(StockService);
   private stockSub: Subscription | null = null;
   currentYear = new Date().getFullYear();
@@ -602,6 +602,21 @@ removeCrypto(pair: string, event: Event) {
     return recordWithDate ? recordWithDate.effective_from : '--.--.----';
   }
 
+  // Calculates numeric difference between current and previous price
+getFuelPriceDiff(fuelName: string): number {
+  const match = this.rawDatabaseFuel.find(f => f.fuel_type === fuelName);
+  if (!match || match.previous_price_mkd === null || match.previous_price_mkd === undefined) return 0;
+  return Number(match.price_mkd) - Number(match.previous_price_mkd);
+}
+
+// Formats display string (e.g., "+1.50", "-0.50", "0.00")
+getFuelPriceDiffText(fuelName: string): string {
+  const diff = this.getFuelPriceDiff(fuelName);
+  if (diff === 0) return '';
+  const sign = diff > 0 ? '+' : '';
+  return `${sign}${diff.toFixed(2)}`;
+}
+
   getCalculatedRateDynamic(targetRate: number): string {
     if (!this.inputMkdAmount || this.inputMkdAmount <= 0) return '0.00';
 
@@ -789,6 +804,12 @@ togglePastEventsView() {
   }
 initLiveStock() {
   this.stockService.connect();
+  this.stockSub = this.stockService.stockData$.subscribe((map) => {
+    this.zone.run(() => {
+      this.stockMap = map;
+      this.updateStockWidgetDisplay();
+    });
+  });
 }
 
 updateStockWidgetDisplay() {

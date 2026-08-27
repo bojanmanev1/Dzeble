@@ -179,15 +179,15 @@ async validateSession(user: User): Promise<boolean> {
     return data;
   }
 
-  async getLatestFuelPrices() {
-    const { data, error } = await this.supabase
-      .from('fuel_prices')
-      .select('id, fuel_type, price_mkd, effective_from, updated_at')
-      .order('id', { ascending: true });
+ async getLatestFuelPrices() {
+  const { data, error } = await this.supabase
+    .from('fuel_prices')
+    .select('id, fuel_type, price_mkd, previous_price_mkd, effective_from, updated_at')
+    .order('id', { ascending: true });
 
-    if (error) throw error;
-    return data;
-  }
+  if (error) throw error;
+  return data;
+}
 
   async getCachedMetricsForCity(city: string) {
     const { data, error } = await this.supabase

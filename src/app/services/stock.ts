@@ -105,20 +105,21 @@ public async fetchAllQuotes(): Promise<void> {
   for (let i = 0; i < this.watchedStocks.length; i++) {
     const symbol = this.watchedStocks[i];
     
-    // ⏱️ Add 250ms spacing between initial requests to prevent hitting the 429 rate limit
     if (i > 0) {
-      await new Promise(resolve => setTimeout(resolve, 250));
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     try {
       const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${this.apiKey}`);
+      
       if (res.status === 429) {
-        console.warn('Finnhub rate limit reached (429). Stopping quote fetch batch.');
+        console.warn('Finnhub rate limit reached (429).');
         break;
       }
 
       const data = await res.json();
-      if (data && data.c) {
+      
+      if (data && typeof data.c === 'number' && data.c > 0) {
         currentMap.set(symbol, {
           symbol: symbol,
           price: data.c,
@@ -132,6 +133,7 @@ public async fetchAllQuotes(): Promise<void> {
     }
   }
 
+  // FORCE ZONE RUN TO TRIGGER ANGULAR RENDER
   this.zone.run(() => {
     this.stockDataSubject.next(currentMap);
   });
