@@ -242,7 +242,7 @@ async ngOnInit() {
 
     if (user) {
       // 🔔 Initialize & register Push Notifications ONLY for logged-in users
-      await this.pushService.initPushNotifications();
+      await this.pushService.requestPushPermissionAndRegister();
 
       await this.healthService.requestHealthPermissions();
       await this.syncHealthData(user.id);
@@ -839,6 +839,23 @@ selectStockForWidget(symbol: string) {
   this.selectedStockSymbol = symbol;
   localStorage.setItem('stock_selected_symbol', symbol);
   this.updateStockWidgetDisplay();
+
+  // 🛰️ Persist chosen stock symbol in Supabase for targeted background push alerts
+  if (this.currentUser) {
+    this.supabaseService.getDeviceId().then((deviceId) => {
+      this.supabaseService.supabase
+        .from('user_devices')
+        .update({ stock_alert_symbol: symbol })
+        .eq('device_id', deviceId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Failed to sync stock alert preference:', error.message);
+          } else {
+            console.log(`✅ Stock alert symbol updated to ${symbol} for device ${deviceId}`);
+          }
+        });
+    });
+  }
 }
 
 openStockDetail(stock: StockTicker) {

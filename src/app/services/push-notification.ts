@@ -9,110 +9,77 @@ import { SupabaseService } from './supabase';
 export class PushNotificationService {
   constructor(private supabaseService: SupabaseService) {}
 
-public async initPushNotifications(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) {
-    console.log('Push notifications skipped: Platform is Web.');
-    return;
-  }
-
-  // 1. Clear existing listeners to avoid duplicate trigger callbacks
-  await PushNotifications.removeAllListeners();
-
-  // 2. Token Registration Listener
-  await PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('🔥 FCM Push Token:', token.value);
-    await this.saveTokenToSupabase(token.value);
-  });
-
-  // 3. Registration Error Listener
-  await PushNotifications.addListener('registrationError', (error: any) => {
-    console.error('❌ Push Registration Error:', JSON.stringify(error));
-  });
-
-  // 4. Foreground Notification Received Listener
-  await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-    console.log('🔔 Push Received in Foreground:', notification);
-  });
-
-  // 5. Notification Tap Action Listener (Deep-linking)
-  await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-    console.log('👉 Notification Tapped:', action);
-    const data = action.notification.data;
-
-    if (data?.widgetId) {
-      // Trigger modal or navigation based on target widget payload
-      this.handleNotificationNavigation(data.widgetId, data.city);
-    }
-  });
-
-  // 6. Create Default Android Channel
-  await PushNotifications.createChannel({
-    id: 'default',
-    name: 'General Notifications',
-    description: 'General app notifications',
-    importance: 5,
-    visibility: 1,
-    vibration: true,
-  });
-
-  // 7. Request permissions & Register
-  let permStatus = await PushNotifications.checkPermissions();
-
-  if (permStatus.receive === 'prompt') {
-    permStatus = await PushNotifications.requestPermissions();
-  }
-
-  if (permStatus.receive === 'granted') {
-    await PushNotifications.register();
-  } else {
-    console.warn('Push notification permission denied by user.');
-  }
-}
-
-// Private helper to trigger deep link actions when tapped
-private handleNotificationNavigation(widgetId: string, city?: string): void {
-  console.log(`Opening widget: ${widgetId} for city: ${city}`);
-  // Execute modal/router navigation logic here (e.g., emit an event or call service method)
-}
-
-private async saveTokenToSupabase(pushToken: string): Promise<void> {
-  try {
-    const deviceId = await this.supabaseService.getDeviceId();
-    console.log('🔍 Attempting token save for deviceId:', deviceId);
-    console.log('🔑 Token value:', pushToken);
-
-    const { data, error, count } = await this.supabaseService.supabase
-      .from('user_devices')
-      .update({ push_token: pushToken })
-      .eq('device_id', deviceId)
-      .select();
-
-    if (error) {
-      console.error('❌ Supabase DB Error during token save:', error.message);
-      return;
+  public async requestPushPermissionAndRegister(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+      console.log('Push notifications skipped: Platform is Web.');
+      return false;
     }
 
-    if (!data || data.length === 0) {
-      // console.warn('⚠️ No device row matched device_id:', deviceId, '— Attempting upsert fallback.');
-      
-      const { error: upsertErr } = await this.supabaseService.supabase
-        .from('user_devices')
-        .upsert({
-          device_id: deviceId,
-          push_token: pushToken,
-          last_active: new Date().toISOString()
-        }, { onConflict: 'device_id' });
+    try {
+      // 1. Clear existing listeners
+      await PushNotifications.removeAllListeners();
 
-      if (upsertErr) {
-        console.error('❌ Upsert fallback failed:', upsertErr.message);
-      } else {
-        console.log('✅ Push token saved via upsert fallback!');
+      // 2. Set up registration listeners BEFORE registering
+      PushNotifications.addListener('registration', async (token: Token) => {
+        console.log('🔥 Fresh FCM Push Token Generated:', token.value);
+        await this.saveTokenToSupabase(token.value);
+      });
+
+      PushNotifications.addListener('registrationError', (error: any) => {
+        console.error('❌ Push Registration Error:', JSON.stringify(error));
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+        console.log('🔔 Push Received in Foreground:', notification);
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+        const data = action.notification.data;
+        if (data?.widgetId) {
+          console.log(`Opening widget: ${data.widgetId}`);
+        }
+      });
+
+      await PushNotifications.createChannel({
+        id: 'default',
+        name: 'General Notifications',
+        description: 'General app notifications',
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+      });
+
+      // 3. Check and request permissions
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
       }
-    } else {
-      // console.log('✅ Push token saved successfully to matching row:', data);
+
+      if (permStatus.receive === 'granted') {
+        // 🚀 Force FCM to re-evaluate and emit a fresh registration token
+        await PushNotifications.register();
+        return true;
+      } else {
+        console.warn('Push notification permission denied.');
+        return false;
+      }
+    } catch (err) {
+      console.error('Error in requestPushPermissionAndRegister:', err);
+      return false;
     }
-  } catch (err) {
-    console.error('❌ Exception in saveTokenToSupabase:', err);
   }
-}
+
+  private async saveTokenToSupabase(pushToken: string): Promise<void> {
+    try {
+      const { data: { user } } = await this.supabaseService.supabase.auth.getUser();
+      await this.supabaseService.syncDeviceRecord(
+        user?.id,
+        user?.email,
+        pushToken
+      );
+      console.log('🔥 Push token updated in Supabase.');
+    } catch (err) {
+      console.error('❌ Failed to save token in Supabase:', err);
+    }
+  }
 }

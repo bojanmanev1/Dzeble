@@ -5,6 +5,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
 import { DeviceTrackerService } from './services/device-tracker';
 import { SupabaseService } from './services/supabase';
+import { PushNotificationService } from './services/push-notification';
+import { PermissionService } from './services/permission';
 
 @Component({
   selector: 'app-root',
@@ -14,28 +16,36 @@ import { SupabaseService } from './services/supabase';
 export class AppComponent implements OnInit {
   private deviceTracker = inject(DeviceTrackerService);
   private supabaseService = inject(SupabaseService);
+  private pushService = inject(PushNotificationService);
+  private permissionService = inject(PermissionService);
   private router = inject(Router);
   private translate = inject(TranslateService);
   private zone = inject(NgZone);
 
   async ngOnInit() {
-    // 1. Setup Deep Link Listener for Mobile Auth Confirmations (dzeble://)
     this.setupDeepLinks();
 
-    // 2. Background analytics tracking
+    // 1. Background analytics tracking
     this.deviceTracker.trackDevice().catch(err => console.error('Tracking error:', err));
 
-    // 3. Single-Device Session Enforcer
+    // 2. Request Push, Location, and Activity permissions ONE BY ONE sequentially
+    await this.permissionService.requestAllPermissionsSequentially();
+
+    // 3. Re-sync token automatically when user signs in or restores session
+    this.supabaseService.onAuthStateChange(async (event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        await this.pushService.requestPushPermissionAndRegister();
+      }
+    });
+
+    // 4. Single-Device Session Enforcer
     await this.checkSingleDeviceSession();
   }
 
   private setupDeepLinks() {
     App.addListener('appUrlOpen', (event: URLOpenListenerEvent) => {
       this.zone.run(async () => {
-        // Intercept all native custom scheme redirects
         if (event.url.includes('dzeble://')) {
-          
-          // 1. Extract hash fragment or query params from the deep link URL
           const urlObj = new URL(event.url.replace('dzeble://', 'https://dummy/'));
           const hashParams = new URLSearchParams(urlObj.hash.substring(1));
           const queryParams = new URLSearchParams(urlObj.search);
@@ -43,7 +53,6 @@ export class AppComponent implements OnInit {
           const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
-          // 2. If OAuth/MagicLink/Reset Link returned session tokens, set them into Supabase SDK
           if (accessToken && refreshToken) {
             await this.supabaseService.supabase.auth.setSession({
               access_token: accessToken,
@@ -51,19 +60,18 @@ export class AppComponent implements OnInit {
             });
           }
 
-          // 3. Check if the link target is the Password Reset route
           if (event.url.includes('reset-password')) {
             this.router.navigate(['/reset-password']);
             return;
           }
 
-          // 4. Standard Login / Sign-up confirmation handling
           const { data } = await this.supabaseService.getCurrentUser();
           const user = data?.user;
           const isVerified = user?.email_confirmed_at != null || user?.app_metadata?.provider === 'google';
 
           if (user && isVerified) {
             await this.supabaseService.registerNewDeviceSession(user.id);
+            await this.pushService.requestPushPermissionAndRegister();
             this.router.navigate(['/']);
           } else {
             await this.supabaseService.signOut();

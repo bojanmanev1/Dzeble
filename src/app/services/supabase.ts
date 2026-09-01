@@ -108,17 +108,17 @@ async signOut() {
   try {
     const deviceId = await this.getDeviceId();
 
-    // 1. Clear push_token from Supabase and native listeners if logged in
+    // 1. Unbind the user and clear push token in database
     if (deviceId) {
       await this.supabase
         .from('user_devices')
-        .update({ push_token: null, user_id: null })
+        .update({ push_token: null, user_id: null, email: null })
         .eq('device_id', deviceId);
     }
 
+    // 2. Clear listeners (DO NOT call unregister() - it breaks FCM re-registration)
     if (Capacitor.isNativePlatform()) {
       await PushNotifications.removeAllListeners();
-      await PushNotifications.unregister();
     }
   } catch (err) {
     console.warn('Failed to clear push token during signout:', err);
@@ -275,27 +275,34 @@ async validateSession(user: User): Promise<boolean> {
     return data || [];
   }
 
-async syncDeviceRecord(userId?: string, userEmail?: string) {
+async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) {
   try {
     const deviceId = await this.getDeviceId();
+    const savedSymbol = localStorage.getItem('stock_selected_symbol') || 'AAPL';
 
     const payload: any = {
       device_id: deviceId,
-      last_active: new Date().toISOString() // 👈 Updates timestamp on every app open
+      stock_alert_symbol: savedSymbol,
+      last_active: new Date().toISOString()
     };
 
-    if (userId && userEmail) {
-      payload.user_id = userId;
-      payload.email = userEmail;
-    }
+    if (userId) payload.user_id = userId;
+    if (userEmail) payload.email = userEmail;
+    if (pushToken) payload.push_token = pushToken;
 
-    const { error } = await this.supabase
+    // Upsert replaces stale FCM tokens stored under device_id
+    const { data, error } = await this.supabase
       .from('user_devices')
-      .upsert(payload, { onConflict: 'device_id' });
+      .upsert(payload, { onConflict: 'device_id' })
+      .select();
 
-    if (error) console.error('Device sync error:', error);
+    if (error) {
+      console.error('❌ Device sync DB error:', error.message);
+    } else {
+      console.log('✅ Device record synced cleanly:', data);
+    }
   } catch (err) {
-    console.error('Device resolution failed:', err);
+    console.error('❌ Device resolution failed:', err);
   }
 }
 
