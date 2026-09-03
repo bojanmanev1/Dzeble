@@ -30,15 +30,25 @@
     </div>
 
     <!-- 3. WIDGETS GRID LAYER -->
+<!-- 3. WIDGETS GRID LAYER -->
     <div class="widgets-container premium-grid">
       @for (widget of visibleWidgets; track widget.id) {
         <div class="widget-card-wrapper" (click)="onWidgetClick(widget.id)">
           <div class="interactive-card">
             <div class="card-icon-frame">
-              <ion-icon [name]="widget.icon" class="widget-vector-icon" [ngClass]="widget.id + '-icon'"></ion-icon>
+              <ion-icon 
+                [name]="widget.icon" 
+                class="widget-vector-icon" 
+                [ngClass]="widget.id + '-icon'"
+                [style.color]="widget.customColor || null">
+              </ion-icon>
             </div>
             
-            <div class="card-value">{{ widget.value }}</div>
+            <!-- Value colored dynamically (e.g. green for 49 AQI) -->
+            <div class="card-value" [style.color]="widget.customColor || null">
+              {{ widget.value }}
+            </div>
+
             <div class="card-label">{{ widget.translationKey | translate }}</div>
           </div>
         </div>

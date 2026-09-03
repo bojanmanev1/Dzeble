@@ -54,6 +54,7 @@ interface Widget {
   isCustom?: boolean;
   rawTitle?: string;
   eventDate?: string;
+  customColor?: string;
 }
 
 export interface TickerItem {
@@ -237,27 +238,39 @@ async ngOnInit() {
   this.supabaseService.currentUser$.subscribe(async (user) => {
     this.currentUser = user;
 
-    // 📱 Sync device state first (Guest or Logged-in)
-    await this.syncCurrentDeviceState(user);
-
     if (user) {
-      // 🔔 Initialize & register Push Notifications ONLY for logged-in users
-      await this.pushService.requestPushPermissionAndRegister();
+      // 🔔 1. Register & receive fresh native FCM token first
+      const token = await this.pushService.requestPushPermissionAndRegister();
 
+      // 📱 2. Sync device state WITH the freshly issued token
+      await this.supabaseService.syncDeviceRecord(user.id, user.email, token || undefined);
+
+      // 3. User services initialization
       await this.healthService.requestHealthPermissions();
       await this.syncHealthData(user.id);
       await this.loadLoyaltyCards(user.id);
       await this.loadUserEvents(user.id);
     } else {
+      // 👤 Guest Mode: Sync hardware record without user credentials
+      await this.supabaseService.syncDeviceRecord();
       this.combineHighlightedDates();
     }
   });
 
-  // 3. Listen for app coming from background
+  // 3. Listen for app coming back from background
   if (Capacitor.isNativePlatform()) {
-    App.addListener('appStateChange', ({ isActive }) => {
+    App.addListener('appStateChange', async ({ isActive }) => {
       if (isActive) {
-        this.syncCurrentDeviceState(this.currentUser);
+        const cachedToken = this.pushService.getCurrentToken();
+        if (this.currentUser) {
+          await this.supabaseService.syncDeviceRecord(
+            this.currentUser.id, 
+            this.currentUser.email, 
+            cachedToken || undefined
+          );
+        } else {
+          await this.supabaseService.syncDeviceRecord();
+        }
       }
     });
   }
@@ -590,11 +603,11 @@ removeCrypto(pair: string, event: Event) {
     }
   }
 
-  getDynamicFuelPrice(fuelName: string): string {
-    const match = this.rawDatabaseFuel.find(f => f.fuel_type === fuelName);
-    if (!match) return '--.--';
-    return match.price_mkd.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+getDynamicFuelPrice(fuelName: string): string {
+  const match = this.findFuelRecord(fuelName);
+  if (!match || match.price_mkd === null || match.price_mkd === undefined) return '--.--';
+  return Number(match.price_mkd).toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
   getFuelEffectiveDate(): string {
     if (!this.rawDatabaseFuel || this.rawDatabaseFuel.length === 0) return '--.--.----';
@@ -604,17 +617,38 @@ removeCrypto(pair: string, event: Event) {
 
   // Calculates numeric difference between current and previous price
 getFuelPriceDiff(fuelName: string): number {
-  const match = this.rawDatabaseFuel.find(f => f.fuel_type === fuelName);
+  const match = this.findFuelRecord(fuelName);
   if (!match || match.previous_price_mkd === null || match.previous_price_mkd === undefined) return 0;
-  return Number(match.price_mkd) - Number(match.previous_price_mkd);
+  
+  const current = Number(match.price_mkd);
+  const previous = Number(match.previous_price_mkd);
+  
+  // Return difference
+  return parseFloat((current - previous).toFixed(2));
 }
 
-// Formats display string (e.g., "+1.50", "-0.50", "0.00")
+// 3. Formatted badge text
 getFuelPriceDiffText(fuelName: string): string {
   const diff = this.getFuelPriceDiff(fuelName);
   if (diff === 0) return '';
   const sign = diff > 0 ? '+' : '';
   return `${sign}${diff.toFixed(2)}`;
+}
+
+findFuelRecord(fuelName: string): any {
+  if (!this.rawDatabaseFuel || this.rawDatabaseFuel.length === 0) return null;
+
+  const target = fuelName.toLowerCase();
+
+  return this.rawDatabaseFuel.find(f => {
+    const dbName = (f.fuel_type || '').toLowerCase();
+    if (target.includes('95') && dbName.includes('95')) return true;
+    if (target.includes('98') && dbName.includes('98')) return true;
+    if (target.includes('дизел') && dbName.includes('дизел')) return true;
+    if (target.includes('лесно') && dbName.includes('лесно')) return true;
+    if (target.includes('мазут') && dbName.includes('мазут')) return true;
+    return dbName === target;
+  });
 }
 
   getCalculatedRateDynamic(targetRate: number): string {
@@ -657,12 +691,14 @@ getFuelPriceDiffText(fuelName: string): string {
             return { ...widget, value: `${Math.round(metrics.uv_index)}` };
           }
           if (widget.id === 'aqi') {
-            return { 
-              ...widget, 
-              value: `${metrics.aqi_value}`,
-              unit: metrics.aqi_status_text
-            };
-          }
+          const aqiNum = Number(metrics.aqi_value) || 0;
+          return { 
+            ...widget, 
+            value: `${metrics.aqi_value}`,
+            unit: metrics.aqi_status_text,
+            customColor: this.getAqiColor(aqiNum) // 👈 Computes and stores the color code
+          };
+        }
           return widget;
         });
 
@@ -1033,22 +1069,27 @@ formatStockPrice(priceInUsd: number): string {
     this.updateCurrencyWidgetDisplay();
   }
 
-  updateFuelWidgetDisplay() {
-    const match = this.rawDatabaseFuel.find(f => f.fuel_type === this.selectedDefaultFuel);
-    const displayPrice = match ? match.price_mkd.toFixed(1) : '--.-';
+updateFuelWidgetDisplay() {
+  const match = this.findFuelRecord(this.selectedDefaultFuel);
+  const displayPrice = match ? Number(match.price_mkd).toFixed(1) : '--.-';
+  const diff = this.getFuelPriceDiff(this.selectedDefaultFuel);
 
-    this.allWidgets = this.allWidgets.map(widget => {
-      if (widget.id === 'fuel') {
-        return {
-          ...widget,
-          translationKey: `FUEL_TYPES.${this.selectedDefaultFuel}`,
-          value: `${displayPrice}`
-        };
-      }
-      return widget;
-    });
-    this.filterWidgets();
-  }
+  let arrow = '';
+  if (diff > 0) arrow = ' 🔺';
+  if (diff < 0) arrow = ' 🔻';
+
+  this.allWidgets = this.allWidgets.map(widget => {
+    if (widget.id === 'fuel') {
+      return {
+        ...widget,
+        translationKey: `FUEL_TYPES.${this.selectedDefaultFuel}`,
+        value: `${displayPrice}${arrow}` // 👈 Displays 95.0 🔺 directly on the widget
+      };
+    }
+    return widget;
+  });
+  this.filterWidgets();
+}
 
   updateCurrencyWidgetDisplay() {
     if (this.selectedDefaultCurrency === 'EUR') {

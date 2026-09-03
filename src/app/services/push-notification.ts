@@ -7,69 +7,81 @@ import { SupabaseService } from './supabase';
   providedIn: 'root',
 })
 export class PushNotificationService {
+  private currentToken: string | null = null;
+
   constructor(private supabaseService: SupabaseService) {}
 
-  public async requestPushPermissionAndRegister(): Promise<boolean> {
+  public async requestPushPermissionAndRegister(): Promise<string | null> {
     if (!Capacitor.isNativePlatform()) {
       console.log('Push notifications skipped: Platform is Web.');
-      return false;
+      return null;
     }
 
-    try {
-      // 1. Clear existing listeners
-      await PushNotifications.removeAllListeners();
+    return new Promise(async (resolve) => {
+      try {
+        await PushNotifications.removeAllListeners();
 
-      // 2. Set up registration listeners BEFORE registering
-      PushNotifications.addListener('registration', async (token: Token) => {
-        console.log('🔥 Fresh FCM Push Token Generated:', token.value);
-        await this.saveTokenToSupabase(token.value);
-      });
+        // 1. Listen for successful registration
+        await PushNotifications.addListener('registration', async (token: Token) => {
+          console.log('🔥 Fresh FCM Push Token Generated:', token.value);
+          this.currentToken = token.value;
+          await this.saveTokenToSupabase(token.value);
+          resolve(token.value);
+        });
 
-      PushNotifications.addListener('registrationError', (error: any) => {
-        console.error('❌ Push Registration Error:', JSON.stringify(error));
-      });
+        // 2. Listen for errors
+        await PushNotifications.addListener('registrationError', (error: any) => {
+          console.error('❌ Push Registration Error:', JSON.stringify(error));
+          resolve(null);
+        });
 
-      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-        console.log('🔔 Push Received in Foreground:', notification);
-      });
+        // 3. Foreground & Tap listeners
+        await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+          console.log('🔔 Push Received in Foreground:', notification);
+        });
 
-      PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-        const data = action.notification.data;
-        if (data?.widgetId) {
-          console.log(`Opening widget: ${data.widgetId}`);
+        await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+          const data = action.notification.data;
+          if (data?.widgetId) {
+            console.log(`Opening widget: ${data.widgetId}`);
+          }
+        });
+
+        await PushNotifications.createChannel({
+          id: 'default',
+          name: 'General Notifications',
+          description: 'General app notifications',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+        });
+
+        // 4. Request permissions
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
         }
-      });
 
-      await PushNotifications.createChannel({
-        id: 'default',
-        name: 'General Notifications',
-        description: 'General app notifications',
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-      });
-
-      // 3. Check and request permissions
-      let permStatus = await PushNotifications.checkPermissions();
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
+        if (permStatus.receive === 'granted') {
+          // Unregister first to clear stale Firebase client instances, then register
+          try {
+            await PushNotifications.unregister();
+          } catch (e) {
+            // Ignore if already unregistered
+          }
+          await PushNotifications.register();
+        } else {
+          console.warn('Push notification permission denied.');
+          resolve(null);
+        }
+      } catch (err) {
+        console.error('Error in requestPushPermissionAndRegister:', err);
+        resolve(null);
       }
-
-      if (permStatus.receive === 'granted') {
-        // 🚀 Force FCM to re-evaluate and emit a fresh registration token
-        await PushNotifications.register();
-        return true;
-      } else {
-        console.warn('Push notification permission denied.');
-        return false;
-      }
-    } catch (err) {
-      console.error('Error in requestPushPermissionAndRegister:', err);
-      return false;
-    }
+    });
   }
 
-  private async saveTokenToSupabase(pushToken: string): Promise<void> {
+  public async saveTokenToSupabase(pushToken: string): Promise<void> {
     try {
       const { data: { user } } = await this.supabaseService.supabase.auth.getUser();
       await this.supabaseService.syncDeviceRecord(
@@ -77,9 +89,13 @@ export class PushNotificationService {
         user?.email,
         pushToken
       );
-      console.log('🔥 Push token updated in Supabase.');
+      console.log('🔥 Push token updated in Supabase user_devices.');
     } catch (err) {
       console.error('❌ Failed to save token in Supabase:', err);
     }
+  }
+
+  public getCurrentToken(): string | null {
+    return this.currentToken;
   }
 }
