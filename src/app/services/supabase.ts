@@ -279,10 +279,12 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
   try {
     const deviceId = await this.getDeviceId();
     const savedSymbol = localStorage.getItem('stock_selected_symbol') || 'AAPL';
+    const savedCrypto = localStorage.getItem('crypto_selected_pair') || 'BTCUSDT';
 
     const payload: any = {
       device_id: deviceId,
       stock_alert_symbol: savedSymbol,
+      crypto_alert_pair: savedCrypto,
       last_active: new Date().toISOString()
     };
 
@@ -290,7 +292,6 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     if (userEmail) payload.email = userEmail;
     if (pushToken) payload.push_token = pushToken;
 
-    // Upsert replaces stale FCM tokens stored under device_id
     const { data, error } = await this.supabase
       .from('user_devices')
       .upsert(payload, { onConflict: 'device_id' })

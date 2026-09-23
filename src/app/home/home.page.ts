@@ -326,10 +326,27 @@ updateCryptoWidgetDisplay() {
     return Array.from(this.cryptoMap.values());
   }
 
- selectCryptoForWidget(pair: string) {
+selectCryptoForWidget(pair: string) {
   this.selectedCryptoPair = pair;
   localStorage.setItem('crypto_selected_pair', pair);
   this.updateCryptoWidgetDisplay();
+
+  // 🛰️ Persist chosen crypto pair in Supabase for targeted background push alerts
+  if (this.currentUser) {
+    this.supabaseService.getDeviceId().then((deviceId) => {
+      this.supabaseService.supabase
+        .from('user_devices')
+        .update({ crypto_alert_pair: pair })
+        .eq('device_id', deviceId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Failed to sync crypto alert preference:', error.message);
+          } else {
+            console.log(`✅ Crypto alert pair updated to ${pair} for device ${deviceId}`);
+          }
+        });
+    });
+  }
 }
 
   openSettingsSheet() {
@@ -666,49 +683,66 @@ findFuelRecord(fuelName: string): any {
     });
   }
 
-  fetchLiveMetrics() {
-    this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
-      next: async (coords: { latitude: number; longitude: number }) => {
-        const metrics = await this.supabaseService.getNearestCityMetrics(
-          coords.latitude, 
-          coords.longitude
-        );
+fetchLiveMetrics() {
+  this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
+    next: async (coords: { latitude: number; longitude: number }) => {
+      const metrics = await this.supabaseService.getNearestCityMetrics(
+        coords.latitude, 
+        coords.longitude
+      );
 
-        if (!metrics) return;
+      if (!metrics) return;
 
-        this.currentCityName = metrics.city_name;
-        this.parsedWeatherData = metrics;
+      this.currentCityName = metrics.city_name;
+      this.parsedWeatherData = metrics;
 
-        this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'weather') {
-            return { 
-              ...widget, 
-              value: `${Math.round(metrics.current_temp)}°`, 
-              unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
-            };
-          }
-          if (widget.id === 'uv') {
-            return { ...widget, value: `${Math.round(metrics.uv_index)}` };
-          }
-          if (widget.id === 'aqi') {
+      // 🛰️ Persist coordinates to Supabase so background notifications use this city
+      if (this.currentUser) {
+        try {
+          await this.supabaseService.syncUserWeather({
+            userId: this.currentUser.id,
+            lat: coords.latitude,
+            lng: coords.longitude,
+            temp: metrics.current_temp,
+            code: metrics.weather_code,
+            uv: metrics.uv_index
+          });
+          console.log(`✅ Synced weather coordinates for ${metrics.city_name} to Supabase`);
+        } catch (syncErr) {
+          console.error('❌ Failed to sync user weather coordinates:', syncErr);
+        }
+      }
+
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'weather') {
+          return { 
+            ...widget, 
+            value: `${Math.round(metrics.current_temp)}°`, 
+            unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
+          };
+        }
+        if (widget.id === 'uv') {
+          return { ...widget, value: `${Math.round(metrics.uv_index)}` };
+        }
+        if (widget.id === 'aqi') {
           const aqiNum = Number(metrics.aqi_value) || 0;
           return { 
             ...widget, 
             value: `${metrics.aqi_value}`,
             unit: metrics.aqi_status_text,
-            customColor: this.getAqiColor(aqiNum) // 👈 Computes and stores the color code
+            customColor: this.getAqiColor(aqiNum)
           };
         }
-          return widget;
-        });
+        return widget;
+      });
 
-        this.filterWidgets();
-      },
-      error: (err: any) => {
-        console.error('Failed to get device coordinates:', err);
-      }
-    });
-  }
+      this.filterWidgets();
+    },
+    error: (err: any) => {
+      console.error('Failed to get device coordinates:', err);
+    }
+  });
+}
 
   Math = Math;
 
