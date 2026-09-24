@@ -274,36 +274,112 @@ async validateSession(user: User): Promise<boolean> {
     if (error) return [];
     return data || [];
   }
-
+// 1. In syncDeviceRecord payload
 async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) {
   try {
     const deviceId = await this.getDeviceId();
-    const savedSymbol = localStorage.getItem('stock_selected_symbol') || 'AAPL';
-    const savedCrypto = localStorage.getItem('crypto_selected_pair') || 'BTCUSDT';
 
+    // 1. Cache fresh push token if provided, or retrieve cached token
+    if (pushToken && pushToken.trim().length > 0) {
+      localStorage.setItem('app_fcm_push_token', pushToken);
+    }
+    const resolvedPushToken = pushToken || localStorage.getItem('app_fcm_push_token') || null;
+
+    // 2. Parse notification preferences
+    const notifPrefs = JSON.parse(
+      localStorage.getItem('widget_notification_prefs') || 
+      '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true}'
+    );
+
+    // 3. Parse Stock favorites with legacy fallback
+    let savedStocks: string[] = ['AAPL'];
+    try {
+      const rawStock = localStorage.getItem('stock_favorite_symbols');
+      if (rawStock) {
+        savedStocks = JSON.parse(rawStock);
+      } else {
+        const legacyStock = localStorage.getItem('stock_selected_symbol');
+        if (legacyStock) savedStocks = [legacyStock];
+      }
+    } catch {
+      savedStocks = ['AAPL'];
+    }
+
+    // 4. Parse Crypto favorites with legacy fallback
+    let savedCryptos: string[] = ['BTCUSDT'];
+    try {
+      const rawCrypto = localStorage.getItem('crypto_favorite_pairs');
+      if (rawCrypto) {
+        savedCryptos = JSON.parse(rawCrypto);
+      } else {
+        const legacyCrypto = localStorage.getItem('crypto_selected_pair');
+        if (legacyCrypto) savedCryptos = [legacyCrypto];
+      }
+    } catch {
+      savedCryptos = ['BTCUSDT'];
+    }
+
+    // 5. Build clean, comprehensive payload
     const payload: any = {
       device_id: deviceId,
-      stock_alert_symbol: savedSymbol,
-      crypto_alert_pair: savedCrypto,
+      // Single fields for backwards compatibility
+      stock_alert_symbol: savedStocks[0] || 'AAPL',
+      crypto_alert_pair: savedCryptos[0] || 'BTCUSDT',
+      // Multi-favorite arrays
+      stock_alert_symbols: savedStocks,
+      crypto_alert_pairs: savedCryptos,
+      // Notification switches
+      notify_weather: notifPrefs.weather ?? true,
+      notify_fuel: notifPrefs.fuel ?? true,
+      notify_stock: notifPrefs.stock ?? true,
+      notify_crypto: notifPrefs.crypto ?? true,
+      notify_calendar: notifPrefs.holidays ?? true,
       last_active: new Date().toISOString()
     };
 
     if (userId) payload.user_id = userId;
     if (userEmail) payload.email = userEmail;
-    if (pushToken) payload.push_token = pushToken;
+    if (resolvedPushToken) payload.push_token = resolvedPushToken;
 
+    // 6. Upsert device row
     const { data, error } = await this.supabase
       .from('user_devices')
       .upsert(payload, { onConflict: 'device_id' })
       .select();
 
     if (error) {
-      console.error('❌ Device sync DB error:', error.message);
+      console.error('❌ Device sync error:', error.message);
     } else {
       console.log('✅ Device record synced cleanly:', data);
     }
   } catch (err) {
     console.error('❌ Device resolution failed:', err);
+  }
+}
+
+// 2. Add helper to update an individual widget switch directly
+async updateNotificationPreference(widgetId: string, enabled: boolean) {
+  try {
+    const deviceId = await this.getDeviceId();
+    const columnMap: Record<string, string> = {
+      weather: 'notify_weather',
+      fuel: 'notify_fuel',
+      stock: 'notify_stock',
+      crypto: 'notify_crypto',
+      holidays: 'notify_calendar'
+    };
+
+    const targetColumn = columnMap[widgetId];
+    if (!targetColumn) return;
+
+    await this.supabase
+      .from('user_devices')
+      .update({ [targetColumn]: enabled })
+      .eq('device_id', deviceId);
+
+    console.log(`🔔 Push preference for ${widgetId} set to:`, enabled);
+  } catch (err) {
+    console.error('Failed to update push preference:', err);
   }
 }
 
