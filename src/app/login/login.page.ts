@@ -54,7 +54,7 @@ export class LoginPage implements OnInit {
     this.successMessage = '';
   }
 
-  async onSubmit() {
+async onSubmit() {
     this.errorMessage = '';
     this.successMessage = '';
 
@@ -74,7 +74,7 @@ export class LoginPage implements OnInit {
         await this.supabaseService.signOut();
 
         if (!user?.email_confirmed_at) {
-          this.successMessage = 'Регистрацијата е успешна! Ве молиме проверете ја вашата е-пошта за да ја потврдите сметката.';
+          this.successMessage = this.translate.instant('AUTH.SIGNUP_SUCCESS');
           alert(this.successMessage);
           this.isSignUpMode = false; // Switch UI to login tab
         } else {
@@ -87,7 +87,7 @@ export class LoginPage implements OnInit {
         // Reject login if email is not verified
         if (user && !user.email_confirmed_at) {
           await this.supabaseService.signOut();
-          this.errorMessage = 'Вашата е-пошта сè уште не е потврдена. Проверете го вашето сандаче.';
+          this.errorMessage = this.translate.instant('AUTH.EMAIL_NOT_CONFIRMED');
           return;
         }
 
@@ -96,21 +96,33 @@ export class LoginPage implements OnInit {
     } catch (err: any) {
       console.error('Auth Error:', err);
 
-      if (err.message?.includes('already registered')) {
-        const resendMsg = 'Оваа е-пошта е веќе регистрирана, но сè уште не е потврдена. Дали сакате повторно да добиете е-пошта за потврда?';
+      const rawMsg = (err?.message || '').toLowerCase();
+      const code = (err?.code || '').toLowerCase();
+
+      // 1. Invalid credentials
+      if (code === 'invalid_credentials' || rawMsg.includes('invalid login credentials') || rawMsg.includes('invalid_credentials')) {
+        this.errorMessage = this.translate.instant('AUTH.ERRORS.invalid_credentials');
+      } 
+      // 2. Email already registered
+      else if (rawMsg.includes('already registered') || rawMsg.includes('user already exists') || code === 'user_already_exists') {
+        const resendMsg = this.translate.instant('AUTH.EMAIL_ALREADY_REGISTERED_CONFIRM');
         
         if (confirm(resendMsg)) {
           try {
             await this.supabaseService.resendConfirmationEmail(this.email);
-            alert('Е-поштата за потврда е повторно испратена!');
+            alert(this.translate.instant('AUTH.CONFIRMATION_RESENT'));
           } catch (resendErr: any) {
-            this.errorMessage = resendErr.message;
+            this.errorMessage = resendErr?.message || this.translate.instant('AUTH.GENERIC_ERROR');
           }
         }
-      } else if (err.message?.includes('Email not confirmed')) {
-        this.errorMessage = 'Вашата е-пошта сè уште не е потврдена. Проверете го вашето сандаче.';
-      } else {
-        this.errorMessage = err.message || this.translate.instant('AUTH.GENERIC_ERROR');
+      } 
+      // 3. Email not confirmed
+      else if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
+        this.errorMessage = this.translate.instant('AUTH.EMAIL_NOT_CONFIRMED');
+      } 
+      // 4. Fallback generic error
+      else {
+        this.errorMessage = this.translate.instant('AUTH.GENERIC_ERROR');
       }
     } finally {
       this.isLoading = false;

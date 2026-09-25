@@ -232,7 +232,22 @@
   "FORGOT_PASSWORD": "Keni harruar fjalëkalimin?",
   "CONTINUE_WITH_GOOGLE": "Vazhdo me Google",
   "LOGGED_OUT_OTHER_DEVICE": "Llogaria juaj u kyç nga një pajisje tjetër.",
-  "CONFIRM_EMAIL_SENT": "Regjistrimi u krye me sukses! Ju lutemi kontrolloni e-mailin tuaj për konfirmim."
+  "CONFIRM_EMAIL_SENT": "Regjistrimi u krye me sukses! Ju lutemi kontrolloni e-mailin tuaj për konfirmim.",
+  "FILL_REQUIRED_FIELDS": "Ju lutemi plotësoni të gjitha fushat e kërkuara.",
+  "SIGNUP_SUCCESS": "Regjistrimi doli me sukses! Ju lutemi kontrolloni email-in tuaj për të konfirmuar llogarinë.",
+  "EMAIL_NOT_CONFIRMED": "Email-i juaj nuk është konfirmuar ende. Ju lutemi kontrolloni kutinë tuaj hyrëse.",
+  "EMAIL_ALREADY_REGISTERED_CONFIRM": "Ky email është regjistruar tashmë, por nuk është konfirmuar ende. Dëshironi ta dërgoni përsëri email-in e konfirmimit?",
+  "CONFIRMATION_RESENT": "Email-i i konfirmimit u dërgua përsëri me sukses!",
+  "FORGOT_PASSWORD_EMAIL_REQUIRED": "Ju lutemi shënoni email-in tuaj për të rivendosur fjalëkalimin.",
+  "PASSWORD_RESET_SENT": "Një lidhje për rivendosjen e fjalëkalimit është dërguar në email-in tuaj!",
+  "GENERIC_ERROR": "Ndodhi një gabim. Ju lutemi provoni përsëri.",
+  "GOOGLE_ERROR": "Hyrja me Google dështoi. Ju lutemi provoni përsëri.",
+  "ERRORS": {
+    "invalid_credentials": "Email-i ose fjalëkalimi është i pasaktë. Ju lutemi provoni përsëri.",
+    "email_not_confirmed": "Email-i juaj nuk është konfirmuar ende. Ju lutemi kontrolloni kutinë tuaj hyrëse.",
+    "user_already_exists": "Një llogari me këtë email ekziston tashmë.",
+    "default": "Ndodhi një gabim gjatë identifikimit. Ju lutemi provoni përsëri."
+  }
 },
 "SETTINGS": {
   "GUEST_TITLE": "Mirësevisni në Dzeble",

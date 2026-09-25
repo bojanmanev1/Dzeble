@@ -23,7 +23,7 @@ export class PushNotificationService {
 
         // 1. Listen for successful registration
         await PushNotifications.addListener('registration', async (token: Token) => {
-          console.log('🔥 Fresh FCM Push Token Generated:', token.value);
+          console.log('🔥 FCM Push Token:', token.value);
           this.currentToken = token.value;
           await this.saveTokenToSupabase(token.value);
           resolve(token.value);
@@ -63,12 +63,7 @@ export class PushNotificationService {
         }
 
         if (permStatus.receive === 'granted') {
-          // Unregister first to clear stale Firebase client instances, then register
-          try {
-            await PushNotifications.unregister();
-          } catch (e) {
-            // Ignore if already unregistered
-          }
+          // Register directly — reuses your existing token without regenerating/invalidating it
           await PushNotifications.register();
         } else {
           console.warn('Push notification permission denied.');

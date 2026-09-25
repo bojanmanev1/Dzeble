@@ -232,7 +232,22 @@
   "FORGOT_PASSWORD": "Forgot password?",
   "CONTINUE_WITH_GOOGLE": "Continue with Google",
   "LOGGED_OUT_OTHER_DEVICE": "Your account was logged in from another device.",
-  "CONFIRM_EMAIL_SENT": "Registration successful! Please check your email for confirmation."
+  "CONFIRM_EMAIL_SENT": "Registration successful! Please check your email for confirmation.",
+  "FILL_REQUIRED_FIELDS": "Please fill in all required fields.",
+  "SIGNUP_SUCCESS": "Registration successful! Please check your email to verify your account.",
+  "EMAIL_NOT_CONFIRMED": "Your email is not verified yet. Please check your inbox.",
+  "EMAIL_ALREADY_REGISTERED_CONFIRM": "This email is already registered but not yet confirmed. Would you like to resend the confirmation email?",
+  "CONFIRMATION_RESENT": "Confirmation email has been resent!",
+  "FORGOT_PASSWORD_EMAIL_REQUIRED": "Please enter your email to reset your password.",
+  "PASSWORD_RESET_SENT": "A password reset link has been sent to your email!",
+  "GENERIC_ERROR": "An error occurred. Please try again.",
+  "GOOGLE_ERROR": "Google sign-in failed. Please try again.",
+  "ERRORS": {
+    "invalid_credentials": "Invalid email or password. Please try again.",
+    "email_not_confirmed": "Your email is not verified yet. Please check your inbox.",
+    "user_already_exists": "An account with this email already exists.",
+    "default": "An authentication error occurred. Please try again."
+  }
 },
 "SETTINGS": {
   "GUEST_TITLE": "Welcome to Dzeble",
