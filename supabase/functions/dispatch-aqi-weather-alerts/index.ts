@@ -108,13 +108,45 @@ serve(async (req) => {
 
       if (!cityMetric) continue;
 
-      // Force trigger condition check
-      const isHighAqi = cityMetric.aqi_value > 100;
-      const isRainOrSnow = cityMetric.weather_code >= 200 && cityMetric.weather_code < 700;
+      // 1. High AQI Trigger (> 100 on standard 0-500 scale)
+      const isHighAqi = Number(cityMetric.aqi_value) > 100;
+
+      // 2. Rain / Snow / Thunderstorm Trigger:
+      // Supports both WMO codes (51-99) and legacy OpenWeather codes (200-699)
+      const isWmoRainOrSnow = cityMetric.weather_code >= 51 && cityMetric.weather_code <= 99;
+      const isLegacyRainOrSnow = cityMetric.weather_code >= 200 && cityMetric.weather_code < 700;
+      const isRainOrSnow = isWmoRainOrSnow || isLegacyRainOrSnow;
 
       if (isHighAqi || isRainOrSnow) {
-        const title = isHighAqi ? `🚨 Штетен воздух во ${userCity}` : `🌧️ Врнежи од дожд во ${userCity}`;
-        const body = isHighAqi ? `AQI достигна ${cityMetric.aqi_value}` : `Температура: ${Math.round(cityMetric.current_temp)}°C`;
+        // Extract daily maximum temperature from today's weekly forecast if available
+        let maxTemp: number | null = null;
+        if (Array.isArray(cityMetric.weekly_forecast) && cityMetric.weekly_forecast.length > 0) {
+          const todayEntry = cityMetric.weekly_forecast.find((f: any) => f.day === "Денес" || f.isToday) || cityMetric.weekly_forecast[0];
+          if (todayEntry?.max != null && !isNaN(todayEntry.max)) {
+            maxTemp = Math.round(todayEntry.max);
+          } else if (typeof todayEntry?.temps === "string") {
+            const match = todayEntry.temps.match(/([0-9.-]+)°/);
+            if (match) maxTemp = Math.round(parseFloat(match[1]));
+          }
+        }
+
+        // Differentiate precipitation title
+        const isSnow = (cityMetric.weather_code >= 71 && cityMetric.weather_code <= 77) ||
+                       (cityMetric.weather_code >= 85 && cityMetric.weather_code <= 86) ||
+                       (cityMetric.weather_code >= 600 && cityMetric.weather_code < 700);
+        const isThunder = (cityMetric.weather_code >= 95 && cityMetric.weather_code <= 99) ||
+                          (cityMetric.weather_code >= 200 && cityMetric.weather_code < 300);
+
+        const weatherTitle = isSnow
+          ? `❄️ Врнежи од снег во ${userCity}`
+          : (isThunder ? `⛈️ Грмотевици во ${userCity}` : `🌧️ Врнежи од дожд во ${userCity}`);
+
+        const weatherBody = maxTemp != null
+          ? `Температура: ${Math.round(cityMetric.current_temp)}°C | Највисока: ${maxTemp}°C`
+          : `Температура: ${Math.round(cityMetric.current_temp)}°C`;
+
+        const title = isHighAqi ? `🚨 Штетен воздух во ${userCity}` : weatherTitle;
+        const body = isHighAqi ? `AQI достигна ${cityMetric.aqi_value}` : weatherBody;
 
         const fcmRes = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
           method: "POST",

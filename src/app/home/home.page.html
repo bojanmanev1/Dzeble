@@ -174,28 +174,103 @@
       
       <!-- WEATHER DETAILS -->
       @if (activeDetailWidgetId === 'weather') {
-        <div class="modal-hero" style="padding-bottom: 10px;">
-          <p class="subtitle">{{ 'WEATHER_MODAL.SUBTITLE' | translate }}</p>
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 4px 0; color: #0f172a;">
+            {{ 'WEATHER_MODAL.TITLE' | translate }}
+          </h2>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ currentCityName }} • {{ 'WEATHER_MODAL.SUBTITLE' | translate }}</p>
         </div>
         
-        <div class="modal-body" style="flex: 1; overflow-y: auto;">
-          <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">{{ 'WEATHER_MODAL.HOURLY' | translate }}</h3>
-          <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px;">
-            @for (hourItem of getHourlyForecast(); track hourItem.time) {
-              <div style="background: #f7f7f5; padding: 10px 14px; border-radius: 12px; text-align: center; min-width: 65px;">
-                <span style="font-size: 0.75rem; color: #888; display: block;">{{ hourItem.time }}</span>
-                <span style="font-size: 1.2rem; display: block; margin: 4px 0;">{{ hourItem.icon }}</span>
-                <span style="font-weight: bold; color: #111;">{{ hourItem.temp }}</span>
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 4px 16px 4px;">
+          <!-- Current Weather Hero Card -->
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; padding: 18px 20px; border-radius: 18px; text-align: center; margin-bottom: 14px;">
+            <div style="font-size: 3.4rem; line-height: 1; margin-bottom: 6px; display: flex; justify-content: center; align-items: center;">
+              <ion-icon [name]="getWeatherCurrentIonicIcon()" [style.color]="getWeatherCurrentIonicColor()"></ion-icon>
+            </div>
+            <div style="font-size: 2.5rem; font-weight: 800; color: #0f172a; line-height: 1.1;">
+              {{ Math.round(parsedWeatherData?.current_temp ?? 0) }}°C
+            </div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: #475569; margin-top: 4px;">
+              {{ getWeatherConditionText() }}
+            </div>
+
+            <!-- Today's High & Low Range Pill -->
+            @if (getTodayWeatherHigh() != null) {
+              <div style="display: inline-flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid #cbd5e1; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-top: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <span style="color: #ef4444;">▲ {{ getTodayWeatherHigh() }}°C</span>
+                @if (getTodayWeatherLow() != null) {
+                  <span style="color: #cbd5e1;">|</span>
+                  <span style="color: #0284c7;">▼ {{ getTodayWeatherLow() }}°C</span>
+                }
               </div>
             }
           </div>
 
-          <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 8px;">{{ 'WEATHER_MODAL.WEEKLY' | translate }}</h3>
-          <ul class="benefits-list">
+          <!-- Quick Metrics Grid -->
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 14px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px;">
+                🌡️ {{ 'WEATHER_MODAL.FEELS_LIKE' | translate }}
+              </span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">
+                {{ getWeatherFeelsLike() ?? '--' }}°C
+              </span>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 14px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px;">
+                💧 {{ 'WEATHER_MODAL.HUMIDITY' | translate }}
+              </span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">
+                {{ getWeatherHumidity() ?? '--' }}%
+              </span>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 14px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px;">
+                💨 {{ 'WEATHER_MODAL.WIND' | translate }}
+              </span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">
+                {{ getWeatherWindSpeed() ?? '--' }} km/h
+              </span>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 14px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px;">
+                ☀️ {{ 'WEATHER_MODAL.UV_INDEX' | translate }}
+              </span>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">
+                {{ Math.round(parsedWeatherData?.uv_index ?? 0) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Hourly Forecast Section -->
+          <h3 style="font-size: 0.9rem; font-weight: 700; color: #475569; margin: 0 0 8px 2px;">
+            {{ 'WEATHER_MODAL.HOURLY' | translate }}
+          </h3>
+          <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px; -webkit-overflow-scrolling: touch;">
+            @for (hourItem of getHourlyForecast(); track hourItem.time) {
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 14px; text-align: center; min-width: 68px; flex-shrink: 0;">
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; display: block;">{{ hourItem.time }}</span>
+                <span style="font-size: 1.35rem; display: block; margin: 4px 0;">{{ hourItem.icon }}</span>
+                <span style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">{{ hourItem.temp }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Weekly Forecast Section -->
+          <h3 style="font-size: 0.9rem; font-weight: 700; color: #475569; margin: 0 0 8px 2px;">
+            {{ 'WEATHER_MODAL.WEEKLY' | translate }}
+          </h3>
+          <ul class="benefits-list" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 4px 14px; margin: 0; list-style: none;">
             @for (dayItem of getWeeklyForecast(); track dayItem.day) {
-              <li style="justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5;">
-                <span>{{ dayItem.day }}</span>
-                <span style="font-weight: 700;">{{ dayItem.icon }} {{ dayItem.temps }}</span>
+              <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: #1e293b;">{{ dayItem.day }}</span>
+                <span style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.1rem;">{{ dayItem.icon }}</span>
+                  <span>{{ dayItem.temps }}</span>
+                </span>
               </li>
             }
           </ul>
@@ -371,25 +446,25 @@
 
           <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'UV_MODAL.SCALE_HEADER' | translate }}</h3>
           <ul style="list-style: none; padding: 0; margin: 0;">
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #2a9d8f;">{{ 'UV_MODAL.LOW' | translate }}</span>
-              <span style="color: #888;">{{ 'UV_MODAL.LOW_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #2a9d8f;">{{ 'UV_MODAL.LOW' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'UV_MODAL.LOW_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #e9c46a;">{{ 'UV_MODAL.MODERATE' | translate }}</span>
-              <span style="color: #888;">{{ 'UV_MODAL.MODERATE_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #e9c46a;">{{ 'UV_MODAL.MODERATE' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'UV_MODAL.MODERATE_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #f4a261;">{{ 'UV_MODAL.HIGH' | translate }}</span>
-              <span style="color: #888;">{{ 'UV_MODAL.HIGH_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #f4a261;">{{ 'UV_MODAL.HIGH' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'UV_MODAL.HIGH_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #e76f51;">{{ 'UV_MODAL.VERY_HIGH' | translate }}</span>
-              <span style="color: #888;">{{ 'UV_MODAL.VERY_HIGH_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #e76f51;">{{ 'UV_MODAL.VERY_HIGH' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'UV_MODAL.VERY_HIGH_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #d62828;">{{ 'UV_MODAL.EXTREME' | translate }}</span>
-              <span style="color: #888;">{{ 'UV_MODAL.EXTREME_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #d62828;">{{ 'UV_MODAL.EXTREME' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'UV_MODAL.EXTREME_DESC' | translate }}</span>
             </li>
           </ul>
         </div>
@@ -428,25 +503,25 @@
 
           <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'AQI_MODAL.LEGEND_TITLE' | translate }}</h3>
           <ul style="list-style: none; padding: 0; margin: 0;">
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #2a9d8f;">{{ 'AQI_MODAL.GOOD' | translate }}</span>
-              <span style="color: #888;">{{ 'AQI_MODAL.GOOD_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #2a9d8f;">{{ 'AQI_MODAL.GOOD' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'AQI_MODAL.GOOD_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #e9c46a;">{{ 'AQI_MODAL.MODERATE' | translate }}</span>
-              <span style="color: #888;">{{ 'AQI_MODAL.MODERATE_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #e9c46a;">{{ 'AQI_MODAL.MODERATE' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'AQI_MODAL.MODERATE_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #f4a261;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE' | translate }}</span>
-              <span style="color: #888;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #f4a261;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'AQI_MODAL.UNHEALTHY_SENSITIVE_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #e76f51;">{{ 'AQI_MODAL.UNHEALTHY' | translate }}</span>
-              <span style="color: #888;">{{ 'AQI_MODAL.UNHEALTHY_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #e76f51;">{{ 'AQI_MODAL.UNHEALTHY' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'AQI_MODAL.UNHEALTHY_DESC' | translate }}</span>
             </li>
-            <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;">
-              <span style="font-weight: 600; color: #d62828;">{{ 'AQI_MODAL.HAZARDOUS' | translate }}</span>
-              <span style="color: #888;">{{ 'AQI_MODAL.HAZARDOUS_DESC' | translate }}</span>
+            <li style="display: flex; flex-direction: column; gap: 3px; padding: 9px 0; border-bottom: 1px solid #f1f3f5;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #d62828;">{{ 'AQI_MODAL.HAZARDOUS' | translate }}</span>
+              <span style="color: #64748b; font-size: 0.82rem; line-height: 1.35;">{{ 'AQI_MODAL.HAZARDOUS_DESC' | translate }}</span>
             </li>
           </ul>
         </div>

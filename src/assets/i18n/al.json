@@ -75,7 +75,28 @@
     "TITLE": "Parashikimi i Motit",
     "SUBTITLE": "Informacione të detajuara me orë dhe ditë",
     "HOURLY": "Orët e ardhshme",
-    "WEEKLY": "Parashikimi javor"
+    "WEEKLY": "Parashikimi javor",
+    "FEELS_LIKE": "Ndihet si",
+    "HUMIDITY": "Lagështia",
+    "WIND": "Era",
+    "UV_INDEX": "Indeksi UV",
+    "HIGH": "Maks",
+    "LOW": "Min",
+    "TODAY_RANGE": "Gama e sotme"
+  },
+  "WEATHER_DESC": {
+    "CLEAR": "Kthjellët",
+    "MAINLY_CLEAR": "Kryesisht kthjellët",
+    "PARTLY_CLOUDY": "Pjesërisht me re",
+    "OVERCAST": "Vranët",
+    "FOG": "Mjegull",
+    "DRIZZLE": "Rigë shiu",
+    "RAIN": "Shi",
+    "SNOW": "Borë",
+    "SHOWERS": "Rrebesh",
+    "SNOW_SHOWERS": "Reshje bore",
+    "THUNDERSTORM": "Stuhi",
+    "VARIABLE": "E ndryshueshme"
   },
   "UV_MODAL": {
     "TITLE": "Rrezatimi UV (UV Index)",

@@ -169,9 +169,9 @@ async validateSession(user: User): Promise<boolean> {
         user_id: metrics.userId,
         latitude: metrics.lat,
         longitude: metrics.lng,
-        current_temp: metrics.temp,
-        weather_code: metrics.code,
-        uv_index: metrics.uv,
+        current_temp: Math.round(metrics.temp),
+        weather_code: Math.round(metrics.code),
+        uv_index: Math.round(metrics.uv),
         updated_at: new Date().toISOString()
       });
 
@@ -341,6 +341,11 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     if (userEmail) payload.email = userEmail;
     if (resolvedPushToken) payload.push_token = resolvedPushToken;
 
+    const cachedCity = localStorage.getItem('user_current_city');
+    if (cachedCity) {
+      payload.city_preference = cachedCity;
+    }
+
     // 6. Upsert device row
     const { data, error } = await this.supabase
       .from('user_devices')
@@ -354,6 +359,19 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     }
   } catch (err) {
     console.error('❌ Device resolution failed:', err);
+  }
+}
+
+async updateDeviceCityPreference(cityName: string) {
+  try {
+    localStorage.setItem('user_current_city', cityName);
+    const deviceId = await this.getDeviceId();
+    await this.supabase
+      .from('user_devices')
+      .update({ city_preference: cityName })
+      .eq('device_id', deviceId);
+  } catch (err) {
+    console.warn('Failed to update city preference:', err);
   }
 }
 

@@ -74,8 +74,29 @@
   "WEATHER_MODAL": {
     "TITLE": "Weather Forecast",
     "SUBTITLE": "Hourly and daily weather forecast",
-    "HOURLY": "Next Few Hours",
-    "WEEKLY": "Weekly Forecast"
+    "HOURLY": "Upcoming Hours",
+    "WEEKLY": "Weekly Forecast",
+    "FEELS_LIKE": "Feels like",
+    "HUMIDITY": "Humidity",
+    "WIND": "Wind",
+    "UV_INDEX": "UV Index",
+    "HIGH": "High",
+    "LOW": "Low",
+    "TODAY_RANGE": "Today's Range"
+  },
+  "WEATHER_DESC": {
+    "CLEAR": "Clear",
+    "MAINLY_CLEAR": "Mainly Clear",
+    "PARTLY_CLOUDY": "Partly Cloudy",
+    "OVERCAST": "Overcast",
+    "FOG": "Fog",
+    "DRIZZLE": "Drizzle",
+    "RAIN": "Rainy",
+    "SNOW": "Snow",
+    "SHOWERS": "Showers",
+    "SNOW_SHOWERS": "Snow Showers",
+    "THUNDERSTORM": "Thunderstorm",
+    "VARIABLE": "Variable"
   },
   "UV_MODAL": {
     "TITLE": "UV Index",

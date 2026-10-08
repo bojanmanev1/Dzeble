@@ -17,6 +17,12 @@ import {
   logoEuro, 
   speedometer, 
   sunny, 
+  partlySunny,
+  rainy,
+  snow,
+  thunderstorm,
+  moon,
+  cloudyNight,
   calendarNumber, 
   gift, 
   notifications, 
@@ -211,6 +217,12 @@ export class HomePage implements OnInit, OnDestroy {
       'logo-euro': logoEuro,
       'speedometer': speedometer,
       'sunny': sunny,
+      'partly-sunny': partlySunny,
+      'rainy': rainy,
+      'snow': snow,
+      'thunderstorm': thunderstorm,
+      'moon': moon,
+      'cloudy-night': cloudyNight,
       'calendar-number': calendarNumber,
       'gift': gift,
       'notifications': notifications,
@@ -688,6 +700,7 @@ async handleLogout() {
 
         this.currentCityName = metrics.city_name;
         this.parsedWeatherData = metrics;
+        this.supabaseService.updateDeviceCityPreference(metrics.city_name);
 
         if (this.currentUser) {
           try {
@@ -704,12 +717,17 @@ async handleLogout() {
           }
         }
 
+        const weatherIcon = this.weatherService.getWeatherIonicIcon(metrics.weather_code, metrics.is_day);
+        const weatherColor = this.weatherService.getWeatherIonicColor(metrics.weather_code, metrics.is_day);
+
         this.allWidgets = this.allWidgets.map(widget => {
           if (widget.id === 'weather') {
             return { 
               ...widget, 
               value: `${Math.round(metrics.current_temp)}°`, 
-              unit: this.weatherService.getWeatherDesc(metrics.weather_code) 
+              unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+              icon: weatherIcon,
+              customColor: weatherColor
             };
           }
           if (widget.id === 'uv') {
@@ -722,6 +740,19 @@ async handleLogout() {
               value: `${metrics.aqi_value}`,
               unit: metrics.aqi_status_text,
               customColor: this.getAqiColor(aqiNum)
+            };
+          }
+          return widget;
+        });
+
+        this.visibleWidgets = this.visibleWidgets.map(widget => {
+          if (widget.id === 'weather') {
+            return {
+              ...widget,
+              value: `${Math.round(metrics.current_temp)}°`,
+              unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+              icon: weatherIcon,
+              customColor: weatherColor
             };
           }
           return widget;
@@ -764,6 +795,80 @@ async handleLogout() {
 
   getHourlyForecast() { return this.parsedWeatherData?.hourly_forecast || []; }
   getWeeklyForecast() { return this.parsedWeatherData?.weekly_forecast || []; }
+
+  getTodayWeatherHigh(): number | null {
+    const today = (this.parsedWeatherData?.weekly_forecast || []).find((d: any) => d.day === 'Денес' || d.isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
+    if (today?.max != null) return today.max;
+    if (typeof today?.temps === 'string') {
+      const match = today.temps.match(/([0-9.-]+)°/);
+      if (match) return Math.round(parseFloat(match[1]));
+    }
+    return this.parsedWeatherData ? Math.round(this.parsedWeatherData.current_temp) : null;
+  }
+
+  getTodayWeatherLow(): number | null {
+    const today = (this.parsedWeatherData?.weekly_forecast || []).find((d: any) => d.day === 'Денес' || d.isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
+    if (today?.min != null) return today.min;
+    if (typeof today?.temps === 'string') {
+      const parts = today.temps.split('/');
+      if (parts[1]) {
+        const match = parts[1].match(/([0-9.-]+)°/);
+        if (match) return Math.round(parseFloat(match[1]));
+      }
+    }
+    return null;
+  }
+
+  getWeatherFeelsLike(): number | null {
+    const hourly = this.parsedWeatherData?.hourly_forecast;
+    if (Array.isArray(hourly)) {
+      for (const h of hourly) {
+        if (h?.apparent_temp != null && !isNaN(h.apparent_temp)) return Math.round(h.apparent_temp);
+      }
+    }
+    return this.parsedWeatherData ? Math.round(this.parsedWeatherData.current_temp) : null;
+  }
+
+  getWeatherHumidity(): number | null {
+    const hourly = this.parsedWeatherData?.hourly_forecast;
+    if (Array.isArray(hourly)) {
+      for (const h of hourly) {
+        if (h?.humidity != null && !isNaN(h.humidity)) return Math.round(h.humidity);
+      }
+    }
+    return null;
+  }
+
+  getWeatherWindSpeed(): number | null {
+    const hourly = this.parsedWeatherData?.hourly_forecast;
+    if (Array.isArray(hourly)) {
+      for (const h of hourly) {
+        if (h?.wind != null && !isNaN(h.wind)) return Math.round(h.wind);
+      }
+    }
+    return null;
+  }
+
+  getWeatherCurrentIcon(): string {
+    if (!this.parsedWeatherData) return '⛅';
+    return this.weatherService.getWeatherIcon(this.parsedWeatherData.weather_code, this.parsedWeatherData.is_day);
+  }
+
+  getWeatherCurrentIonicIcon(): string {
+    if (!this.parsedWeatherData) return 'cloudy';
+    return this.weatherService.getWeatherIonicIcon(this.parsedWeatherData.weather_code, this.parsedWeatherData.is_day);
+  }
+
+  getWeatherCurrentIonicColor(): string {
+    if (!this.parsedWeatherData) return '#64748b';
+    return this.weatherService.getWeatherIonicColor(this.parsedWeatherData.weather_code, this.parsedWeatherData.is_day);
+  }
+
+  getWeatherConditionText(): string {
+    if (!this.parsedWeatherData) return '';
+    return this.weatherService.getWeatherDesc(this.parsedWeatherData.weather_code);
+  }
+
 
 filterWidgets() {
   if (!this.currentUser) {

@@ -60,8 +60,29 @@
   "WEATHER_MODAL": {
     "TITLE": "Временска Прогноза",
     "SUBTITLE": "Детални информации по часови и денови",
-    "HOURLY": "Следни неколку часа",
-    "WEEKLY": "Неделна прогноза"
+    "HOURLY": "Следни часови",
+    "WEEKLY": "Неделна прогноза",
+    "FEELS_LIKE": "Се чувствува како",
+    "HUMIDITY": "Влажност",
+    "WIND": "Ветер",
+    "UV_INDEX": "УВ Индекс",
+    "HIGH": "Највисока",
+    "LOW": "Најниска",
+    "TODAY_RANGE": "Денешен опсег"
+  },
+  "WEATHER_DESC": {
+    "CLEAR": "Ведро",
+    "MAINLY_CLEAR": "Претежно ведро",
+    "PARTLY_CLOUDY": "Делумно Облачно",
+    "OVERCAST": "Облачно",
+    "FOG": "Магла",
+    "DRIZZLE": "Росење",
+    "RAIN": "Дождливо",
+    "SNOW": "Снег",
+    "SHOWERS": "Пороен дожд",
+    "SNOW_SHOWERS": "Снежни врнежи",
+    "THUNDERSTORM": "Грмежи",
+    "VARIABLE": "Променливо"
   },
   "UV_MODAL": {
     "TITLE": "УВ Зрачење (UV Index)",
