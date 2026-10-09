@@ -45,12 +45,16 @@
         }
 
             <div class="card-icon-frame">
-              <ion-icon 
-                [name]="widget.icon" 
-                class="widget-vector-icon" 
-                [ngClass]="widget.id + '-icon'"
-                [style.color]="widget.customColor || null">
-              </ion-icon>
+              @if (widget.id === 'weather' && widget.weatherEmoji) {
+                <span class="weather-rich-icon">{{ widget.weatherEmoji }}</span>
+              } @else {
+                <ion-icon 
+                  [name]="widget.icon" 
+                  class="widget-vector-icon" 
+                  [ngClass]="widget.id + '-icon'"
+                  [style.color]="widget.customColor || null">
+                </ion-icon>
+              }
             </div>
             
             <!-- Value colored dynamically (e.g. green for 49 AQI) -->
@@ -170,7 +174,7 @@
   [breakpoints]="[0, 1.0]"
   [handle]="true">
   <ng-template>
-    <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; max-height: 85vh; padding: 12px 16px max(16px, env(safe-area-inset-bottom)) 16px; box-sizing: border-box;">
+    <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; max-height: 85vh; padding: 30px 16px max(16px, env(safe-area-inset-bottom)) 16px; box-sizing: border-box;">
       
       <!-- WEATHER DETAILS -->
       @if (activeDetailWidgetId === 'weather') {
@@ -184,8 +188,8 @@
         <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 4px 16px 4px;">
           <!-- Current Weather Hero Card -->
           <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; padding: 18px 20px; border-radius: 18px; text-align: center; margin-bottom: 14px;">
-            <div style="font-size: 3.4rem; line-height: 1; margin-bottom: 6px; display: flex; justify-content: center; align-items: center;">
-              <ion-icon [name]="getWeatherCurrentIonicIcon()" [style.color]="getWeatherCurrentIonicColor()"></ion-icon>
+            <div style="font-size: 3.6rem; line-height: 1; margin-bottom: 6px; display: flex; justify-content: center; align-items: center;">
+              <span class="weather-hero-rich-icon">{{ getWeatherCurrentIcon() }}</span>
             </div>
             <div style="font-size: 2.5rem; font-weight: 800; color: #0f172a; line-height: 1.1;">
               {{ Math.round(parsedWeatherData?.current_temp ?? 0) }}°C
@@ -530,49 +534,100 @@
       <!-- CURRENCY DETAILS MODAL -->
       @if (activeDetailWidgetId === 'currency') {
         <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-          <p class="subtitle">{{ 'CURRENCY_MODAL.SUBTITLE' | translate }}</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon [name]="getCurrencyIonicIcon(selectedDefaultCurrency)" style="font-size: 1.3rem; color: #f59e0b;"></ion-icon>
+            <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ selectedDefaultCurrency }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'CURRENCY_MODAL.SUBTITLE' | translate }}</p>
         </div>
 
-        <div style="background: #f7f7f5; padding: 14px; border-radius: 16px; margin-bottom: 16px;">
-          <label style="font-size: 0.75rem; font-weight: bold; color: #666; display: block; margin-bottom: 4px;">
+        <!-- Input Denar Amount Card -->
+        <div style="background: #f8fafc; padding: 14px 16px; border-radius: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
+          <label style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
             {{ 'CURRENCY_MODAL.INPUT_LABEL' | translate }}
           </label>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
             <input 
               type="number" 
               [(ngModel)]="inputMkdAmount" 
-              style="width: 100%; border: none; background: transparent; font-size: 1.5rem; font-weight: 800; color: #111; outline: none;" 
+              style="width: 100%; border: none; background: transparent; font-size: 1.8rem; font-weight: 800; color: #0f172a; outline: none; padding: 0;" 
               placeholder="100" />
-            <span style="font-weight: 800; color: #666;">{{ 'CURRENCY_MODAL.DENAR_SYMBOL' | translate }}</span>
+            <span style="font-weight: 800; font-size: 1.1rem; color: #64748b; flex-shrink: 0;">{{ 'CURRENCY_MODAL.DENAR_SYMBOL' | translate }}</span>
           </div>
         </div>
 
-        <div class="modal-body" style="flex: 1; overflow-y: auto;">
-          <ul class="benefits-list">
-            <li (click)="setDefaultCurrency('EUR')" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <span>{{ selectedDefaultCurrency === 'EUR' ? '⭐' : '☆' }}</span>
-                🇪🇺 {{ 'CURRENCY_MODAL.EURO_NAME' | translate }}
-              </span>
-              <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
-                {{ getCalculatedRateDynamic(1.0) }} €
-              </span>
-            </li>
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            
+            <!-- EUR Card -->
+            <div 
+              (click)="setDefaultCurrency('EUR')"
+              style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+                  {{ selectedDefaultCurrency === 'EUR' ? '★' : '☆' }}
+                </span>
+                <div>
+                  <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+                    {{ getCurrencyFlag('EUR') }} {{ 'CURRENCY_MODAL.EURO_NAME' | translate }}
+                  </span>
+                  <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                    EUR
+                  </span>
+                </div>
+              </div>
 
+              <div style="text-align: right;">
+                <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+                  {{ getCalculatedRateDynamic(1.0) }} €
+                </span>
+                @if (selectedDefaultCurrency === 'EUR') {
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                    ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основна') }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Other Currencies Cards -->
             @for (rateRow of rawDatabaseRates; track rateRow.target_currency) {
               @if (rateRow.target_currency !== 'MKD') {
-                <li (click)="setDefaultCurrency(rateRow.target_currency)" style="justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-                  <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                    <span>{{ selectedDefaultCurrency === rateRow.target_currency ? '⭐' : '☆' }}</span>
-                    {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }} ({{ rateRow.target_currency }})
-                  </span>
-                  <span style="font-weight: 800; font-size: 1.1rem; color: #111;">
-                    {{ getCalculatedRateDynamic(rateRow.rate) }} {{ rateRow.target_currency }}
-                  </span>
-                </li>
+                <div 
+                  (click)="setDefaultCurrency(rateRow.target_currency)"
+                  style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+                  
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+                      {{ selectedDefaultCurrency === rateRow.target_currency ? '★' : '☆' }}
+                    </span>
+                    <div>
+                      <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+                        {{ getCurrencyFlag(rateRow.target_currency) }} {{ getCurrencyNameLocal(rateRow.target_currency) }}
+                      </span>
+                      <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                        {{ rateRow.target_currency }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style="text-align: right;">
+                    <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+                      {{ getCalculatedRateDynamic(rateRow.rate) }} {{ rateRow.target_currency }}
+                    </span>
+                    @if (selectedDefaultCurrency === rateRow.target_currency) {
+                      <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                        ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основна') }}
+                      </span>
+                    }
+                  </div>
+                </div>
               }
             }
-          </ul>
+
+          </div>
         </div>
       }
 
@@ -712,122 +767,245 @@
       <!-- LOYALTY CARDS MODULE -->
       @if (activeDetailWidgetId === 'loyalty' && currentUser) {
         @if (loyaltyModalView === 'list') {
-          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-            <p class="subtitle">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
+          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+              <ion-icon name="card" style="font-size: 1.3rem; color: #6366f1;"></ion-icon>
+              <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+                {{ 'LOYALTY_MODAL.TITLE' | translate }}
+              </h2>
+            </div>
+            <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+            <!-- Prominent Add Card Button -->
+            <button 
+              (click)="openAddLoyaltyCardView()" 
+              style="width: 100%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; padding: 13px 16px; border-radius: 14px; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: transform 0.15s ease;">
+              <span style="font-size: 1.1rem; line-height: 1;">＋</span>
+              <span>{{ 'LOYALTY_MODAL.ADD_NEW_BTN' | translate }}</span>
+            </button>
+
             @if (loyaltyCards.length > 0) {
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+              <!-- Realistic Digital Wallet Cards Grid -->
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
                 @for (card of loyaltyCards; track card.id) {
                   <div 
-                    [style.background-color]="card.card_color || '#1e293b'" 
-                    style="padding: 16px; border-radius: 16px; color: white; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 95px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-                    (click)="openLoyaltyCardView(card)">
-                    <h4 style="margin: 0; font-weight: 800; font-size: 1.1rem;">{{ card.store_name }}</h4>
-                    <span style="font-family: monospace; font-size: 0.85rem; opacity: 0.85; letter-spacing: 1px;">
-                      •••• {{ card.barcode_data.slice(-4) }}
-                    </span>
+                    (click)="openLoyaltyCardView(card)"
+                    [style.background]="getCardGradient(card)" 
+                    style="position: relative; border-radius: 18px; color: white; cursor: pointer; padding: 14px 14px; height: 114px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; box-shadow: 0 8px 22px rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s ease;">
+                    
+                    <!-- Glass Gloss Curve -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none; border-radius: 18px 18px 0 0;"></div>
+                    <div style="position: absolute; top: -15px; right: -15px; width: 65px; height: 65px; background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%); pointer-events: none;"></div>
+
+                    <!-- Top Row: Store Name -->
+                    <div style="position: relative; z-index: 1;">
+                      <h4 style="margin: 0; font-weight: 800; font-size: 1.05rem; text-shadow: 0 1px 3px rgba(0,0,0,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px;">{{ card.store_name }}</h4>
+                    </div>
+
+                    <!-- Bottom Row: Mini Barcode Lines & Masked Number -->
+                    <div style="position: relative; z-index: 1;">
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+                        <!-- Stylized Mini Barcode Lines -->
+                        <div style="display: flex; gap: 1.5px; opacity: 0.8; align-items: flex-end; height: 10px;">
+                          <span style="width: 1.5px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 2.5px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 1px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 3px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 1px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 2px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 3px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 1.5px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 2px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 1px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 3px; height: 10px; background: white; display: inline-block;"></span>
+                          <span style="width: 1.5px; height: 10px; background: white; display: inline-block;"></span>
+                        </div>
+                        <span style="font-size: 0.62rem; font-weight: 700; text-transform: uppercase; background: rgba(0, 0, 0, 0.3); padding: 1.5px 5px; border-radius: 5px; backdrop-filter: blur(4px);">
+                          {{ 'LOYALTY_MODAL.TAP_TO_SCAN' | translate }}
+                        </span>
+                      </div>
+                      <span style="font-family: monospace; font-size: 0.82rem; opacity: 0.95; letter-spacing: 1px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.35);">
+                        •••• {{ card.barcode_data.slice(-4) }}
+                      </span>
+                    </div>
                   </div>
                 }
               </div>
             } @else {
-              <div style="text-align: center; padding: 30px 10px; background: #f7f7f5; border-radius: 16px; margin-bottom: 20px;">
-                <p style="margin: 0 0 6px 0; font-weight: bold; color: #111;">{{ 'LOYALTY_MODAL.NO_CARDS' | translate }}</p>
-                <span style="font-size: 0.8rem; color: #666;">{{ 'LOYALTY_MODAL.NO_CARDS_HINT' | translate }}</span>
+              <div style="text-align: center; padding: 36px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; margin-bottom: 20px;">
+                <span style="font-size: 2.2rem; display: block; margin-bottom: 8px;">💳</span>
+                <p style="margin: 0 0 6px 0; font-weight: 800; font-size: 1rem; color: #0f172a;">{{ 'LOYALTY_MODAL.NO_CARDS' | translate }}</p>
+                <span style="font-size: 0.8rem; color: #64748b;">{{ 'LOYALTY_MODAL.NO_CARDS_HINT' | translate }}</span>
               </div>
             }
-
-            <button 
-              (click)="openAddLoyaltyCardView()" 
-              style="width: 100%; background: #111; color: white; border: none; padding: 14px; border-radius: 14px; font-weight: bold; font-size: 0.95rem;">
-              {{ 'LOYALTY_MODAL.ADD_NEW_BTN' | translate }}
-            </button>
           </div>
         }
 
+        <!-- VIEW MODE: REALISTIC DIGITAL MEMBERSHIP PASS -->
         @if (loyaltyModalView === 'view' && selectedLoyaltyCard) {
-          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-            <div [style.background-color]="selectedLoyaltyCard.card_color || '#1e293b'" style="padding: 16px; border-radius: 16px; color: white; margin-bottom: 12px;">
-              <h2 style="margin: 0;">{{ selectedLoyaltyCard.store_name }}</h2>
-            </div>
+          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+            <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px; text-align: center;">
-            <div style="background: #ffffff; padding: 20px; border-radius: 16px; display: inline-block; width: 100%; border: 1px solid #e2e2df; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-              <svg appBarcodeRender [value]="selectedLoyaltyCard.barcode_data" [format]="selectedLoyaltyCard.barcode_format || 'CODE128'"></svg>
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 6px; text-align: center;">
+            <!-- Realistic Pass Card -->
+            <div style="background: white; border-radius: 22px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; margin-bottom: 16px;">
+              <!-- Pass Header with Card Gradient -->
+              <div [style.background]="getCardGradient(selectedLoyaltyCard)" style="padding: 22px 20px; color: white; position: relative; overflow: hidden; text-align: left;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 60%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none;"></div>
+                <div style="position: relative; z-index: 1;">
+                  <h2 style="margin: 0; font-size: 1.4rem; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">{{ selectedLoyaltyCard.store_name }}</h2>
+                  <span style="font-size: 0.72rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">DIGITAL LOYALTY PASS</span>
+                </div>
+              </div>
+
+              <!-- Barcode Scan Compartment -->
+              <div style="padding: 26px 16px 20px 16px; background: #ffffff;">
+                <div style="display: inline-block; width: 100%; max-width: 320px; margin: 0 auto;">
+                  <svg appBarcodeRender [value]="selectedLoyaltyCard.barcode_data" [format]="selectedLoyaltyCard.barcode_format || 'CODE128'"></svg>
+                </div>
+
+                <!-- Full Barcode Digits -->
+                <div style="margin-top: 10px; font-family: monospace; font-size: 1.2rem; font-weight: 800; color: #0f172a; letter-spacing: 2px;">
+                  {{ selectedLoyaltyCard.barcode_data }}
+                </div>
+              </div>
+
+              <!-- Screen Brightness Note -->
+              <div style="background: #f8fafc; padding: 10px 14px; border-top: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                {{ 'LOYALTY_MODAL.BRIGHTNESS_HINT' | translate }}
+              </div>
             </div>
 
-            <p style="font-size: 0.8rem; color: #888; margin-top: 12px;">
-              {{ 'LOYALTY_MODAL.BRIGHTNESS_HINT' | translate }}
-            </p>
-
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
               <button 
                 (click)="closeLoyaltySubView()" 
-                style="flex: 1; background: #e9ecef; color: #333; border: none; padding: 14px; border-radius: 14px; font-weight: bold;">
+                style="flex: 1; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
                 {{ 'LOYALTY_MODAL.BACK_BTN' | translate }}
               </button>
               <button 
                 (click)="deleteLoyaltyCard(selectedLoyaltyCard.id)" 
-                style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 14px; border-radius: 14px; font-weight: bold;">
+                style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
                 {{ 'LOYALTY_MODAL.DELETE_BTN' | translate }}
               </button>
             </div>
           </div>
         }
 
+        <!-- ADD MODE: CREATE PASS WITH PREVIEW & PRESETS -->
         @if (loyaltyModalView === 'add') {
-          <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-            <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 4px;">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
-            <p class="subtitle" style="font-size: 0.8rem; color: #666; margin: 0;">{{ 'LOYALTY_MODAL.NEW_CARD_SUBTITLE' | translate }}</p>
+          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 4px 0; color: #0f172a;">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
+            <p class="subtitle" style="font-size: 0.82rem; color: #64748b; margin: 0;">{{ 'LOYALTY_MODAL.NEW_CARD_SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 10px 16px;">
-            <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 10px;">
-              <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.STORE_NAME_LABEL' | translate }}</label>
+          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+            <!-- Real-time Live Wallet Card Preview -->
+            <div 
+              [style.background]="newCardColor" 
+              style="position: relative; border-radius: 20px; color: white; padding: 18px 18px; height: 118px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.25);">
+              
+              <div style="position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none; border-radius: 20px 20px 0 0;"></div>
+              
+              <div style="position: relative; z-index: 1;">
+                <span style="font-weight: 800; font-size: 1.15rem; text-shadow: 0 1px 3px rgba(0,0,0,0.4); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  {{ newCustomStoreName.trim() || ('LOYALTY_MODAL.PREVIEW_DEFAULT_NAME' | translate) }}
+                </span>
+              </div>
+
+              <div style="position: relative; z-index: 1;">
+                <span style="font-family: monospace; font-size: 0.95rem; letter-spacing: 2px; opacity: 0.95; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.35);">
+                  {{ newBarcodeData ? ('•••• ' + newBarcodeData.slice(-4)) : '•••• •••• ••••' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Quick Store Suggestions Carousel -->
+            <div style="margin-bottom: 14px;">
+              <label style="font-size: 0.72rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                {{ 'LOYALTY_MODAL.STORE_SUGGESTIONS' | translate }}
+              </label>
+              <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
+                @for (store of stores; track store.name) {
+                  <button 
+                    (click)="selectStorePreset(store)" 
+                    type="button"
+                    style="display: inline-flex; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; padding: 7px 12px; border-radius: 10px; font-weight: 700; font-size: 0.78rem; color: #0f172a; white-space: nowrap; cursor: pointer; flex-shrink: 0;">
+                    {{ store.name }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Store Name Input -->
+            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
+              <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 2px; text-transform: uppercase;">
+                {{ 'LOYALTY_MODAL.STORE_NAME_LABEL' | translate }}
+              </label>
               <input 
                 type="text" 
                 [(ngModel)]="newCustomStoreName" 
                 (input)="onStoreNameInput()"
                 [placeholder]="'LOYALTY_MODAL.STORE_NAME_PLACEHOLDER' | translate" 
-                style="width: 100%; border: none; background: transparent; font-size: 0.95rem; font-weight: 700; color: #111; outline: none;" />
+                style="width: 100%; border: none; background: transparent; font-size: 1rem; font-weight: 800; color: #0f172a; outline: none; padding: 2px 0;" />
             </div>
 
-            <div style="background: #f7f7f5; padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;">
-              <label style="font-size: 0.7rem; font-weight: 700; color: #666; display: block; margin-bottom: 2px;">{{ 'LOYALTY_MODAL.BARCODE_LABEL' | translate }}</label>
-              <div style="display: flex; align-items: center; gap: 6px;">
+            <!-- Barcode Input + Scan Camera Button -->
+            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
+              <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 2px; text-transform: uppercase;">
+                {{ 'LOYALTY_MODAL.BARCODE_LABEL' | translate }}
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
                 <input 
                   type="text" 
                   [(ngModel)]="newBarcodeData" 
                   [placeholder]="'LOYALTY_MODAL.BARCODE_PLACEHOLDER' | translate" 
-                  style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 0.9rem; font-weight: 700; color: #111; outline: none;" />
+                  style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 0.95rem; font-weight: 800; color: #0f172a; outline: none; padding: 2px 0;" />
                 <button 
                   (click)="scanBarcode()" 
-                  style="background: #111; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                  type="button"
+                  style="background: #0f172a; color: white; border: none; padding: 8px 12px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px; cursor: pointer;">
                   {{ 'LOYALTY_MODAL.SCAN_BTN' | translate }}
                 </button>
               </div>
             </div>
 
-            <div 
-              [style.background-color]="newCardColor" 
-              style="padding: 14px; border-radius: 14px; color: white; height: 80px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
-              <span style="font-weight: 800; font-size: 1rem;">{{ newCustomStoreName.trim() || ('LOYALTY_MODAL.PREVIEW_DEFAULT_NAME' | translate) }}</span>
-              <span style="font-family: monospace; font-size: 0.85rem; letter-spacing: 2px; opacity: 0.9;">{{ newBarcodeData || '•••• •••• ••••' }}</span>
+            <!-- Color Palette Selector -->
+            <div style="margin-bottom: 16px;">
+              <label style="font-size: 0.72rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                {{ 'LOYALTY_MODAL.COLOR_LABEL' | translate }}
+              </label>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                @for (pal of cardGradientPalette; track pal.name) {
+                  <button 
+                    (click)="selectColorPreset(pal.gradient)" 
+                    type="button"
+                    [style.background]="pal.gradient"
+                    [style.transform]="newCardColor === pal.gradient ? 'scale(1.15)' : 'scale(1)'"
+                    [style.box-shadow]="newCardColor === pal.gradient ? '0 0 0 2.5px #6366f1' : 'none'"
+                    style="width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; transition: transform 0.15s ease;">
+                  </button>
+                }
+              </div>
             </div>
 
-            <div style="display: flex; gap: 8px;">
+            <!-- Dialog Bottom Action Buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
               <button 
                 (click)="closeLoyaltySubView()" 
-                style="flex: 1; background: #e9ecef; color: #333; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9rem;">
+                type="button"
+                style="flex: 1; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
                 {{ 'HOME.CANCEL' | translate }}
               </button>
               <button 
                 (click)="saveLoyaltyCard()" 
+                type="button"
                 [disabled]="!newBarcodeData.trim() || !newCustomStoreName.trim()" 
-                [style.opacity]="(!newBarcodeData.trim() || !newCustomStoreName.trim()) ? 0.5 : 1"
-                style="flex: 2; background: #111; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9rem;">
+                [style.opacity]="(!newBarcodeData.trim() || !newCustomStoreName.trim()) ? 0.45 : 1"
+                style="flex: 2; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
                 {{ 'LOYALTY_MODAL.SAVE_BTN' | translate }}
               </button>
             </div>
@@ -837,63 +1015,144 @@
       }
 
       <!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
-      @if (activeDetailWidgetId === 'activity' && currentUser) {
-        <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-          <p class="subtitle">{{ 'ACTIVITY_MODAL.SUBTITLE' | translate }}</p>
+      @if (activeDetailWidgetId === 'activity') {
+        <div class="modal-hero" style="padding-bottom: 10px; text-align: center; margin-top: 8px;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="footsteps" style="font-size: 1.3rem; color: #10b981;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ 'ACTIVITY_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'ACTIVITY_MODAL.SUBTITLE' | translate }}</p>
         </div>
         
-        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
-          <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
-            <span style="font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase;">{{ 'ACTIVITY_MODAL.TODAY_SUMMARY' | translate }}</span>
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <!-- Big Today Summary Card -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 22px 20px; border-radius: 20px; text-align: center; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);">
+            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; font-weight: 700; display: block; margin-bottom: 4px;">
+              {{ 'ACTIVITY_MODAL.TODAY_SUMMARY' | translate }}
+            </span>
             
-            <h1 style="font-size: 2.8rem; font-weight: 800; color: #111; margin: 6px 0;">
-              {{ todayHealthData.steps.toLocaleString('mk-MK') }}
+            <h1 style="font-size: 2.8rem; font-weight: 800; margin: 2px 0 6px 0; letter-spacing: -0.5px;">
+              {{ (todayHealthData.steps || 0).toLocaleString('mk-MK') }}
             </h1>
-            <span style="font-size: 0.85rem; color: #666; font-weight: bold; display: block; margin-bottom: 12px;">{{ 'ACTIVITY_MODAL.STEPS_LABEL' | translate }}</span>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
-                <span style="font-size: 0.75rem; color: #888; display: block;">{{ 'ACTIVITY_MODAL.CALORIES' | translate }}</span>
-                <span style="font-size: 1.1rem; font-weight: 800; color: #e63946;">{{ todayHealthData.calories }} kcal</span>
+            <span style="font-size: 0.85rem; opacity: 0.9; font-weight: 600; display: block; margin-bottom: 14px;">
+              {{ 'ACTIVITY_MODAL.STEPS_LABEL' | translate }}
+            </span>
+
+            <!-- Goal Progress Bar -->
+            <div style="background: rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 700; margin-bottom: 6px;">
+                <span>🎯 {{ 'ACTIVITY_MODAL.DAILY_GOAL' | translate }}</span>
+                <span style="color: #34d399;">{{ getStepsProgressPercent() }}% ({{ (todayHealthData.steps || 0).toLocaleString('mk-MK') }} / 10,000)</span>
               </div>
-              <div style="background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #e9ecef;">
-                <span style="font-size: 0.75rem; color: #888; display: block;">{{ 'ACTIVITY_MODAL.DISTANCE' | translate }}</span>
-                <span style="font-size: 1.1rem; font-weight: 800; color: #2a9d8f;">{{ todayHealthData.distanceKm }} км</span>
+              <div style="background: rgba(255, 255, 255, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                <div [style.width.%]="getStepsProgressPercent()" style="background: #10b981; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
+              </div>
+            </div>
+
+            <!-- Calories & Distance Grid inside Hero -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div style="background: rgba(255, 255, 255, 0.08); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px);">
+                <span style="font-size: 0.72rem; opacity: 0.8; display: block; margin-bottom: 2px;">{{ 'ACTIVITY_MODAL.CALORIES' | translate }}</span>
+                <span style="font-size: 1.15rem; font-weight: 800; color: #fb7185;">{{ todayHealthData.calories || 0 }} kcal</span>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.08); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px);">
+                <span style="font-size: 0.72rem; opacity: 0.8; display: block; margin-bottom: 2px;">{{ 'ACTIVITY_MODAL.DISTANCE' | translate }}</span>
+                <span style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">{{ todayHealthData.distanceKm || 0 }} км</span>
               </div>
             </div>
           </div>
 
-          <h3 style="font-size: 0.9rem; font-weight: bold; color: #666; margin-bottom: 10px;">{{ 'ACTIVITY_MODAL.LAST_7_DAYS' | translate }}</h3>
-          
-          @if (last7DaysHealth.length === 0) {
-            <p style="text-align: center; color: #888; font-size: 0.85rem; padding: 12px 0;">
-              {{ 'ACTIVITY_MODAL.NO_HISTORY' | translate }}
-            </p>
-          } @else {
-            <ul style="list-style: none; padding: 0; margin: 0;">
-              @for (day of last7DaysHealth; track day.id) {
-                <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5;">
-                  <div>
-                    <span style="font-weight: 700; font-size: 0.95rem; color: #111; display: block;">
-                      {{ formatHistoryDate(day.logged_date) }}
-                    </span>
-                    <span style="font-size: 0.75rem; color: #888;">
-                      📍 {{ day.distance_km }} км
-                    </span>
-                  </div>
-                  <div style="text-align: right;">
-                    <span style="font-weight: 800; font-size: 1.05rem; color: #111; display: block;">
-                      👟 {{ day.step_count.toLocaleString('mk-MK') }}
-                    </span>
-                    <span style="font-size: 0.8rem; font-weight: bold; color: #e63946;">
-                      🔥 {{ day.calories_burned }} kcal
-                    </span>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
+          <!-- Daily Milestones Badges Card -->
+          <div style="background: #f8fafc; padding: 14px 16px; border-radius: 16px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 0.8rem; font-weight: 800; color: #0f172a;">
+                🏅 {{ 'ACTIVITY_MODAL.MILESTONES_TITLE' | translate }}
+              </span>
+              <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Push Notifications</span>
+            </div>
 
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <!-- 5,000 Milestone -->
+              <div [style.border-color]="getMilestonesStatus().reached5k ? '#10b981' : '#e2e8f0'"
+                   [style.background]="getMilestonesStatus().reached5k ? '#ecfdf5' : '#ffffff'"
+                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
+                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
+                  {{ getMilestonesStatus().reached5k ? '🎉' : '👟' }}
+                </span>
+                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">5K</span>
+                <span [style.color]="getMilestonesStatus().reached5k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
+                  {{ getMilestonesStatus().reached5k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
+                </span>
+              </div>
+
+              <!-- 10,000 Milestone -->
+              <div [style.border-color]="getMilestonesStatus().reached10k ? '#10b981' : '#e2e8f0'"
+                   [style.background]="getMilestonesStatus().reached10k ? '#ecfdf5' : '#ffffff'"
+                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
+                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
+                  {{ getMilestonesStatus().reached10k ? '🔥' : '🎯' }}
+                </span>
+                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">10K</span>
+                <span [style.color]="getMilestonesStatus().reached10k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
+                  {{ getMilestonesStatus().reached10k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
+                </span>
+              </div>
+
+              <!-- 15,000 Milestone -->
+              <div [style.border-color]="getMilestonesStatus().reached15k ? '#10b981' : '#e2e8f0'"
+                   [style.background]="getMilestonesStatus().reached15k ? '#ecfdf5' : '#ffffff'"
+                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
+                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
+                  {{ getMilestonesStatus().reached15k ? '🏆' : '⭐' }}
+                </span>
+                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">15K</span>
+                <span [style.color]="getMilestonesStatus().reached15k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
+                  {{ getMilestonesStatus().reached15k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7-Day History Section -->
+          <div style="margin-bottom: 10px;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 8px;">
+              📊 {{ 'ACTIVITY_MODAL.LAST_7_DAYS' | translate }}
+            </span>
+
+            @if (last7DaysHealth.length === 0) {
+              <div style="text-align: center; padding: 24px 10px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0; color: #64748b; font-size: 0.85rem; font-weight: 600;">
+                  {{ 'ACTIVITY_MODAL.NO_HISTORY' | translate }}
+                </p>
+              </div>
+            } @else {
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                @for (day of last7DaysHealth; track (day.id || day.logged_date)) {
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                    <div>
+                      <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a; display: block;">
+                        🗓️ {{ formatHistoryDate(day.logged_date) }}
+                      </span>
+                      <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                        📍 {{ day.distance_km }} км
+                      </span>
+                    </div>
+
+                    <div style="text-align: right;">
+                      <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a; display: block;">
+                        👟 {{ day.step_count.toLocaleString('mk-MK') }}
+                      </span>
+                      <span style="font-size: 0.75rem; font-weight: 700; color: #e63946;">
+                        🔥 {{ day.calories_burned }} kcal
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
         </div>
       }
 
@@ -1095,107 +1354,229 @@
 
       <!-- FUEL DETAILS -->
 @if (activeDetailWidgetId === 'fuel') {
-  <div class="modal-hero" style="padding-bottom: 10px;">
-    <p class="subtitle">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
+  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+      <ion-icon name="speedometer" style="font-size: 1.3rem; color: #ef4444;"></ion-icon>
+      <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: #0f172a;">
+        {{ 'WIDGETS.FUEL' | translate }}
+      </h2>
+    </div>
+    <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
   </div>
   
-  <div class="modal-body" style="flex: 1; overflow-y: auto;">
-    <ul class="benefits-list" style="list-style: none; padding: 0; margin: 0;">
+  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
       
       <!-- Бензин 95 -->
-      <li (click)="setDefaultFuel('Бензин 95')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Бензин 95' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.PETROL_95' | translate }}
-        </span>
+      <div 
+        (click)="setDefaultFuel('Бензин 95')" 
+        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+            {{ selectedDefaultFuel === 'Бензин 95' ? '★' : '☆' }}
+          </span>
+          <div>
+            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+              {{ 'FUEL_MODAL.PETROL_95' | translate }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+              {{ 'FUEL_MODAL.PER_LITER' | translate }}
+            </span>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px;">
           @if (getFuelPriceDiff('Бензин 95') !== 0) {
             <span [style.background-color]="getFuelPriceDiff('Бензин 95') > 0 ? '#ffe3e3' : '#d3f9d8'"
                   [style.color]="getFuelPriceDiff('Бензин 95') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
               {{ getFuelPriceDiff('Бензин 95') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 95') }}
             </span>
           }
-          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Бензин 95') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+          <div style="text-align: right;">
+            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+              {{ getDynamicFuelPrice('Бензин 95') }} ден.
+            </span>
+            @if (selectedDefaultFuel === 'Бензин 95') {
+              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              </span>
+            }
+          </div>
         </div>
-      </li>
+      </div>
 
       <!-- Бензин 98+ -->
-      <li (click)="setDefaultFuel('Бензин 98+')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Бензин 98+' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.PETROL_98' | translate }}
-        </span>
+      <div 
+        (click)="setDefaultFuel('Бензин 98+')" 
+        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+            {{ selectedDefaultFuel === 'Бензин 98+' ? '★' : '☆' }}
+          </span>
+          <div>
+            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+              {{ 'FUEL_MODAL.PETROL_98' | translate }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+              {{ 'FUEL_MODAL.PER_LITER' | translate }}
+            </span>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px;">
           @if (getFuelPriceDiff('Бензин 98+') !== 0) {
             <span [style.background-color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#ffe3e3' : '#d3f9d8'"
                   [style.color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
               {{ getFuelPriceDiff('Бензин 98+') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 98+') }}
             </span>
           }
-          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Бензин 98+') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+          <div style="text-align: right;">
+            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+              {{ getDynamicFuelPrice('Бензин 98+') }} ден.
+            </span>
+            @if (selectedDefaultFuel === 'Бензин 98+') {
+              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              </span>
+            }
+          </div>
         </div>
-      </li>
+      </div>
 
       <!-- Дизел -->
-      <li (click)="setDefaultFuel('Дизел')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Дизел' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.DIESEL' | translate }}
-        </span>
+      <div 
+        (click)="setDefaultFuel('Дизел')" 
+        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+            {{ selectedDefaultFuel === 'Дизел' ? '★' : '☆' }}
+          </span>
+          <div>
+            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+              {{ 'FUEL_MODAL.DIESEL' | translate }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+              {{ 'FUEL_MODAL.PER_LITER' | translate }}
+            </span>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px;">
           @if (getFuelPriceDiff('Дизел') !== 0) {
             <span [style.background-color]="getFuelPriceDiff('Дизел') > 0 ? '#ffe3e3' : '#d3f9d8'"
                   [style.color]="getFuelPriceDiff('Дизел') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
               {{ getFuelPriceDiff('Дизел') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Дизел') }}
             </span>
           }
-          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Дизел') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+          <div style="text-align: right;">
+            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+              {{ getDynamicFuelPrice('Дизел') }} ден.
+            </span>
+            @if (selectedDefaultFuel === 'Дизел') {
+              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              </span>
+            }
+          </div>
         </div>
-      </li>
+      </div>
 
       <!-- Екстра Лесно -->
-      <li (click)="setDefaultFuel('Екстра Лесно')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Екстра Лесно' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
-        </span>
+      <div 
+        (click)="setDefaultFuel('Екстра Лесно')" 
+        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+            {{ selectedDefaultFuel === 'Екстра Лесно' ? '★' : '☆' }}
+          </span>
+          <div>
+            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+              {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+              {{ 'FUEL_MODAL.PER_LITER' | translate }}
+            </span>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px;">
           @if (getFuelPriceDiff('Екстра Лесно') !== 0) {
             <span [style.background-color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#ffe3e3' : '#d3f9d8'"
                   [style.color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
               {{ getFuelPriceDiff('Екстра Лесно') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Екстра Лесно') }}
             </span>
           }
-          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Екстра Лесно') }} {{ 'FUEL_MODAL.PER_LITER' | translate }}</span>
+          <div style="text-align: right;">
+            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+              {{ getDynamicFuelPrice('Екстра Лесно') }} ден.
+            </span>
+            @if (selectedDefaultFuel === 'Екстра Лесно') {
+              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              </span>
+            }
+          </div>
         </div>
-      </li>
+      </div>
 
       <!-- Мазут -->
-      <li (click)="setDefaultFuel('Мазут')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f5; cursor: pointer;">
-        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-          <span>{{ selectedDefaultFuel === 'Мазут' ? '⭐' : '☆' }}</span>
-          {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
-        </span>
+      <div 
+        (click)="setDefaultFuel('Мазут')" 
+        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
+            {{ selectedDefaultFuel === 'Мазут' ? '★' : '☆' }}
+          </span>
+          <div>
+            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
+              {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+              {{ 'FUEL_MODAL.PER_KG' | translate }}
+            </span>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px;">
           @if (getFuelPriceDiff('Мазут') !== 0) {
             <span [style.background-color]="getFuelPriceDiff('Мазут') > 0 ? '#ffe3e3' : '#d3f9d8'"
                   [style.color]="getFuelPriceDiff('Мазут') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
+                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
               {{ getFuelPriceDiff('Мазут') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Мазут') }}
             </span>
           }
-          <span style="font-weight: bold; color: #1d3557;">{{ getDynamicFuelPrice('Мазут') }} {{ 'FUEL_MODAL.PER_KG' | translate }}</span>
+          <div style="text-align: right;">
+            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
+              {{ getDynamicFuelPrice('Мазут') }} ден.
+            </span>
+            @if (selectedDefaultFuel === 'Мазут') {
+              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              </span>
+            }
+          </div>
         </div>
-      </li>
-    </ul>
+      </div>
 
-    <div style="margin-top: 20px; padding: 12px; background-color: #f8f9fa; border-radius: 12px; text-align: center; border: 1px dashed #dee2e6;">
-      <span style="font-size: 0.8rem; color: #495057; font-weight: 600; display: block; margin-bottom: 2px;">{{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}:</span>
-      <span style="font-size: 1.05rem; color: #e63946; font-weight: 800;">{{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}</span>
+    </div>
+
+    <!-- Effective Date Card -->
+    <div style="margin-top: 14px; padding: 12px 14px; background: #f8fafc; border-radius: 14px; text-align: center; border: 1px dashed #cbd5e1;">
+      <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; display: block; margin-bottom: 2px; text-transform: uppercase;">
+        📅 {{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}
+      </span>
+      <span style="font-size: 1.1rem; color: #ef4444; font-weight: 800;">
+        {{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}
+      </span>
     </div>
   </div>
 }

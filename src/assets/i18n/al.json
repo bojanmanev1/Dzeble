@@ -159,6 +159,14 @@
     "STEPS_LABEL": "hapa",
     "CALORIES": "🔥 Të djegura",
     "DISTANCE": "📍 Distanca",
+    "DAILY_GOAL": "Qëllimi ditor",
+    "GOAL_OF": "nga 10,000 hapa",
+    "MILESTONES_TITLE": "Arritjet Ditore",
+    "MILESTONE_5K": "5,000 hapa",
+    "MILESTONE_10K": "10,000 hapa",
+    "MILESTONE_15K": "15,000 hapa",
+    "ACHIEVED": "Arritur",
+    "PENDING": "Në progres",
     "LAST_7_DAYS": "7 Ditët e Fundit",
     "NO_HISTORY": "Nuk ka të dhëna të ruajtura për ditët e kaluara."
   },
@@ -180,7 +188,7 @@
     "SUBTITLE": "Të gjitha kartelat tuaja me zbritje në një vend",
     "NO_CARDS": "Nuk ka kartela të ruajtura",
     "NO_CARDS_HINT": "Shtoni një kartelë për Tinex, Ramstore, Vero, Neptun...",
-    "ADD_NEW_BTN": "+ Shto Kartelë të Re",
+    "ADD_NEW_BTN": "Shto Kartelë të Re",
     "NEW_CARD_TITLE": "Kartelë e Re Besnikërie",
     "NEW_CARD_SUBTITLE": "Skenoni barkodin ose shkruajeni me dorë",
     "STORE_NAME_LABEL": "Emri i Dyqanit / Marketit",
@@ -191,8 +199,13 @@
     "PREVIEW_DEFAULT_NAME": "Emri i Kartelës",
     "SAVE_BTN": "Ruaj",
     "BACK_BTN": "← Mbrapa",
+    "STORE_SUGGESTIONS": "Zgjedhje e Shpejtë e Marketit",
+    "COLOR_LABEL": "Ngjyra & Stili i Kartelës",
+    "TAP_TO_SCAN": "Prek për të skenuar",
+    "CONFIRM_DELETE_TITLE": "Fshij Kartelën",
+    "CONFIRM_DELETE_MSG": "A jeni të sigurt që dëshironi të fshini këtë kartelë?",
     "DELETE_BTN": "🗑️ Fshij",
-    "BRIGHTNESS_HINT": "💡 Ndriçimi i ekranit është vendosur në 100% për lehtësim të skenimit"
+    "BRIGHTNESS_HINT": "💡 Ndriçimi i ekranit është rritur automatikisht për lehtësim të leximit"
   },
   "CURRENCIES": {
     "MKD": "Denar Maqedonas",

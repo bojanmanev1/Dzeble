@@ -438,28 +438,47 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
     return true;
   }
 
-  async syncTodayHealthMetrics(userId: string, metrics: { steps: number; calories: number; distanceKm: number; notified10k: boolean; notified15k: boolean; }) {
+  async syncTodayHealthMetrics(userId: string, metrics: { steps: number; calories: number; distanceKm: number; notified5k?: boolean; notified10k: boolean; notified15k: boolean; }) {
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const { data, error } = await this.supabase
-      .from('user_health_metrics')
-      .upsert(
-        {
-          user_id: userId,
-          step_count: metrics.steps,
-          calories_burned: metrics.calories,
-          distance_km: metrics.distanceKm,
-          milestone_10k_notified: metrics.notified10k,
-          milestone_15k_notified: metrics.notified15k,
-          logged_date: todayStr,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: 'user_id,logged_date' }
-      )
-      .select()
-      .single();
+    try {
+      const payload: any = {
+        user_id: userId,
+        step_count: metrics.steps,
+        calories_burned: metrics.calories,
+        distance_km: metrics.distanceKm,
+        milestone_10k_notified: metrics.notified10k,
+        milestone_15k_notified: metrics.notified15k,
+        logged_date: todayStr,
+        updated_at: new Date().toISOString()
+      };
 
-    return data;
+      if (metrics.notified5k !== undefined) {
+        payload.milestone_5k_notified = metrics.notified5k;
+      }
+
+      const { data, error } = await this.supabase
+        .from('user_health_metrics')
+        .upsert(payload, { onConflict: 'user_id,logged_date' })
+        .select()
+        .single();
+
+      if (error && error.message && error.message.includes('milestone_5k_notified')) {
+        // Fallback if user hasn't added milestone_5k_notified column yet
+        delete payload.milestone_5k_notified;
+        const fallbackRes = await this.supabase
+          .from('user_health_metrics')
+          .upsert(payload, { onConflict: 'user_id,logged_date' })
+          .select()
+          .single();
+        return fallbackRes.data;
+      }
+
+      return data;
+    } catch (e) {
+      console.warn('Could not sync health metrics to Supabase (offline or table pending):', e);
+      return null;
+    }
   }
 
   async getLast7DaysHealthMetrics(userId: string) {

@@ -8,12 +8,15 @@ import { SupabaseService } from './services/supabase';
 import { PushNotificationService } from './services/push-notification';
 import { PermissionService } from './services/permission';
 
+import { ThemeService } from './services/theme';
+
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   imports: [IonApp, IonRouterOutlet],
 })
 export class AppComponent implements OnInit {
+  private themeService = inject(ThemeService);
   private deviceTracker = inject(DeviceTrackerService);
   private supabaseService = inject(SupabaseService);
   private pushService = inject(PushNotificationService);
@@ -23,6 +26,7 @@ export class AppComponent implements OnInit {
   private zone = inject(NgZone);
 
   async ngOnInit() {
+    this.themeService.initializeTheme();
     this.setupDeepLinks();
 
     // 1. Background analytics tracking

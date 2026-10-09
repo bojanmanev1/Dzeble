@@ -73,7 +73,8 @@ input {
 
 /* 2. Settings Sheet Modal Styling */
 .settings-wrapper {
-  padding: 16px 20px 32px;
+  background: var(--modal-bg, white);
+  padding: 28px 20px 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -298,6 +299,27 @@ ion-toggle {
   transition: color 0.2s ease;
 }
 
+.weather-rich-icon {
+  font-size: 1.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+  user-select: none;
+  transform: translateZ(0);
+}
+
+.weather-hero-rich-icon {
+  font-size: 3.8rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+  user-select: none;
+}
+
 .card-value {
   font-size: 1.25rem;
   font-weight: 800;
@@ -357,9 +379,9 @@ ion-toggle {
 }
 
 .modal-wrapper {
-  background: white;
+  background: var(--modal-bg, white);
   height: 100%;
-  padding: 24px;
+  padding: 30px 16px 24px;
   box-sizing: border-box;
 }
 
@@ -386,7 +408,7 @@ ion-toggle {
     li {
       font-size: 0.95rem;
       font-weight: 600;
-      color: #1c1c1e !important;
+      color: inherit;
       display: flex !important;
       align-items: center;
       width: 100%;
@@ -394,7 +416,7 @@ ion-toggle {
       box-sizing: border-box;
 
       span {
-        color: #1c1c1e !important;
+        color: inherit;
       }
     }
   }
@@ -404,7 +426,7 @@ ion-toggle {
   display: flex;
   gap: 12px;
   padding-top: 14px;
-  background: white;
+  background: transparent;
   margin-top: auto; 
 
   button {
@@ -488,8 +510,36 @@ ion-toggle {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+.fuel-icon { 
+  color: #ef4444; 
+}
+
+.currency-icon { 
+  color: #f59e0b; 
+}
+
 .crypto-icon { 
-  color: #f59e0b;
+  color: #f59e0b; 
+}
+
+.uv-icon { 
+  color: #f59e0b; 
+}
+
+.stock-icon { 
+  color: #10b981; 
+}
+
+.holidays-icon {
+  color: #4e4e50;
+}
+
+.loyalty-icon {
+  color: #4e4e50;
+}
+
+.activity-icon {
+  color: #10b981;
 }
 
 /* Target your detail modal container */
@@ -552,15 +602,5 @@ ion-modal {
 
   &:active {
     transform: scale(0.9);
-  }
-}
-
-body.dark .widget-notif-toggle {
-  background: rgba(255, 255, 255, 0.08);
-  color: #64748b;
-
-  &.active {
-    background: rgba(2, 132, 199, 0.2);
-    color: #38bdf8;
   }
 }

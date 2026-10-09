@@ -33,9 +33,12 @@
  */
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+@import "@ionic/angular/css/palettes/dark.class.css";
+/* @import '@ionic/angular/css/palettes/dark.system.css'; */
 
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
 
 /* 1. Make the modal backdrop area transparent so it doesn't show a black block */
 ion-modal {
@@ -48,7 +51,7 @@ ion-modal {
   &::part(content) {
     border-top-left-radius: 28px;
     border-top-right-radius: 28px;
-    background: #ffffff; /* Ensures the modal card itself is crisp white */
+    background: var(--modal-bg, #ffffff); /* Crisp white in light mode, dark grey #121514 in dark mode */
     box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
   }
 }
@@ -57,7 +60,7 @@ ion-modal {
 .detail-modal-container {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--modal-bg, #ffffff);
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
   /* Push content smoothly above safe area without forcing a dark background */
@@ -104,5 +107,561 @@ ion-popover {
       --color: #0f172a;
       font-weight: 800;
     }
+  }
+}
+
+/* ==========================================================================
+   CSS VARIABLES FOR LIGHT & DARK THEMES
+   ========================================================================== */
+:root {
+  --modal-bg: #ffffff;
+}
+
+body.dark,
+html.dark {
+  --modal-bg: #121514;
+}
+
+/* ==========================================================================
+   CREATIVE DARK THEME: DARK GREY BACKGROUND + GREENISH DARK WIDGETS
+   ========================================================================== */
+body.dark,
+html.dark {
+  background-color: #121514 !important;
+  color: #f1f5f9 !important;
+
+  /* 1. Dashboard Content & Background */
+  .dashboard-content {
+    --background: #121514 !important;
+    background: #121514 !important;
+  }
+
+  /* 2. Top Utility Bar */
+  .utility-bar {
+    .app-brand-title {
+      color: #f1f5f9 !important;
+    }
+  }
+
+  .user-avatar-btn {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+
+    .avatar-initial {
+      color: #34d399 !important;
+    }
+
+    .guest-avatar-icon {
+      color: #9bb0a7 !important;
+    }
+  }
+
+  /* 3. Dashboard Titles */
+  .dashboard-titles {
+    .city-subtitle {
+      color: #34d399 !important;
+      font-weight: 600 !important;
+    }
+
+    .main-title {
+      color: #ffffff !important;
+    }
+  }
+
+  /* 4. Widgets Grid & Cards (Greenish Dark Theme) */
+  .widget-card-wrapper {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.18) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+  }
+
+  /* Keep base card value white, but allow [style.color] (e.g. AQI status color) to take precedence */
+  .card-value {
+    color: #f0fdf4;
+  }
+
+  .card-label {
+    color: #9bb0a7 !important;
+  }
+
+  /* Default vector icon fallback */
+  .widget-vector-icon {
+    color: #cbd5e1;
+  }
+
+  /* 🌟 KEEP VIBRANT COLORS FROM LIGHT THEME ON WIDGET ICONS */
+  .fuel-icon {
+    color: #ef4444 !important; /* Red speedometer */
+  }
+
+  .currency-icon {
+    color: #f59e0b !important; /* Golden Euro */
+  }
+
+  .crypto-icon {
+    color: #f59e0b !important; /* Amber / Gold Crypto Chart */
+  }
+
+  .uv-icon {
+    color: #f59e0b !important; /* Warm Orange/Amber Sun */
+  }
+
+  .stock-icon {
+    color: #10b981 !important; /* Vibrant Emerald Green trend */
+  }
+
+  /* Icons that were dark grey in light mode: lighten them so they pop */
+  .holidays-icon {
+    color: #e2e8f0 !important; /* Clean silver-white calendar icon */
+  }
+
+  .loyalty-icon {
+    color: #e2e8f0 !important; /* Clean silver-white loyalty card icon */
+  }
+
+  .widget-notif-toggle {
+    background: rgba(52, 211, 153, 0.1) !important;
+    color: #9bb0a7 !important;
+
+    &.active {
+      background: rgba(52, 211, 153, 0.25) !important;
+      color: #34d399 !important;
+    }
+  }
+
+  .dashed-card {
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    background: rgba(52, 211, 153, 0.04) !important;
+
+    .dashed-content span {
+      color: #34d399 !important;
+    }
+  }
+
+  /* 5. News & Holiday Ticker Feed */
+  .news-ticker-container {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.18) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+
+    .news-header span {
+      color: #34d399 !important;
+      font-weight: 700 !important;
+    }
+
+    .news-body {
+      color: #f0fdf4 !important;
+    }
+  }
+
+  /* 6. Settings Bottom Sheet */
+  .settings-wrapper {
+    background: #121514 !important;
+    color: #f1f5f9 !important;
+  }
+
+  .settings-profile-card {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+    .avatar-large {
+      background: #0f382a !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    }
+
+    .profile-info {
+      h3 {
+        color: #f1f5f9 !important;
+      }
+      p {
+        color: #9bb0a7 !important;
+      }
+    }
+  }
+
+  .settings-group {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+    .settings-row {
+      &:not(:last-child) {
+        border-bottom: 1px solid rgba(52, 211, 153, 0.12) !important;
+      }
+
+      .row-left .row-label {
+        color: #f1f5f9 !important;
+      }
+    }
+  }
+
+  .lang-select-pill {
+    --background: #23342f !important;
+    --color: #f0fdf4 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+
+    &::part(text) {
+      color: #f0fdf4 !important;
+    }
+
+    &::part(icon) {
+      color: #34d399 !important;
+    }
+  }
+
+  .btn-settings-login {
+    background: #10b981 !important;
+    color: #042f2e !important;
+    font-weight: 800 !important;
+  }
+
+  .btn-settings-logout {
+    background: rgba(239, 68, 68, 0.14) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  }
+
+  /* 7. ALL MODALS & POPUPS (SAME DARK GREY BACKGROUND + GREENISH THEME) */
+  ion-modal,
+  ion-modal.premium-modal {
+    --background: #121514 !important;
+
+    &::part(backdrop) {
+      background: rgba(0, 0, 0, 0.75) !important;
+    }
+
+    &::part(content) {
+      background: #121514 !important;
+      background-color: #121514 !important;
+      border-top: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    &::part(handle) {
+      background: #2e473f !important;
+    }
+  }
+
+  .detail-modal-container,
+  .modal-wrapper {
+    background: #121514 !important;
+    background-color: #121514 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Universal headings, subtitles and cards across any modal */
+  .modal-wrapper,
+  .detail-modal-container {
+    h1, h2, h3, h4, h5 {
+      color: #f1f5f9 !important;
+    }
+
+    p, label, .subtitle {
+      color: #9bb0a7 !important;
+    }
+
+    /* All inner cards, stat containers, lists across all modals */
+    div[style*="background: linear-gradient"],
+    div[style*="background: #f8fafc"],
+    div[style*="background: #f7f7f5"],
+    div[style*="background: #f8f9fa"],
+    div[style*="background: #f1f5f9"],
+    div[style*="background: #ffffff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
+    div[style*="background: #fff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
+    div[style*="background-color: #ffffff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
+    div[style*="background-color: #f8f9fa"],
+    ul[style*="background: #f8fafc"],
+    div[style*="box-shadow: 0 4px 12px"] {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border-color: rgba(52, 211, 153, 0.18) !important;
+      color: #f1f5f9 !important;
+
+      span[style*="color: #64748b"],
+      span[style*="color: #6c757d"],
+      span[style*="color: #666"],
+      span[style*="color: #888"],
+      span[style*="color: #495057"],
+      span[style*="color: #8e8e93"],
+      span[style*="color: #94a3b8"],
+      span[style*="color: #475569"] {
+        color: #9bb0a7 !important;
+      }
+
+      span[style*="color: #0f172a"],
+      span[style*="color: #111"],
+      span[style*="color: #1e293b"],
+      span[style*="color: #1c1c1e"],
+      span[style*="color: #333"],
+      span[style*="color: #1d3557"] {
+        color: #f1f5f9 !important;
+      }
+
+      div[style*="color: #0f172a"],
+      div[style*="color: #111"],
+      div[style*="color: #1c1c1e"] {
+        color: #f1f5f9 !important;
+      }
+
+      div[style*="color: #475569"],
+      div[style*="color: #64748b"] {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    /* Currency pills inside modal hero (Crypto, Stock) */
+    div[style*="background: #f1f5f9"] {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.22) !important;
+
+      button {
+        color: #9bb0a7 !important;
+
+        &[style*="background: #ffffff"],
+        &[style*="background: rgb(255, 255, 255)"] {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+
+        &[style*="background: transparent"] {
+          background: transparent !important;
+          color: #9bb0a7 !important;
+        }
+      }
+    }
+
+    /* Interactive modal inputs (search, add event, add card, amount) */
+    input {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #f1f5f9 !important;
+
+      &::placeholder {
+        color: #6b857a !important;
+      }
+
+      &[style*="background: transparent"] {
+        background: transparent !important;
+        border: none !important;
+      }
+    }
+
+    /* Action / Submit buttons (Add coin, Save event, Save card) */
+    button[style*="background: #0f172a"],
+    button[style*="background: #10b981"] {
+      background: #10b981 !important;
+      color: #042f2e !important;
+      font-weight: 800 !important;
+    }
+
+    /* Secondary action / Back / Filter buttons */
+    button[style*="background: #f1f5f9"],
+    button[style*="background: #e9ecef"] {
+      background: #23342f !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Danger / Delete buttons */
+    button[style*="background: #fef2f2"],
+    button[style*="background: #fee2e2"] {
+      background: rgba(239, 68, 68, 0.16) !important;
+      border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      color: #f87171 !important;
+    }
+
+    /* Calendar Box & Wrapper */
+    div[style*="background: #ffffff"][style*="box-shadow"],
+    div[style*="box-shadow: 0 4px 12px"] {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    ion-datetime {
+      --background: #1c2824 !important;
+      --title-color: #f1f5f9 !important;
+      color: #f1f5f9 !important;
+      --wheel-highlight-background: rgba(52, 211, 153, 0.15) !important;
+      --wheel-fade-background-rgb: 28, 40, 36 !important;
+    }
+
+    /* Calendar Legend Tags */
+    span[style*="background: #f3e8ff"] { background: rgba(139, 92, 246, 0.25) !important; color: #c4b5fd !important; }
+    span[style*="background: #ffe4e6"] { background: rgba(225, 29, 72, 0.25) !important; color: #fda4af !important; }
+    span[style*="background: #fef3c7"] { background: rgba(217, 119, 6, 0.25) !important; color: #fcd34d !important; }
+    span[style*="background: #d1fae5"] { background: rgba(16, 185, 129, 0.25) !important; color: #6ee7b7 !important; }
+    span[style*="background: #dbeafe"] { background: rgba(59, 130, 246, 0.25) !important; color: #93c5fd !important; }
+
+    /* Fuel dynamic price badges */
+    span[style*="background-color: #ffe3e3"] { background: rgba(239, 68, 68, 0.2) !important; color: #f87171 !important; }
+    span[style*="background-color: #d3f9d8"] { background: rgba(16, 185, 129, 0.2) !important; color: #34d399 !important; }
+
+    /* Fuel list prices and labels */
+    span[style*="color: #1d3557"] { color: #f1f5f9 !important; }
+
+    /* Weather Hero Pill */
+    div[style*="background: #ffffff"][style*="border: 1px solid #cbd5e1"] {
+      background: #23342f !important;
+      border-color: rgba(52, 211, 153, 0.25) !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Weekly & Hourly Forecast Containers */
+    ul[style*="background: #f8fafc"] {
+      background: #1c2824 !important;
+      border-color: rgba(52, 211, 153, 0.18) !important;
+
+      li {
+        border-bottom-color: rgba(52, 211, 153, 0.12) !important;
+
+        span[style*="color: #1e293b"],
+        span[style*="color: #0f172a"] {
+          color: #f1f5f9 !important;
+        }
+      }
+    }
+
+    /* Modal List Items with dividers */
+    li[style*="border-bottom: 1px solid #f1f3f5"],
+    li[style*="border-bottom: 1px solid #e2e8f0"],
+    li {
+      border-bottom-color: rgba(52, 211, 153, 0.12) !important;
+
+      span[style*="color: #64748b"],
+      span[style*="color: #888"] {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    /* AQI status badge container */
+    div[style*="background: #e2e2df"] {
+      background: #243831 !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Keep Loyalty Barcode Scanner Container clean white */
+    div:has(svg[appBarcodeRender]),
+    div:has(svg) {
+      background: #ffffff !important;
+      background-color: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+  }
+
+  /* 8. Popovers (Language selector) */
+  ion-popover {
+    --background: #1c2824 !important;
+    --box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+
+    &::part(content) {
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      background: #1c2824 !important;
+    }
+
+    ion-item {
+      --color: #cbd5e1;
+      --color-checked: #34d399;
+      --background-hover: #23342f;
+      --background-activated: #283e37;
+
+      &.item-checkbox-checked,
+      &.select-item-selected {
+        --background: #23342f;
+        --color: #34d399;
+        font-weight: 800;
+      }
+    }
+  }
+
+  /* 9. Setting & Global Toggles */
+  ion-toggle {
+    --track-background: #23342f !important;
+    --track-background-checked: #10b981 !important;
+    --handle-background: #ffffff !important;
+    --handle-background-checked: #ffffff !important;
+    --handle-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  /* 10. Global Inputs & Calendar */
+  input {
+    color: #f1f5f9 !important;
+
+    &::placeholder {
+      color: #64748b !important;
+    }
+  }
+
+  /* 11. Modal Footer Close Buttons */
+  .modal-footer {
+    background: transparent !important;
+
+    .btn-modal-cancel,
+    button[style*="background: #111"] {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #f1f5f9 !important;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+
+      &:active {
+        background: #23342f !important;
+      }
+    }
+  }
+
+  /* 12. Login / Auth Views */
+  .auth-content {
+    --background: #121514 !important;
+    background: #121514 !important;
+  }
+
+  .btn-back {
+    background: #1c2824 !important;
+    border-color: rgba(52, 211, 153, 0.2) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .auth-header h1 {
+    color: #f1f5f9 !important;
+  }
+
+  .input-group {
+    label {
+      color: #9bb0a7 !important;
+    }
+
+    input {
+      background: #1c2824 !important;
+      border-color: rgba(52, 211, 153, 0.25) !important;
+      color: #f1f5f9 !important;
+
+      &:focus {
+        border-color: #10b981 !important;
+      }
+
+      &:-webkit-autofill,
+      &:-webkit-autofill:hover,
+      &:-webkit-autofill:focus {
+        -webkit-text-fill-color: #f1f5f9 !important;
+        -webkit-box-shadow: 0 0 0px 1000px #1c2824 inset !important;
+      }
+    }
+  }
+
+  .btn-google {
+    background: #1c2824 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .btn-toggle-mode {
+    color: #34d399 !important;
   }
 }

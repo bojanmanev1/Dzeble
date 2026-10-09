@@ -15,6 +15,8 @@ import {
   leaf, 
   cloudy, 
   logoEuro, 
+  logoUsd,
+  cashOutline,
   speedometer, 
   sunny, 
   partlySunny,
@@ -49,7 +51,7 @@ import { StockService, StockTicker } from '../services/stock';
 import { HealthData, HealthService } from '../services/health';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
-import { MACEDONIAN_STORES, StorePreset } from '../config/loyalty-stores.config';
+import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
 import { App } from '@capacitor/app';
 import { PushNotificationService } from '../services/push-notification';
 
@@ -60,6 +62,7 @@ interface Widget {
   unit: string;
   icon: string;
   customColor?: string;
+  weatherEmoji?: string;
 }
 
 export interface TickerItem {
@@ -71,6 +74,8 @@ export interface TickerItem {
   linkUrl?: string;
   date?: string;
 }
+
+import { ThemeService } from '../services/theme';
 
 @Component({
   selector: 'app-home',
@@ -93,6 +98,7 @@ export interface TickerItem {
   ]
 })
 export class HomePage implements OnInit, OnDestroy {
+  public themeService = inject(ThemeService);
   private supabaseService = inject(SupabaseService);
   private weatherService = inject(WeatherService);
   private cryptoService = inject(CryptoService);
@@ -154,7 +160,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   isAddWidgetModalOpen = false;
   isSettingsSheetOpen = false;
-  isDarkMode = localStorage.getItem('theme_mode') === 'dark';
+  isDarkMode = this.themeService.isDark();
 
   newWidgetTitle = '';
   newWidgetDate: string = new Date().toISOString();
@@ -179,11 +185,12 @@ export class HomePage implements OnInit, OnDestroy {
   cryptoModalView: 'list' | 'detail' = 'list';
   selectedCoinDetail: CryptoTicker | null = null;
   stores: StorePreset[] = MACEDONIAN_STORES;
+  cardGradientPalette = CARD_GRADIENT_PALETTE;
   newCardStore: string = 'Tinex';
   newCustomStoreName: string = '';
   newBarcodeData: string = '';
   newBarcodeFormat: string = 'CODE128';
-  newCardColor: string = '#D32F2F';
+  newCardColor: string = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
   holidaysList: any[] = [];
   highlightedHolidayDates: any[] = [];
 
@@ -197,12 +204,12 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
     { id: 'currency', translationKey: 'WIDGETS.CURRENCY', value: '--.-', unit: 'EUR', icon: 'logo-euro' },
-    { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy' },
+    { id: 'weather', translationKey: 'WIDGETS.WEATHER', value: '--°', unit: '...', icon: 'cloudy', weatherEmoji: '⛅' },
     { id: 'crypto', translationKey: '--', value: 'BTC', unit: 'BTC', icon: 'stats-chart' },
     { id: 'stock', translationKey: 'WIDGETS.STOCK', value: 'AAPL', unit: 'AAPL', icon: 'trending-up' },
     { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' },
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
-    // { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
+    { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
   ];
 
@@ -215,6 +222,8 @@ export class HomePage implements OnInit, OnDestroy {
       'leaf': leaf,
       'cloudy': cloudy,
       'logo-euro': logoEuro,
+      'logo-usd': logoUsd,
+      'cash-outline': cashOutline,
       'speedometer': speedometer,
       'sunny': sunny,
       'partly-sunny': partlySunny,
@@ -236,9 +245,16 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    this.themeService.isDarkMode$.subscribe(isDark => {
+      this.isDarkMode = isDark;
+    });
+
     const localEvents = JSON.parse(localStorage.getItem('guest_user_events') || '[]');
     this.userCalendarEvents = localEvents;
     this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
+    this.updateCurrencyWidgetDisplay();
+
+    await this.initHealthTracking();
 
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
@@ -246,7 +262,6 @@ export class HomePage implements OnInit, OnDestroy {
       if (user) {
         const token = await this.pushService.requestPushPermissionAndRegister();
         await this.supabaseService.syncDeviceRecord(user.id, user.email, token || undefined);
-        await this.healthService.requestHealthPermissions();
         await this.syncHealthData(user.id);
         await this.loadLoyaltyCards(user.id);
         await this.loadUserEvents(user.id);
@@ -254,6 +269,7 @@ export class HomePage implements OnInit, OnDestroy {
         await this.supabaseService.syncDeviceRecord();
         this.combineHighlightedDates();
       }
+      this.filterWidgets();
     });
 
     if (Capacitor.isNativePlatform()) {
@@ -262,8 +278,12 @@ export class HomePage implements OnInit, OnDestroy {
           const cachedToken = this.pushService.getCurrentToken();
           if (this.currentUser) {
             await this.supabaseService.syncDeviceRecord(this.currentUser.id, this.currentUser.email, cachedToken || undefined);
+            await this.syncHealthData(this.currentUser.id);
           } else {
             await this.supabaseService.syncDeviceRecord();
+            const freshSteps = await this.healthService.getTodayDeviceSteps();
+            this.todayHealthData = freshSteps;
+            this.updateActivityWidgetDisplay(freshSteps);
           }
         }
       });
@@ -434,9 +454,9 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   toggleDarkMode(event: any) {
-    this.isDarkMode = event.detail.checked;
-    localStorage.setItem('theme_mode', this.isDarkMode ? 'dark' : 'light');
-    document.body.classList.toggle('dark', this.isDarkMode);
+    const isDark = event.detail.checked;
+    this.isDarkMode = isDark;
+    this.themeService.toggleTheme(isDark);
   }
 
 async handleLogout() {
@@ -514,9 +534,71 @@ async handleLogout() {
     this.syncFavoritesToSupabase();
   }
 
+  getCardGradient(card: LoyaltyCard | null | undefined): string {
+    if (!card) return 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+
+    const cleanName = (card.store_name || '').trim().toLowerCase();
+
+    // 1. Match against known presets (e.g. Zhito, Forever friends, Alfi, Tinex, Vero, DM...)
+    const match = MACEDONIAN_STORES.find(s => 
+      cleanName.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(cleanName)
+    );
+    if (match) {
+      return match.gradient;
+    }
+
+    // 2. If card_color is explicitly saved as a gradient
+    if (card.card_color && card.card_color.startsWith('linear-gradient')) {
+      return card.card_color;
+    }
+
+    // 3. If card_color is custom hex, create high-end gradient
+    if (card.card_color && card.card_color.startsWith('#') && card.card_color !== '#1e293b') {
+      return `linear-gradient(135deg, ${card.card_color} 0%, rgba(15, 23, 42, 0.85) 100%)`;
+    }
+
+    // 4. Deterministic luxury palette gradient by hashing store name
+    let hash = 0;
+    for (let i = 0; i < cleanName.length; i++) {
+      hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % CARD_GRADIENT_PALETTE.length;
+    return CARD_GRADIENT_PALETTE[idx].gradient;
+  }
+
+  getCardEmoji(card: LoyaltyCard | null | undefined): string {
+    if (!card) return '💳';
+    const cleanName = (card.store_name || '').trim().toLowerCase();
+    const match = MACEDONIAN_STORES.find(s => 
+      cleanName.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(cleanName)
+    );
+    return match ? match.emoji : '💳';
+  }
+
   onStoreNameInput() {
     const cleanName = this.newCustomStoreName.trim().toLowerCase();
-    this.newCardColor = this.storeColorMap[cleanName] || '#1e293b';
+    const match = MACEDONIAN_STORES.find(s => 
+      cleanName.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(cleanName)
+    );
+    if (match) {
+      this.newCardColor = match.gradient;
+    } else {
+      let hash = 0;
+      for (let i = 0; i < cleanName.length; i++) {
+        hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const idx = Math.abs(hash) % CARD_GRADIENT_PALETTE.length;
+      this.newCardColor = CARD_GRADIENT_PALETTE[idx].gradient;
+    }
+  }
+
+  selectStorePreset(store: StorePreset) {
+    this.newCustomStoreName = store.name;
+    this.newCardColor = store.gradient;
+  }
+
+  selectColorPreset(gradient: string) {
+    this.newCardColor = gradient;
   }
 
   async scanBarcode() {
@@ -565,38 +647,63 @@ async handleLogout() {
     }
   }
 
-  async syncHealthData(userId: string) {
-    const hardwareSteps = await this.healthService.getTodayDeviceSteps();
-    const calculated = this.healthService.calculateMetrics(hardwareSteps);
-    this.todayHealthData = calculated;
-
-    const milestoneRes = await this.healthService.checkAndNotifyMilestones(
-      calculated.steps, 
-      this.notified10k, 
-      this.notified15k
-    );
-    this.notified10k = milestoneRes.update10k;
-    this.notified15k = milestoneRes.update15k;
-
-    await this.supabaseService.syncTodayHealthMetrics(userId, {
-      steps: calculated.steps,
-      calories: calculated.calories,
-      distanceKm: calculated.distanceKm,
-      notified10k: this.notified10k,
-      notified15k: this.notified15k
+  async initHealthTracking() {
+    this.healthService.currentHealth$.subscribe(data => {
+      this.todayHealthData = data;
+      this.updateActivityWidgetDisplay(data);
     });
 
+    const localHistory = await this.healthService.getLocal7DaysHistory();
+    this.last7DaysHealth = localHistory;
+
+    const initialSteps = await this.healthService.getTodayDeviceSteps();
+    this.todayHealthData = initialSteps;
+    this.updateActivityWidgetDisplay(initialSteps);
+
+    const hasPrompted = localStorage.getItem('dzeble_health_perm_prompted');
+    if (!hasPrompted) {
+      localStorage.setItem('dzeble_health_perm_prompted', 'true');
+      await this.healthService.requestHealthPermissions();
+    }
+  }
+
+  updateActivityWidgetDisplay(data: HealthData) {
     this.allWidgets = this.allWidgets.map(widget => {
       if (widget.id === 'activity') {
         return {
           ...widget,
-          value: calculated.steps.toLocaleString('mk-MK'),
-          unit: `${calculated.calories} kcal`
+          value: (data.steps || 0).toLocaleString('mk-MK'),
+          unit: `${data.calories || 0} kcal`
         };
       }
       return widget;
     });
     this.filterWidgets();
+  }
+
+  getStepsProgressPercent(): number {
+    const steps = this.todayHealthData?.steps || 0;
+    return Math.min(100, Math.round((steps / 10000) * 100));
+  }
+
+  getMilestonesStatus() {
+    return this.healthService.getMilestonesStatus();
+  }
+
+  async syncHealthData(userId: string) {
+    const data = await this.healthService.getTodayDeviceSteps();
+    this.todayHealthData = data;
+    this.updateActivityWidgetDisplay(data);
+
+    const milestones = this.healthService.getMilestonesStatus();
+    await this.supabaseService.syncTodayHealthMetrics(userId, {
+      steps: data.steps,
+      calories: data.calories,
+      distanceKm: data.distanceKm,
+      notified5k: milestones.reached5k,
+      notified10k: milestones.reached10k,
+      notified15k: milestones.reached15k
+    });
   }
 
   combineHighlightedDates() {
@@ -619,10 +726,18 @@ async handleLogout() {
 
   getCurrencyFlag(currency: string): string {
     const flags: { [key: string]: string } = {
-      'MKD': '🇲🇰', 'USD': '🇺🇸', 'CHF': '🇨🇭', 'GBP': '🇬🇧', 'RSD': '🇷🇸',
+      'EUR': '🇪🇺', 'MKD': '🇲🇰', 'USD': '🇺🇸', 'CHF': '🇨🇭', 'GBP': '🇬🇧', 'RSD': '🇷🇸',
       'TRY': '🇹🇷', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'ALL': '🇦🇱', 'BGN': '🇧🇬'
     };
-    return flags[currency] || '🏳️';
+    return flags[currency] || currency;
+  }
+
+  getCurrencyIonicIcon(currency: string): string {
+    switch ((currency || '').toUpperCase()) {
+      case 'USD': return 'logo-usd';
+      case 'EUR': return 'logo-euro';
+      default: return 'cash-outline';
+    }
   }
 
   getCurrencyNameLocal(currency: string): string {
@@ -719,6 +834,7 @@ async handleLogout() {
 
         const weatherIcon = this.weatherService.getWeatherIonicIcon(metrics.weather_code, metrics.is_day);
         const weatherColor = this.weatherService.getWeatherIonicColor(metrics.weather_code, metrics.is_day);
+        const weatherEmoji = this.weatherService.getWeatherIcon(metrics.weather_code, metrics.is_day);
 
         this.allWidgets = this.allWidgets.map(widget => {
           if (widget.id === 'weather') {
@@ -727,7 +843,8 @@ async handleLogout() {
               value: `${Math.round(metrics.current_temp)}°`, 
               unit: this.weatherService.getWeatherDesc(metrics.weather_code),
               icon: weatherIcon,
-              customColor: weatherColor
+              customColor: weatherColor,
+              weatherEmoji: weatherEmoji
             };
           }
           if (widget.id === 'uv') {
@@ -752,7 +869,8 @@ async handleLogout() {
               value: `${Math.round(metrics.current_temp)}°`,
               unit: this.weatherService.getWeatherDesc(metrics.weather_code),
               icon: weatherIcon,
-              customColor: weatherColor
+              customColor: weatherColor,
+              weatherEmoji: weatherEmoji
             };
           }
           return widget;
@@ -873,7 +991,7 @@ async handleLogout() {
 filterWidgets() {
   if (!this.currentUser) {
     this.visibleWidgets = this.allWidgets.filter(
-      widget => widget.id !== 'activity' && widget.id !== 'loyalty'
+      widget => widget.id !== 'loyalty'
     );
   } else {
     this.visibleWidgets = [...this.allWidgets];
@@ -916,12 +1034,23 @@ filterWidgets() {
   }
 
   async onWidgetClick(widgetId: string) {
-    if ((widgetId === 'activity' || widgetId === 'loyalty') && !this.currentUser) return;
+    if (widgetId === 'loyalty' && !this.currentUser) return;
 
     this.activeDetailWidgetId = widgetId;
     if (widgetId === 'loyalty') this.loyaltyModalView = 'list';
-    if (widgetId === 'activity' && this.currentUser) {
-      this.last7DaysHealth = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
+    if (widgetId === 'activity') {
+      const refreshed = await this.healthService.getTodayDeviceSteps();
+      this.todayHealthData = refreshed;
+      this.updateActivityWidgetDisplay(refreshed);
+
+      if (this.currentUser) {
+        this.last7DaysHealth = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
+        if (!this.last7DaysHealth || this.last7DaysHealth.length === 0) {
+          this.last7DaysHealth = await this.healthService.getLocal7DaysHistory();
+        }
+      } else {
+        this.last7DaysHealth = await this.healthService.getLocal7DaysHistory();
+      }
     }
     if (widgetId === 'currency') {
       try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
@@ -1056,20 +1185,39 @@ filterWidgets() {
   }
 
   updateCurrencyWidgetDisplay() {
-    if (this.selectedDefaultCurrency === 'EUR') {
+    const activeCurrency = this.selectedDefaultCurrency || 'EUR';
+    const activeIcon = this.getCurrencyIonicIcon(activeCurrency);
+
+    if (activeCurrency === 'EUR') {
       const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
       const eurRate = mkdRecord ? mkdRecord.rate.toFixed(2) : '61.49';
       this.allWidgets = this.allWidgets.map(widget => {
-        if (widget.id === 'currency') return { ...widget, translationKey: 'EUR', value: `${eurRate}` };
+        if (widget.id === 'currency') {
+          return { 
+            ...widget, 
+            translationKey: 'EUR', 
+            unit: 'EUR', 
+            icon: activeIcon, 
+            value: `${eurRate}` 
+          };
+        }
         return widget;
       });
     } else {
-      const targetRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === this.selectedDefaultCurrency);
+      const targetRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === activeCurrency);
       const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
       if (targetRecord && mkdRecord) {
         const rateToMkd = (mkdRecord.rate / targetRecord.rate).toFixed(2);
         this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'currency') return { ...widget, translationKey: this.selectedDefaultCurrency, value: `${rateToMkd}` };
+          if (widget.id === 'currency') {
+            return { 
+              ...widget, 
+              translationKey: activeCurrency, 
+              unit: activeCurrency, 
+              icon: activeIcon, 
+              value: `${rateToMkd}` 
+            };
+          }
           return widget;
         });
       }

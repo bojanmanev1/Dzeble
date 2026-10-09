@@ -15,7 +15,7 @@
             android:value="barcode" />
 
         <service
-            android:name="com.capgo.pedometer.PedometerService"
+            android:name="com.dzeble.app.StepService"
             android:foregroundServiceType="health"
             android:exported="false" />
             
