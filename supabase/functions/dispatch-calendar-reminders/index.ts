@@ -111,7 +111,7 @@ serve(async (_req) => {
     // 1. Fetch active devices whose users have calendar notifications enabled
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, user_id, push_token")
+      .select("device_id, user_id, push_token, language")
       .not("push_token", "is", null)
       .not("user_id", "is", null)
       .eq("notify_calendar", true);
@@ -140,26 +140,48 @@ serve(async (_req) => {
       const userDevices = devices.filter((d: any) => d.user_id === ev.user_id);
       if (userDevices.length === 0) continue;
 
-      let title = "";
-      let body = "";
       let updateField: "notified_eve" | "notified_day" | null = null;
 
       // Condition A: Morning reminder on the day of the event (07:00 - 12:00)
       if (ev.event_date === todayStr && !ev.notified_day && localHour >= 7 && localHour < 13) {
-        title = `🔔 Денешен потсетник: ${ev.title}`;
-        body = `Имате закажан настан/роденден денес (${ev.title}). Не заборавајте! 📅`;
         updateField = "notified_day";
       }
       // Condition B: Evening heads-up on the day before the event (18:00 - 21:00)
       else if (ev.event_date === tomorrowStr && !ev.notified_eve && localHour >= 18 && localHour < 22) {
-        title = `⏰ Потсетник за утре: ${ev.title}`;
-        body = `Утре имате настан: "${ev.title}". Подгответе се навреме! 🎁`;
         updateField = "notified_eve";
       }
 
       if (!updateField) continue;
 
       for (const dev of userDevices) {
+        const lang = dev.language || "mk";
+        let title = "";
+        let body = "";
+
+        if (updateField === "notified_day") {
+          if (lang === "en") {
+            title = `🔔 Today's Reminder: ${ev.title}`;
+            body = `You have a scheduled event/birthday today (${ev.title}). Don't forget! 📅`;
+          } else if (lang === "al") {
+            title = `🔔 Kujtesë për sot: ${ev.title}`;
+            body = `Keni një ngjarje/ditëlindje sot (${ev.title}). Mos harroni! 📅`;
+          } else {
+            title = `🔔 Денешен потсетник: ${ev.title}`;
+            body = `Имате закажан настан/роденден денес (${ev.title}). Не заборавајте! 📅`;
+          }
+        } else if (updateField === "notified_eve") {
+          if (lang === "en") {
+            title = `⏰ Reminder for Tomorrow: ${ev.title}`;
+            body = `Tomorrow you have an event: "${ev.title}". Get ready in advance! 🎁`;
+          } else if (lang === "al") {
+            title = `⏰ Kujtesë për nesër: ${ev.title}`;
+            body = `Nesër keni një ngjarje: "${ev.title}". Përgatituni me kohë! 🎁`;
+          } else {
+            title = `⏰ Потсетник за утре: ${ev.title}`;
+            body = `Утре имате настан: "${ev.title}". Подгответе се навреме! 🎁`;
+          }
+        }
+
         const ok = await sendFcmPush(
           dev.push_token,
           title,

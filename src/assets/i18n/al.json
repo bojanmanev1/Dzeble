@@ -26,7 +26,9 @@
     "CARD_UNIT": "Të ruajtura",
     "CALENDAR": "Kalendari",
     "CRYPTO": "Kripto",
-    "STOCK": "Bursa"
+    "STOCK": "Bursa",
+    "NOTIF_ON": "Aktivizo njoftimet",
+    "NOTIF_OFF": "Çaktivizo njoftimet"
   },
   "STOCK_MODAL": {
     "TITLE": "Tregu i Aksioneve",
@@ -143,7 +145,9 @@
     "UNHEALTHY": "151 - 200 • I ndotur",
     "UNHEALTHY_DESC": "E pasigurt për të gjithë",
     "HAZARDOUS": "201+ • Dëmshëm",
-    "HAZARDOUS_DESC": "Rrezik i lartë dhe rekomandime serioze"
+    "HAZARDOUS_DESC": "Rrezik i lartë dhe rekomandime serioze",
+    "MUNICIPALITIES_TITLE": "Cilësia e ajrit sipas komunave të Shkupit",
+    "MUNICIPALITIES_SUBTITLE": "Pikat matëse"
   },
   "CURRENCY_MODAL": {
     "TITLE": "Lista e Kursit & Konvertuesi",
@@ -168,7 +172,10 @@
     "ACHIEVED": "Arritur",
     "PENDING": "Në progres",
     "LAST_7_DAYS": "7 Ditët e Fundit",
-    "NO_HISTORY": "Nuk ka të dhëna të ruajtura për ditët e kaluara."
+    "NO_HISTORY": "Nuk ka të dhëna të ruajtura për ditët e kaluara.",
+    "PERM_REQUIRED_TITLE": "Kërkohet leje për aktivitet fizik",
+    "PERM_REQUIRED_DESC": "Që aplikacioni të numërojë hapat tuaj automatikisht edhe kur është i mbyllur, ju lutem jepni leje.",
+    "PERM_BTN": "Lejo Ndjekjen e Hapave"
   },
   "FUEL_MODAL": {
     "TITLE": "Çmimet e Karburantit",

@@ -238,6 +238,11 @@ ion-toggle {
     font-size: 0.85rem;
     color: #a0a0a0;
     font-weight: 500;
+    transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out;
+
+    &.is-locating {
+      opacity: 0.6;
+    }
   }
 
   .main-title {

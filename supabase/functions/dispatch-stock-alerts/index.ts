@@ -69,7 +69,7 @@ serve(async (req) => {
     // 1. Fetch active devices subscribed to stock updates
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, stock_alert_symbol, stock_alert_threshold, last_stock_alert_at")
+      .select("device_id, push_token, stock_alert_symbol, stock_alert_threshold, last_stock_alert_at, language")
       .not("push_token", "is", null);
 
     if (devError || !devices || devices.length === 0) {
@@ -109,10 +109,22 @@ serve(async (req) => {
 
       // Notify if price movement exceeds threshold and cooldown has elapsed
       if (changePercent >= threshold && hoursDiff >= COOLDOWN_HOURS) {
+        const lang = dev.language || "mk";
         const emoji = quote.dp >= 0 ? "📈" : "📉";
         const sign = quote.dp >= 0 ? "+" : "";
-        const title = `${emoji} ${symbol} Значителна промена (${sign}${quote.dp.toFixed(2)}%)`;
-        const body = `Моментална цена: $${quote.c.toFixed(2)} (Дневен опсег: $${quote.l.toFixed(2)} - $${quote.h.toFixed(2)}).`;
+        let title = "";
+        let body = "";
+
+        if (lang === "en") {
+          title = `${emoji} ${symbol} Significant Movement (${sign}${quote.dp.toFixed(2)}%)`;
+          body = `Current price: $${quote.c.toFixed(2)} (Day range: $${quote.l.toFixed(2)} - $${quote.h.toFixed(2)}).`;
+        } else if (lang === "al") {
+          title = `${emoji} ${symbol} Lëvizje e çmimit (${sign}${quote.dp.toFixed(2)}%)`;
+          body = `Çmimi aktual: $${quote.c.toFixed(2)} (Diapazoni ditor: $${quote.l.toFixed(2)} - $${quote.h.toFixed(2)}).`;
+        } else {
+          title = `${emoji} ${symbol} Значителна промена (${sign}${quote.dp.toFixed(2)}%)`;
+          body = `Моментална цена: $${quote.c.toFixed(2)} (Дневен опсег: $${quote.l.toFixed(2)} - $${quote.h.toFixed(2)}).`;
+        }
 
         const ok = await sendFcmPush(dev.push_token, title, body, fcmAccessToken, projectId);
 

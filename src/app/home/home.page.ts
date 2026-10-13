@@ -28,12 +28,15 @@ import {
   calendarNumber, 
   gift, 
   notifications, 
+  notificationsOffOutline,
   checkmarkCircleOutline,
   footsteps,
   card,
   personOutline,
   statsChart,
-  trendingUp
+  trendingUp,
+  chevronDownOutline,
+  chevronUpOutline
 } from 'ionicons/icons';
 
 import { 
@@ -142,7 +145,8 @@ export class HomePage implements OnInit, OnDestroy {
   rawDatabaseRates: any[] = [];
   currentUser: User | null = null;
   currentLang = 'mk';
-  currentCityName = 'Скопје'; 
+  currentCityName: string = localStorage.getItem('user_current_city') || 'Скопје'; 
+  isLocatingCity: boolean = false;
   rawDatabaseFuel: any[] = [];
 
   selectedDefaultFuel = localStorage.getItem('default_fuel_type') || 'Дизел';
@@ -214,9 +218,12 @@ export class HomePage implements OnInit, OnDestroy {
   ];
 
   visibleWidgets: Widget[] = [];
+  isHealthPermGranted: boolean = true;
 
   constructor() {
-    this.translate.use('mk');
+    const savedLang = localStorage.getItem('app_language') || 'mk';
+    this.currentLang = savedLang;
+    this.translate.use(savedLang);
 
     addIcons({ 
       'leaf': leaf,
@@ -235,12 +242,15 @@ export class HomePage implements OnInit, OnDestroy {
       'calendar-number': calendarNumber,
       'gift': gift,
       'notifications': notifications,
+      'notifications-off-outline': notificationsOffOutline,
       'checkmark-circle-outline': checkmarkCircleOutline,
       'footsteps': footsteps,
       'card': card,
       'person-outline': personOutline,
       'stats-chart': statsChart,
-      'trending-up': trendingUp
+      'trending-up': trendingUp,
+      'chevron-down-outline': chevronDownOutline,
+      'chevron-up-outline': chevronUpOutline
     });
   }
 
@@ -254,7 +264,20 @@ export class HomePage implements OnInit, OnDestroy {
     this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
     this.updateCurrencyWidgetDisplay();
 
+    // Hydrate cached weather metrics immediately so frame 1 has city and weather
+    const cachedWeather = localStorage.getItem('cached_weather_metrics');
+    if (cachedWeather) {
+      try {
+        const parsed = JSON.parse(cachedWeather);
+        if (parsed) {
+          this.parsedWeatherData = parsed;
+          this.applyWeatherMetricsToWidgets(parsed);
+        }
+      } catch {}
+    }
+
     await this.initHealthTracking();
+    this.healthService.setLanguage(this.currentLang);
 
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
@@ -275,15 +298,17 @@ export class HomePage implements OnInit, OnDestroy {
     if (Capacitor.isNativePlatform()) {
       App.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
+          // Immediately fetch and display fresh steps on frame 1
+          const freshSteps = await this.healthService.getTodayDeviceSteps();
+          this.todayHealthData = freshSteps;
+          this.updateActivityWidgetDisplay(freshSteps);
+
           const cachedToken = this.pushService.getCurrentToken();
           if (this.currentUser) {
             await this.supabaseService.syncDeviceRecord(this.currentUser.id, this.currentUser.email, cachedToken || undefined);
             await this.syncHealthData(this.currentUser.id);
           } else {
             await this.supabaseService.syncDeviceRecord();
-            const freshSteps = await this.healthService.getTodayDeviceSteps();
-            this.todayHealthData = freshSteps;
-            this.updateActivityWidgetDisplay(freshSteps);
           }
         }
       });
@@ -660,10 +685,31 @@ async handleLogout() {
     this.todayHealthData = initialSteps;
     this.updateActivityWidgetDisplay(initialSteps);
 
-    const hasPrompted = localStorage.getItem('dzeble_health_perm_prompted');
-    if (!hasPrompted) {
-      localStorage.setItem('dzeble_health_perm_prompted', 'true');
-      await this.healthService.requestHealthPermissions();
+    if (Capacitor.isNativePlatform()) {
+      const permCheck = await this.healthService.checkHealthPermissions();
+      this.isHealthPermGranted = permCheck.granted;
+
+      // After sequential permissions complete in AppComponent, refresh status and steps
+      setTimeout(async () => {
+        const recheck = await this.healthService.checkHealthPermissions();
+        this.isHealthPermGranted = recheck.granted;
+        if (recheck.granted) {
+          const fresh = await this.healthService.getTodayDeviceSteps();
+          this.todayHealthData = fresh;
+          this.updateActivityWidgetDisplay(fresh);
+        }
+      }, 3500);
+    }
+  }
+
+  async promptHealthPermission() {
+    const granted = await this.healthService.requestHealthPermissions();
+    this.isHealthPermGranted = granted;
+    if (granted) {
+      await this.healthService.startContinuousPedometer();
+      const refreshed = await this.healthService.getTodayDeviceSteps();
+      this.todayHealthData = refreshed;
+      this.updateActivityWidgetDisplay(refreshed);
     }
   }
 
@@ -808,13 +854,32 @@ async handleLogout() {
   }
 
   fetchLiveMetrics() {
+    this.isLocatingCity = true;
     this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
       next: async (coords: { latitude: number; longitude: number }) => {
-        const metrics = await this.supabaseService.getNearestCityMetrics(coords.latitude, coords.longitude);
+        // 1. Instantly determine nearest city locally in memory (0ms)
+        const resolvedCity = this.weatherService.resolveCityName(coords.latitude, coords.longitude);
+        if (resolvedCity) {
+          this.currentCityName = resolvedCity;
+          localStorage.setItem('user_current_city', resolvedCity);
+        }
+
+        // 2. Fetch fresh cached metrics from Supabase for this city
+        let metrics = await this.supabaseService.getCachedMetricsForCity(resolvedCity);
+        if (!metrics) {
+          metrics = await this.supabaseService.getNearestCityMetrics(coords.latitude, coords.longitude);
+        }
+
+        this.isLocatingCity = false;
         if (!metrics) return;
 
         this.currentCityName = metrics.city_name;
         this.parsedWeatherData = metrics;
+        localStorage.setItem('user_current_city', metrics.city_name);
+        try {
+          localStorage.setItem('cached_weather_metrics', JSON.stringify(metrics));
+        } catch {}
+
         this.supabaseService.updateDeviceCityPreference(metrics.city_name);
 
         if (this.currentUser) {
@@ -832,54 +897,75 @@ async handleLogout() {
           }
         }
 
-        const weatherIcon = this.weatherService.getWeatherIonicIcon(metrics.weather_code, metrics.is_day);
-        const weatherColor = this.weatherService.getWeatherIonicColor(metrics.weather_code, metrics.is_day);
-        const weatherEmoji = this.weatherService.getWeatherIcon(metrics.weather_code, metrics.is_day);
-
-        this.allWidgets = this.allWidgets.map(widget => {
-          if (widget.id === 'weather') {
-            return { 
-              ...widget, 
-              value: `${Math.round(metrics.current_temp)}°`, 
-              unit: this.weatherService.getWeatherDesc(metrics.weather_code),
-              icon: weatherIcon,
-              customColor: weatherColor,
-              weatherEmoji: weatherEmoji
-            };
-          }
-          if (widget.id === 'uv') {
-            return { ...widget, value: `${Math.round(metrics.uv_index)}` };
-          }
-          if (widget.id === 'aqi') {
-            const aqiNum = Number(metrics.aqi_value) || 0;
-            return { 
-              ...widget, 
-              value: `${metrics.aqi_value}`,
-              unit: metrics.aqi_status_text,
-              customColor: this.getAqiColor(aqiNum)
-            };
-          }
-          return widget;
-        });
-
-        this.visibleWidgets = this.visibleWidgets.map(widget => {
-          if (widget.id === 'weather') {
-            return {
-              ...widget,
-              value: `${Math.round(metrics.current_temp)}°`,
-              unit: this.weatherService.getWeatherDesc(metrics.weather_code),
-              icon: weatherIcon,
-              customColor: weatherColor,
-              weatherEmoji: weatherEmoji
-            };
-          }
-          return widget;
-        });
-
-        this.filterWidgets();
+        this.applyWeatherMetricsToWidgets(metrics);
       },
-      error: (err: any) => console.error('Device coords error:', err)
+      error: (err: any) => {
+        this.isLocatingCity = false;
+        console.error('Device coords error:', err);
+      }
     });
+  }
+
+  applyWeatherMetricsToWidgets(metrics: any) {
+    if (!metrics) return;
+
+    const weatherIcon = this.weatherService.getWeatherIonicIcon(metrics.weather_code, metrics.is_day);
+    const weatherColor = this.weatherService.getWeatherIonicColor(metrics.weather_code, metrics.is_day);
+    const weatherEmoji = this.weatherService.getWeatherIcon(metrics.weather_code, metrics.is_day);
+
+    this.allWidgets = this.allWidgets.map(widget => {
+      if (widget.id === 'weather') {
+        return { 
+          ...widget, 
+          value: `${Math.round(metrics.current_temp)}°`, 
+          unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+          icon: weatherIcon,
+          customColor: weatherColor,
+          weatherEmoji: weatherEmoji
+        };
+      }
+      if (widget.id === 'uv') {
+        return { ...widget, value: `${Math.round(metrics.uv_index)}` };
+      }
+      if (widget.id === 'aqi') {
+        const aqiNum = Number(metrics.aqi_value) || 0;
+        return { 
+          ...widget, 
+          value: `${metrics.aqi_value}`,
+          unit: metrics.aqi_status_text,
+          customColor: this.getAqiColor(aqiNum)
+        };
+      }
+      return widget;
+    });
+
+    this.visibleWidgets = this.visibleWidgets.map(widget => {
+      if (widget.id === 'weather') {
+        return {
+          ...widget,
+          value: `${Math.round(metrics.current_temp)}°`,
+          unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+          icon: weatherIcon,
+          customColor: weatherColor,
+          weatherEmoji: weatherEmoji
+        };
+      }
+      if (widget.id === 'uv') {
+        return { ...widget, value: `${Math.round(metrics.uv_index)}` };
+      }
+      if (widget.id === 'aqi') {
+        const aqiNum = Number(metrics.aqi_value) || 0;
+        return {
+          ...widget,
+          value: `${metrics.aqi_value}`,
+          unit: metrics.aqi_status_text,
+          customColor: this.getAqiColor(aqiNum)
+        };
+      }
+      return widget;
+    });
+
+    this.filterWidgets();
   }
 
   Math = Math;
@@ -911,7 +997,37 @@ async handleLogout() {
     return this.translate.instant('UV_MODAL.ADVICE_EXTREME');
   }
 
-  getHourlyForecast() { return this.parsedWeatherData?.hourly_forecast || []; }
+  getHourlyForecast() {
+    const list = this.parsedWeatherData?.hourly_forecast;
+    if (!Array.isArray(list) || list.length === 0) return [];
+
+    const nowHour = new Date().getHours();
+
+    const curIndex = list.findIndex(item => {
+      if (item.rawTime) {
+        const itemHour = parseInt(item.rawTime.split('T')[1]?.substring(0, 2), 10);
+        return itemHour === nowHour;
+      }
+      if (item.hour !== undefined) {
+        return item.hour === nowHour;
+      }
+      if (item.time && item.time !== 'Сега') {
+        const itemHour = parseInt(item.time.split(':')[0], 10);
+        return itemHour === nowHour;
+      }
+      return false;
+    });
+
+    if (curIndex > 0) {
+      const sliced = list.slice(curIndex).map((item, idx) => ({
+        ...item,
+        time: idx === 0 ? 'Сега' : (item.time === 'Сега' ? (item.rawTime ? item.rawTime.split('T')[1]?.substring(0, 5) : `${item.hour ?? ''}:00`) : item.time)
+      }));
+      return sliced.slice(0, 12);
+    }
+
+    return list.slice(0, 12);
+  }
   getWeeklyForecast() { return this.parsedWeatherData?.weekly_forecast || []; }
 
   getTodayWeatherHigh(): number | null {
@@ -1007,10 +1123,58 @@ filterWidgets() {
     return '#d62828';
   }
 
-  changeLanguage(event: any) {
+  isSkopjeMunicipalitiesExpanded = true;
+
+  toggleSkopjeMunicipalities() {
+    this.isSkopjeMunicipalitiesExpanded = !this.isSkopjeMunicipalitiesExpanded;
+  }
+
+  isSkopjeCity(): boolean {
+    const city = (this.currentCityName || this.parsedWeatherData?.city_name || '').toLowerCase();
+    return city.includes('скопје') || city.includes('skopje') || city.includes('shkup');
+  }
+
+  getSkopjeMunicipalities(): any[] {
+    if (!this.parsedWeatherData?.skopje_municipalities) return [];
+    return this.parsedWeatherData.skopje_municipalities;
+  }
+
+  getMunicipalityName(muni: any): string {
+    if (!muni) return '';
+    if (this.currentLang === 'en' && muni.nameEn) return muni.nameEn;
+    if (this.currentLang === 'al' && muni.nameAl) return muni.nameAl;
+    return muni.name || '';
+  }
+
+  getLocalizedAqiStatus(val: number): string {
+    const num = Number(val);
+    if (this.currentLang === 'en') {
+      if (num <= 50) return 'Good';
+      if (num <= 100) return 'Moderate';
+      if (num <= 150) return 'Sensitive';
+      if (num <= 200) return 'Unhealthy';
+      return 'Hazardous';
+    } else if (this.currentLang === 'al') {
+      if (num <= 50) return 'Mirë';
+      if (num <= 100) return 'Mesatar';
+      if (num <= 150) return 'E dëmshme';
+      if (num <= 200) return 'Shumë e dëmshme';
+      return 'E rrezikshme';
+    }
+    if (num <= 50) return 'Одличен';
+    if (num <= 100) return 'Умерен';
+    if (num <= 150) return 'Чувствителен';
+    if (num <= 200) return 'Загаден';
+    return 'Опасно';
+  }
+
+  async changeLanguage(event: any) {
     const selectedLang = event.detail.value;
     this.currentLang = selectedLang;
     this.translate.use(selectedLang);
+    localStorage.setItem('app_language', selectedLang);
+    await this.healthService.setLanguage(selectedLang);
+    await this.supabaseService.updateDeviceLanguage(selectedLang);
     this.filterWidgets();
   }
 
@@ -1039,6 +1203,10 @@ filterWidgets() {
     this.activeDetailWidgetId = widgetId;
     if (widgetId === 'loyalty') this.loyaltyModalView = 'list';
     if (widgetId === 'activity') {
+      if (Capacitor.isNativePlatform()) {
+        const permCheck = await this.healthService.checkHealthPermissions();
+        this.isHealthPermGranted = permCheck.granted;
+      }
       const refreshed = await this.healthService.getTodayDeviceSteps();
       this.todayHealthData = refreshed;
       this.updateActivityWidgetDisplay(refreshed);
@@ -1448,12 +1616,12 @@ filterWidgets() {
   // 1. Add notification state map
 notificationPreferences: Record<string, boolean> = JSON.parse(
   localStorage.getItem('widget_notification_prefs') || 
-  '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true}'
+  '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true,"activity":true,"aqi":true}'
 );
 
 // 2. Check if a widget supports notification toggles
 supportsNotification(widgetId: string): boolean {
-  return ['weather', 'fuel', 'stock', 'crypto', 'holidays'].includes(widgetId);
+  return ['weather', 'fuel', 'stock', 'crypto', 'holidays', 'activity', 'aqi'].includes(widgetId);
 }
 
 // 3. Toggle handler (stops click propagation so it doesn't open the detail modal)
@@ -1465,8 +1633,15 @@ toggleWidgetNotification(widgetId: string, event: Event) {
   this.notificationPreferences[widgetId] = newVal;
   localStorage.setItem('widget_notification_prefs', JSON.stringify(this.notificationPreferences));
 
-  // Sync to backend DB
-  this.supabaseService.updateNotificationPreference(widgetId, newVal);
+  // Sync to backend DB if logged in
+  if (this.currentUser) {
+    this.supabaseService.updateNotificationPreference(widgetId, newVal);
+  }
+
+  // If activity, inform HealthService & native StepTracker
+  if (widgetId === 'activity') {
+    this.healthService.setNotificationEnabled(newVal);
+  }
 }
 
 isNotificationActive(widgetId: string): boolean {

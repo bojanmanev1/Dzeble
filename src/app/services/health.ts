@@ -28,6 +28,9 @@ export interface StepTrackerPlugin {
   }>;
   startUpdates(): Promise<{ started: boolean }>;
   stopUpdates(): Promise<void>;
+  setNotificationsEnabled(options: { enabled: boolean }): Promise<void>;
+  setLanguage(options: { language: string }): Promise<void>;
+  checkTrackerPermissions(): Promise<{ activityRecognition: string }>;
   requestTrackerPermissions(): Promise<{ activityRecognition: string }>;
   addListener(
     eventName: 'stepUpdate',
@@ -64,7 +67,11 @@ export class HealthService {
   private async initPedometer() {
     await this.loadSavedSteps();
     if (Capacitor.isNativePlatform()) {
-      await this.startContinuousPedometer();
+      const perm = await this.checkHealthPermissions();
+      if (perm.granted) {
+        await this.startContinuousPedometer();
+        await this.getTodayDeviceSteps();
+      }
     }
   }
 
@@ -133,19 +140,61 @@ export class HealthService {
   }
 
   /**
-   * 3. Prompt permissions once on launch
+   * 3. Check current hardware permission status
+   */
+  async checkHealthPermissions(): Promise<{ granted: boolean; state: string }> {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const platform = Capacitor.getPlatform();
+        if (platform === 'android') {
+          try {
+            const trackerStatus = await StepTracker.checkTrackerPermissions();
+            const isGranted = trackerStatus?.activityRecognition === 'granted';
+            return { granted: isGranted, state: trackerStatus?.activityRecognition || 'prompt' };
+          } catch (te) {
+            console.warn('StepTracker.checkTrackerPermissions error:', te);
+            return { granted: false, state: 'prompt' };
+          }
+        } else if (platform === 'ios') {
+          const status = await CapacitorPedometer.checkPermissions();
+          return {
+            granted: status.activityRecognition === 'granted',
+            state: status.activityRecognition || 'prompt'
+          };
+        }
+      }
+      return { granted: true, state: 'granted' };
+    } catch (e) {
+      console.warn('Error checking health permissions:', e);
+      return { granted: false, state: 'error' };
+    }
+  }
+
+  /**
+   * 4. Prompt permissions on launch or user request
    */
   async requestHealthPermissions(): Promise<boolean> {
     try {
       console.log('🔐 Requesting Activity Recognition & Notification permissions...');
       let granted = false;
+      const platform = Capacitor.getPlatform();
 
-      if (Capacitor.getPlatform() === 'android') {
-        const res = await StepTracker.requestTrackerPermissions();
-        granted = res.activityRecognition === 'granted';
-      } else if (Capacitor.getPlatform() === 'ios') {
-        const activityPerm = await CapacitorPedometer.requestPermissions();
-        granted = activityPerm.activityRecognition === 'granted';
+      if (platform === 'android') {
+        try {
+          const trackerRes = await StepTracker.requestTrackerPermissions();
+          if (trackerRes && trackerRes.activityRecognition === 'granted') {
+            granted = true;
+          }
+        } catch (te) {
+          console.warn('StepTracker.requestTrackerPermissions error:', te);
+        }
+      } else if (platform === 'ios') {
+        try {
+          const activityPerm = await CapacitorPedometer.requestPermissions();
+          granted = activityPerm.activityRecognition === 'granted';
+        } catch (ie) {
+          console.warn('iOS requestPermissions error:', ie);
+        }
       } else {
         granted = true;
       }
@@ -156,7 +205,7 @@ export class HealthService {
         console.warn('Local notifications request error:', ne);
       }
 
-      if (granted) {
+      if (granted || platform === 'web') {
         await this.startContinuousPedometer();
         await this.getTodayDeviceSteps();
       }
@@ -246,20 +295,69 @@ export class HealthService {
     return { steps, calories, distanceKm };
   }
 
+  public async setNotificationEnabled(enabled: boolean) {
+    await Preferences.set({ key: 'dzeble_activity_notif_enabled', value: enabled ? 'true' : 'false' });
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        await StepTracker.setNotificationsEnabled({ enabled });
+      } catch (e) {}
+    }
+  }
+
+  public async isNotificationEnabled(): Promise<boolean> {
+    const { value } = await Preferences.get({ key: 'dzeble_activity_notif_enabled' });
+    return value !== 'false';
+  }
+
+  public async setLanguage(lang: string) {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        await StepTracker.setLanguage({ language: lang });
+      } catch (e) {}
+    }
+  }
+
   /**
    * 6. Check and notify milestone thresholds (5,000, 10,000, 15,000 steps)
    */
   async checkAndNotifyMilestones(steps: number) {
     try {
+      const isEnabled = await this.isNotificationEnabled();
+      if (!isEnabled) return;
+
       const checkPerms = await LocalNotifications.checkPermissions();
       if (checkPerms.display !== 'granted') return;
+
+      const lang = localStorage.getItem('app_language') || 'mk';
+      let title5k = '🎉 5,000 Чекори!';
+      let body5k = 'Одличен напредок! Достигнавте 5,000 чекори денес!';
+      let title10k = '🔥 10,000 Чекори!';
+      let body10k = 'Честитки! Ја остваривте вашата дневна цел од 10,000 чекори!';
+      let title15k = '🏆 15,000 Чекори!';
+      let body15k = 'Неверојатен успех! Соборивте 15,000 чекори денес - вистински шампион!';
+
+      if (lang === 'en') {
+        title5k = '🎉 5,000 Steps!';
+        body5k = 'Great progress! You reached 5,000 steps today!';
+        title10k = '🔥 10,000 Steps!';
+        body10k = 'Congratulations! You achieved your daily goal of 10,000 steps!';
+        title15k = '🏆 15,000 Steps!';
+        body15k = 'Incredible achievement! You exceeded 15,000 steps today - champion!';
+      } else if (lang === 'al') {
+        title5k = '🎉 5,000 Hapa!';
+        body5k = 'Përparim i shkëlqyer! Keni arritur 5,000 hapa sot!';
+        title10k = '🔥 10,000 Hapa!';
+        body10k = 'Urime! Keni arritur synimin ditor prej 10,000 hapash!';
+        title15k = '🏆 15,000 Hapa!';
+        body15k = 'Sukses i jashtëzakonshëm! Kaluat 15,000 hapa sot - kampion i vërtetë!';
+      }
 
       // Milestone 1: 5,000 Steps
       if (steps >= 5000 && !this.notified5k) {
         await LocalNotifications.schedule({
           notifications: [{
-            title: '🎉 5,000 Чекори!',
-            body: 'Одличен напредок! Достигнавте 5,000 чекори денес!',
+            title: title5k,
+            body: body5k,
             id: 5000,
             schedule: { at: new Date(Date.now() + 500) }
           }]
@@ -272,8 +370,8 @@ export class HealthService {
       if (steps >= 10000 && !this.notified10k) {
         await LocalNotifications.schedule({
           notifications: [{
-            title: '🔥 10,000 Чекори!',
-            body: 'Честитки! Ја остваривте вашата дневна цел од 10,000 чекори!',
+            title: title10k,
+            body: body10k,
             id: 10000,
             schedule: { at: new Date(Date.now() + 500) }
           }]
@@ -286,8 +384,8 @@ export class HealthService {
       if (steps >= 15000 && !this.notified15k) {
         await LocalNotifications.schedule({
           notifications: [{
-            title: '🏆 15,000 Чекори!',
-            body: 'Неверојатен успех! Соборивте 15,000 чекори денес - вистински шампион!',
+            title: title15k,
+            body: body15k,
             id: 15000,
             schedule: { at: new Date(Date.now() + 500) }
           }]

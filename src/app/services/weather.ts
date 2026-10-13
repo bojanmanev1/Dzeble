@@ -49,9 +49,25 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
       if (reqPerms.location !== 'granted') return null;
     }
 
+    // 1. Fast cached OS location (< 50ms)
+    try {
+      const fastPosition = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 1500,
+        maximumAge: 300000 // Accept cached OS location up to 5 minutes old
+      });
+      if (fastPosition?.coords) {
+        return { lat: fastPosition.coords.latitude, lng: fastPosition.coords.longitude };
+      }
+    } catch {
+      // Fallback if no cached location in OS
+    }
+
+    // 2. Standard position request
     const position = await Geolocation.getCurrentPosition({
       enableHighAccuracy: false,
-      timeout: 5000
+      timeout: 5000,
+      maximumAge: 60000
     });
 
     return { lat: position.coords.latitude, lng: position.coords.longitude };
@@ -61,27 +77,46 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
   }
 }
 
-  // Define the exact coordinates of your seeded database cities
-  private macedonianCities = [
-    { name: 'Скопје', lat: 42.0000, lng: 21.4333 },
+  // All 34 Macedonian seeded database cities with precise coordinates
+  public macedonianCities = [
+    { name: 'Берово', lat: 41.7028, lng: 22.8569 },
     { name: 'Битола', lat: 41.0311, lng: 21.3403 },
-    { name: 'Куманово', lat: 42.1322, lng: 21.7144 },
-    { name: 'Прилеп', lat: 41.3461, lng: 21.5542 },
-    { name: 'Тетово', lat: 42.0106, lng: 20.9714 },
-    { name: 'Охрид', lat: 41.1172, lng: 20.8019 },
+    { name: 'Богданци', lat: 41.2031, lng: 22.5756 },
+    { name: 'Валандово', lat: 41.3169, lng: 22.5606 },
     { name: 'Велес', lat: 41.7156, lng: 21.7756 },
-    { name: 'Штип', lat: 41.7458, lng: 22.1994 },
-    { name: 'Струмица', lat: 41.4375, lng: 22.6433 },
+    { name: 'Виница', lat: 41.8828, lng: 22.5092 },
+    { name: 'Гевгелија', lat: 41.1414, lng: 22.5019 },
     { name: 'Гостивар', lat: 41.7961, lng: 20.9083 },
+    { name: 'Дебар', lat: 41.5250, lng: 20.5272 },
+    { name: 'Делчево', lat: 41.9675, lng: 22.7744 },
+    { name: 'Демир Капија', lat: 41.4114, lng: 22.2422 },
+    { name: 'Демир Хисар', lat: 41.2208, lng: 21.2036 },
     { name: 'Кавадарци', lat: 41.4331, lng: 22.0119 },
-    { name: 'Кочани', lat: 41.9167, lng: 22.4125 },
     { name: 'Кичево', lat: 41.5139, lng: 20.9531 },
+    { name: 'Кочани', lat: 41.9167, lng: 22.4125 },
+    { name: 'Кратово', lat: 42.0783, lng: 22.1811 },
+    { name: 'Крива Паланка', lat: 42.2011, lng: 22.3333 },
+    { name: 'Крушево', lat: 41.3689, lng: 21.2486 },
+    { name: 'Куманово', lat: 42.1322, lng: 21.7144 },
+    { name: 'Македонска Каменица', lat: 42.0208, lng: 22.5878 },
+    { name: 'Македонски Брод', lat: 41.5133, lng: 21.2153 },
+    { name: 'Неготино', lat: 41.4844, lng: 22.0914 },
+    { name: 'Охрид', lat: 41.1172, lng: 20.8019 },
+    { name: 'Пехчево', lat: 41.7619, lng: 22.8875 },
+    { name: 'Прилеп', lat: 41.3461, lng: 21.5542 },
+    { name: 'Пробиштип', lat: 41.9961, lng: 22.1856 },
+    { name: 'Радовиш', lat: 41.6383, lng: 22.4647 },
+    { name: 'Ресен', lat: 41.0889, lng: 21.0108 },
+    { name: 'Свети Николе', lat: 41.8650, lng: 21.9442 },
+    { name: 'Скопје', lat: 42.0000, lng: 21.4333 },
     { name: 'Струга', lat: 41.1778, lng: 20.6789 },
-    { name: 'Гевгелија', lat: 41.1414, lng: 22.5019 }
+    { name: 'Струмица', lat: 41.4375, lng: 22.6433 },
+    { name: 'Тетово', lat: 42.0106, lng: 20.9714 },
+    { name: 'Штип', lat: 41.7458, lng: 22.1994 }
   ];
 
-  private resolveCityName(userLat: number, userLng: number): string {
-    let nearestCity = this.macedonianCities[0].name;
+  public resolveCityName(userLat: number, userLng: number): string {
+    let nearestCity = 'Скопје';
     let shortestDistance = Number.MAX_VALUE;
 
     for (const city of this.macedonianCities) {

@@ -97,7 +97,7 @@ serve(async (_req) => {
 
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, crypto_alert_pair, last_crypto_alert_at")
+      .select("device_id, push_token, crypto_alert_pair, last_crypto_alert_at, language")
       .not("push_token", "is", null);
 
     if (devError) throw devError;
@@ -153,10 +153,23 @@ serve(async (_req) => {
 
       if (!isCooldownPassed && !isBigMove) continue;
 
+      const lang = dev.language || "mk";
       const title = `${emoji} ${symbol} ${sign}${ticker.change24h.toFixed(2)}% ($${priceStr})`;
-      const body = isUp
-        ? `${symbol} бележи раст од ${sign}${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
-        : `${symbol} бележи пад од ${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+      let body = "";
+
+      if (lang === "en") {
+        body = isUp
+          ? `${symbol} is up by ${sign}${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+          : `${symbol} is down by ${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+      } else if (lang === "al") {
+        body = isUp
+          ? `${symbol} shënon rritje prej ${sign}${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+          : `${symbol} shënon rënie prej ${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+      } else {
+        body = isUp
+          ? `${symbol} бележи раст од ${sign}${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+          : `${symbol} бележи пад од ${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+      }
 
       const ok = await sendFcmPush(
         dev.push_token,

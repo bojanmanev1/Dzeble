@@ -75,14 +75,33 @@ serve(async (req) => {
         const pm10 = parseFloat((aqiData.current?.pm10 ?? 0).toFixed(1));
         const aqiText = getAqiStatus(usAqi);
 
-        // Build 12-hour hourly forecast timeline
-        const nowIsoHour = new Date().toISOString().substring(0, 13);
-        let startIndex = (weatherData.hourly?.time || []).findIndex((t: string) => t.startsWith(nowIsoHour));
-        if (startIndex === -1) startIndex = 0;
+        // Build 24-hour hourly forecast timeline aligned to Europe/Skopje local time
+        const skopjeFormatter = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Skopje",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          hourCycle: "h23"
+        });
+        const skopjeParts = Object.fromEntries(
+          skopjeFormatter.formatToParts(new Date()).map(p => [p.type, p.value])
+        );
+        const nowSkopjeIsoHour = `${skopjeParts.year}-${skopjeParts.month}-${skopjeParts.day}T${skopjeParts.hour}`;
+
+        let startIndex = (weatherData.hourly?.time || []).findIndex((t: string) => t.startsWith(nowSkopjeIsoHour));
+        if (startIndex === -1) {
+          const curHourNum = parseInt(skopjeParts.hour, 10);
+          startIndex = (weatherData.hourly?.time || []).findIndex((t: string) => {
+            const h = t.includes("T") ? parseInt(t.split("T")[1].substring(0, 2), 10) : -1;
+            return h === curHourNum;
+          });
+          if (startIndex === -1) startIndex = 0;
+        }
 
         const hourlyForecast = [];
         const hourlyTotal = weatherData.hourly?.time?.length || 0;
-        const count = Math.min(12, hourlyTotal - startIndex);
+        const count = Math.min(24, hourlyTotal - startIndex);
 
         for (let i = 0; i < count; i++) {
           const idx = startIndex + i;
@@ -94,6 +113,8 @@ serve(async (req) => {
 
           hourlyForecast.push({
             time: i === 0 ? "Сега" : hourPart,
+            rawTime: timeStr,
+            hour: hourNum,
             temp: `${Math.round(weatherData.hourly.temperature_2m[idx])}°`,
             icon: getWmoIcon(code, isDayHour),
             humidity: Math.round(weatherData.hourly.relative_humidity_2m?.[idx] ?? currentItem.relative_humidity_2m),
@@ -129,30 +150,79 @@ serve(async (req) => {
           });
         }
 
-        // 3. Upsert data cleanly back into cached_weather_metrics
+        // 3. If Skopje, fetch localized municipality AQI in a single batch call (Centar, Karposh, Aerodrom, etc.)
+        let skopjeMunicipalities: any = null;
+        if (city.city_name === "Скопје") {
+          try {
+            const muniDefs = [
+              { name: "Центар", nameEn: "Centar", nameAl: "Qendër", lat: 41.9960, lng: 21.4316 },
+              { name: "Карпош", nameEn: "Karposh", nameAl: "Karposh", lat: 42.0050, lng: 21.3900 },
+              { name: "Аеродром", nameEn: "Aerodrom", nameAl: "Aerodrom", lat: 41.9833, lng: 21.4667 },
+              { name: "Кисела Вода", nameEn: "Kisela Voda", nameAl: "Kisela Vodë", lat: 41.9680, lng: 21.4420 },
+              { name: "Гази Баба", nameEn: "Gazi Baba", nameAl: "Gazi Babë", lat: 42.0120, lng: 21.4650 },
+              { name: "Ѓорче Петров", nameEn: "Gjorche Petrov", nameAl: "Gjorçe Petrov", lat: 42.0110, lng: 21.3550 },
+              { name: "Чаир", nameEn: "Chair", nameAl: "Çair", lat: 42.0150, lng: 21.4380 },
+              { name: "Бутел", nameEn: "Butel", nameAl: "Butel", lat: 42.0320, lng: 21.4460 }
+            ];
+
+            const lats = muniDefs.map((m) => m.lat).join(",");
+            const lngs = muniDefs.map((m) => m.lng).join(",");
+            const munisAqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=european_aqi,us_aqi,pm10,pm2_5&timezone=Europe/Skopje`;
+
+            const munisRes = await fetch(munisAqiUrl);
+            if (munisRes.ok) {
+              const munisData = await munisRes.json();
+              if (Array.isArray(munisData)) {
+                skopjeMunicipalities = muniDefs.map((def, idx) => {
+                  const item = munisData[idx]?.current;
+                  const val = Math.round(item?.us_aqi ?? item?.european_aqi ?? 0);
+                  return {
+                    name: def.name,
+                    nameEn: def.nameEn,
+                    nameAl: def.nameAl,
+                    aqi_value: val,
+                    aqi_status_text: getAqiStatus(val),
+                    pm10: parseFloat((item?.pm10 ?? 0).toFixed(1)),
+                    pm2_5: parseFloat((item?.pm2_5 ?? 0).toFixed(1))
+                  };
+                });
+              }
+            }
+          } catch (muniErr: any) {
+            console.warn("Failed to fetch Skopje municipalities AQI:", muniErr.message);
+          }
+        }
+
+        // 4. Upsert data cleanly back into cached_weather_metrics
+        const upsertPayload: any = {
+          city_name: city.city_name,
+          latitude: city.latitude,
+          longitude: city.longitude,
+          current_temp: currentItem.temperature_2m,
+          weather_code: currentItem.weather_code,
+          is_day: currentItem.is_day,
+          uv_index: weatherData.daily?.uv_index_max?.[0] ?? 0.0,
+          aqi_value: usAqi,
+          aqi_status_text: aqiText,
+          pm25_value: pm25,
+          pm10_value: pm10,
+          hourly_forecast: hourlyForecast,
+          weekly_forecast: weeklyForecast,
+          updated_at: new Date().toISOString()
+        };
+
+        if (skopjeMunicipalities) {
+          upsertPayload.skopje_municipalities = skopjeMunicipalities;
+        }
+
         const { error: upsertErr } = await supabase
           .from("cached_weather_metrics")
-          .upsert({
-            city_name: city.city_name,
-            latitude: city.latitude,
-            longitude: city.longitude,
-            current_temp: currentItem.temperature_2m,
-            weather_code: currentItem.weather_code,
-            is_day: currentItem.is_day,
-            uv_index: weatherData.daily?.uv_index_max?.[0] ?? 0.0,
-            aqi_value: usAqi,
-            aqi_status_text: aqiText,
-            pm25_value: pm25,
-            pm10_value: pm10,
-            hourly_forecast: hourlyForecast,
-            weekly_forecast: weeklyForecast,
-            updated_at: new Date().toISOString()
-          }, { onConflict: "city_name" });
+          .upsert(upsertPayload, { onConflict: "city_name" });
 
         if (upsertErr) {
           console.error(`Failed to upsert weather for ${city.city_name}:`, upsertErr);
         } else {
-          console.info(`✓ Successfully synced ${city.city_name}: ${currentItem.temperature_2m}°C, AQI: ${usAqi} (${aqiText})`);
+          console.info(`✓ Successfully synced ${city.city_name}: ${currentItem.temperature_2m}°C, AQI: ${usAqi} (${aqiText})${skopjeMunicipalities ? ` [with ${skopjeMunicipalities.length} municipalities]` : ""}`);
         }
 
       } catch (err: any) {

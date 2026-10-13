@@ -90,7 +90,7 @@ serve(async (req) => {
     // 3. Query fuel prices from DB
     const { data: prices, error: priceErr } = await supabase
       .from("fuel_prices")
-      .select("fuel_type, price_mkd, previous_price_mkd");
+      .select("fuel_type, price_mkd, previous_price_mkd, effective_from, updated_at");
 
     if (priceErr || !prices || prices.length === 0) {
       return new Response(
@@ -110,24 +110,60 @@ serve(async (req) => {
     }
 
     // Calculate deltas
-    const dieselDiff = diesel.previous_price_mkd ? diesel.price_mkd - diesel.previous_price_mkd : 0;
-    const p95Diff = p95.previous_price_mkd ? p95.price_mkd - p95.previous_price_mkd : 0;
+    const dieselDiff = (diesel.previous_price_mkd !== null && diesel.previous_price_mkd !== undefined)
+      ? diesel.price_mkd - diesel.previous_price_mkd 
+      : 0;
+    const p95Diff = (p95.previous_price_mkd !== null && p95.previous_price_mkd !== undefined)
+      ? p95.price_mkd - p95.previous_price_mkd 
+      : 0;
 
-    // Build notification text
+    // 🛑 CRITICAL CHECK: ONLY proceed if there is an ACTUAL non-zero price change
+    const hasPriceChange = Math.abs(dieselDiff) >= 0.05 || Math.abs(p95Diff) >= 0.05;
+    if (!hasPriceChange) {
+      console.log("No fuel price change detected (diff is 0.0). Skipping alert dispatch.");
+      return new Response(
+        JSON.stringify({ success: true, message: "No price change detected (diff is 0.0). Skipped.", sentCount: 0 }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Determine when this price change was saved
+    const latestPriceUpdateMs = prices.reduce((latest, p) => {
+      if (!p.updated_at) return latest;
+      const t = new Date(p.updated_at).getTime();
+      return t > latest ? t : latest;
+    }, 0);
+
+    // Build notification helper
     let emoji = "⛽";
     if (dieselDiff > 0 || p95Diff > 0) emoji = "📈";
     if (dieselDiff < 0 || p95Diff < 0) emoji = "📉";
 
-    const formatDiff = (diff: number) => (diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`);
-    
-    const title = `${emoji} Промена на цените на горивата`;
-    const body = `Дизел: ${diesel.price_mkd} ден (${formatDiff(dieselDiff)}) | BS-95: ${p95.price_mkd} ден (${formatDiff(p95Diff)}).`;
+    const getFuelNotificationText = (lang: string) => {
+      const formatDiff = (diff: number) => (diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`);
+      if (lang === 'en') {
+        return {
+          title: `${emoji} Fuel Price Update`,
+          body: `Diesel: ${diesel.price_mkd} MKD (${formatDiff(dieselDiff)}) | BS-95: ${p95.price_mkd} MKD (${formatDiff(p95Diff)}).`
+        };
+      } else if (lang === 'al') {
+        return {
+          title: `${emoji} Ndryshim i çmimeve të karburantit`,
+          body: `Dizel: ${diesel.price_mkd} den (${formatDiff(dieselDiff)}) | BS-95: ${p95.price_mkd} den (${formatDiff(p95Diff)}).`
+        };
+      }
+      return {
+        title: `${emoji} Промена на цените на горивата`,
+        body: `Дизел: ${diesel.price_mkd} ден (${formatDiff(dieselDiff)}) | BS-95: ${p95.price_mkd} ден (${formatDiff(p95Diff)}).`
+      };
+    };
 
-    // 4. Query devices ready for alerts (24-hour cooldown)
+    // 4. Query devices ready for alerts (filtering disabled devices and checking cooldown)
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, last_fuel_alert_at")
-      .not("push_token", "is", null);
+      .select("device_id, push_token, last_fuel_alert_at, notify_fuel, language")
+      .not("push_token", "is", null)
+      .neq("notify_fuel", false);
 
     if (devError) {
       return new Response(
@@ -136,16 +172,27 @@ serve(async (req) => {
       );
     }
 
-    const COOLDOWN_HOURS = 24;
+    const COOLDOWN_HOURS = 20;
     const now = new Date();
     let sentCount = 0;
 
     for (const dev of devices || []) {
-      const hoursDiff = dev.last_fuel_alert_at
-        ? (now.getTime() - new Date(dev.last_fuel_alert_at).getTime()) / (1000 * 60 * 60)
-        : 999;
+      if (dev.last_fuel_alert_at) {
+        const lastAlertTime = new Date(dev.last_fuel_alert_at).getTime();
+        const hoursDiff = (now.getTime() - lastAlertTime) / (1000 * 60 * 60);
 
-      if (hoursDiff < COOLDOWN_HOURS) continue;
+        // If the device was already notified AFTER this price update, don't spam again
+        if (latestPriceUpdateMs > 0 && lastAlertTime >= latestPriceUpdateMs) {
+          continue;
+        }
+
+        // If notified less than cooldown hours ago, skip
+        if (hoursDiff < COOLDOWN_HOURS) {
+          continue;
+        }
+      }
+
+      const { title, body } = getFuelNotificationText(dev.language || 'mk');
 
       const ok = await sendFcmPush(
         dev.push_token,

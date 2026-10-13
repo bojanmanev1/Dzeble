@@ -71,6 +71,13 @@ export default {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+      // Query existing prices to accurately preserve previous_price_mkd
+      const { data: existingPrices } = await supabase
+        .from('fuel_prices')
+        .select('fuel_type, price_mkd, previous_price_mkd');
+
+      const existingMap = new Map((existingPrices || []).map(p => [p.fuel_type, p]));
+
       const fuelRecords = [
         { fuel_type: 'Бензин 95', price_mkd: p95, effective_from: p95Date },
         { fuel_type: 'Бензин 98+', price_mkd: p98, effective_from: p98Date },
@@ -79,20 +86,51 @@ export default {
         { fuel_type: 'Мазут', price_mkd: mazut, effective_from: mazutDate }
       ];
 
+      let anyPriceChanged = false;
+
       for (const record of fuelRecords) {
+        const existing = existingMap.get(record.fuel_type);
+        const priceDiff = existing ? Math.abs((existing.price_mkd || 0) - (record.price_mkd || 0)) : 0;
+        const isNewChange = existing && priceDiff >= 0.05;
+
+        const updatePayload: any = {
+          fuel_type: record.fuel_type,
+          price_mkd: record.price_mkd,
+          effective_from: record.effective_from,
+        };
+
+        if (isNewChange) {
+          anyPriceChanged = true;
+          updatePayload.previous_price_mkd = existing.price_mkd;
+          updatePayload.price_changed_at = new Date().toISOString();
+          updatePayload.updated_at = new Date().toISOString();
+        } else if (existing) {
+          updatePayload.previous_price_mkd = existing.previous_price_mkd;
+        }
+
         await supabase
           .from('fuel_prices')
-          .upsert(
-            { 
-              fuel_type: record.fuel_type, 
-              price_mkd: record.price_mkd,
-              effective_from: record.effective_from 
-            },
-            { onConflict: 'fuel_type' }
-          );
+          .upsert(updatePayload, { onConflict: 'fuel_type' });
       }
 
-      return Response.json({ success: true, liveScrape: true, updatedCount: fuelRecords.length });
+      // If price change was detected, immediately trigger the alert dispatcher!
+      if (anyPriceChanged) {
+        console.info("[PRICE CHANGE DETECTED] Triggering dispatch-fuel-alerts...");
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/dispatch-fuel-alerts`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({ trigger: "price_changed" }),
+          });
+        } catch (alertErr: any) {
+          console.warn("Failed to trigger dispatch-fuel-alerts:", alertErr.message);
+        }
+      }
+
+      return Response.json({ success: true, liveScrape: true, updatedCount: fuelRecords.length, anyPriceChanged });
 
     } catch (err: any) {
       console.error("[GLOBAL CRASH]:", err.message);

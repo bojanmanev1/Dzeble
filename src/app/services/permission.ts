@@ -1,19 +1,23 @@
 import { Injectable, inject } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
-import { Motion } from '@capacitor/motion';
 import { PushNotificationService } from './push-notification';
+import { HealthService } from './health';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PermissionService {
   private pushService = inject(PushNotificationService);
+  private healthService = inject(HealthService);
 
   async requestAllPermissionsSequentially(): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
 
     console.log('🏁 Starting Sequential Permission Requests...');
+
+    // Small delay so app rendering and splash dismissal completes
+    await new Promise((res) => setTimeout(res, 800));
 
     // --- STEP 1: Push Notifications ---
     try {
@@ -24,7 +28,7 @@ export class PermissionService {
     }
 
     // Small delay to allow OS dialog transition to finish smoothly
-    await new Promise((res) => setTimeout(res, 600));
+    await new Promise((res) => setTimeout(res, 800));
 
     // --- STEP 2: Location Permission ---
     try {
@@ -37,21 +41,18 @@ export class PermissionService {
       console.warn('Location permission step failed:', e);
     }
 
-    // Small delay
-    await new Promise((res) => setTimeout(res, 600));
+    // Small delay to allow OS dialog transition to finish smoothly
+    await new Promise((res) => setTimeout(res, 800));
 
-    // --- STEP 3: Activity / Motion Tracking Permission ---
+    // --- STEP 3: Activity / Step Tracking Permission ---
     try {
-      console.log('3️⃣ Requesting Motion / Activity Permission...');
-      if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
-        await (DeviceMotionEvent as any).requestPermission();
-      } else {
-        // Triggers initial listener check for Android Motion Sensors
-        const handle = await Motion.addListener('accel', () => {});
-        handle.remove();
+      console.log('3️⃣ Requesting Physical Activity Permission...');
+      const permCheck = await this.healthService.checkHealthPermissions();
+      if (!permCheck.granted) {
+        await this.healthService.requestHealthPermissions();
       }
     } catch (e) {
-      console.warn('Activity/Motion permission step failed:', e);
+      console.warn('Activity permission step failed:', e);
     }
 
     console.log('✅ All permission requests processed in sequence.');

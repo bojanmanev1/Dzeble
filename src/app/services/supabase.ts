@@ -330,6 +330,7 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       crypto_alert_pairs: savedCryptos,
       // Notification switches
       notify_weather: notifPrefs.weather ?? true,
+      notify_aqi: notifPrefs.aqi ?? true,
       notify_fuel: notifPrefs.fuel ?? true,
       notify_stock: notifPrefs.stock ?? true,
       notify_crypto: notifPrefs.crypto ?? true,
@@ -346,6 +347,9 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       payload.city_preference = cachedCity;
     }
 
+    const savedLanguage = localStorage.getItem('app_language') || 'mk';
+    payload.language = savedLanguage;
+
     // 6. Upsert device row
     const { data, error } = await this.supabase
       .from('user_devices')
@@ -359,6 +363,30 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     }
   } catch (err) {
     console.error('❌ Device resolution failed:', err);
+  }
+}
+
+async updateDeviceLanguage(language: string) {
+  try {
+    localStorage.setItem('app_language', language);
+    const deviceId = await this.getDeviceId();
+    if (deviceId) {
+      await this.supabase
+        .from('user_devices')
+        .update({ language: language })
+        .eq('device_id', deviceId);
+    }
+
+    const currentUser = (await this.supabase.auth.getUser()).data.user;
+    if (currentUser?.id) {
+      await this.supabase
+        .from('profiles')
+        .update({ language: language })
+        .eq('id', currentUser.id);
+    }
+    console.log(`🌐 Language preference saved to Supabase: ${language}`);
+  } catch (err) {
+    console.warn('Failed to update language preference:', err);
   }
 }
 
@@ -381,6 +409,7 @@ async updateNotificationPreference(widgetId: string, enabled: boolean) {
     const deviceId = await this.getDeviceId();
     const columnMap: Record<string, string> = {
       weather: 'notify_weather',
+      aqi: 'notify_aqi',
       fuel: 'notify_fuel',
       stock: 'notify_stock',
       crypto: 'notify_crypto',
