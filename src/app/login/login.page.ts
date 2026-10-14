@@ -4,8 +4,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SupabaseService } from '../services/supabase';
-import { IonContent, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonSpinner, IonIcon } from '@ionic/angular/standalone';
 import { NetworkService } from '../services/network';
+import { addIcons } from 'ionicons';
+import { arrowBackOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-login',
@@ -17,10 +19,14 @@ import { NetworkService } from '../services/network';
     FormsModule,
     TranslatePipe,
     IonContent,
-    IonSpinner
+    IonSpinner,
+    IonIcon
   ]
 })
 export class LoginPage implements OnInit {
+  constructor() {
+    addIcons({ 'arrow-back-outline': arrowBackOutline });
+  }
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
   private translate = inject(TranslateService);

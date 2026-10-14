@@ -623,42 +623,104 @@ html.dark {
   }
 
   .btn-back {
-    background: #1c2824 !important;
-    border-color: rgba(52, 211, 153, 0.2) !important;
-    color: #f1f5f9 !important;
+    background: #18201c !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+
+    ion-icon {
+      color: #f8fafc !important;
+    }
+
+    &:hover {
+      background: #202b26 !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 12px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    &:active {
+      background: #273630 !important;
+    }
   }
 
-  .auth-header h1 {
-    color: #f1f5f9 !important;
+  .auth-header {
+    .auth-logo-badge {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.24)) !important;
+      border-color: rgba(52, 211, 153, 0.35) !important;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    h1 {
+      color: #ffffff !important;
+    }
   }
 
   .input-group {
     label {
-      color: #9bb0a7 !important;
+      color: #cbd5e1 !important;
     }
 
     input {
-      background: #1c2824 !important;
-      border-color: rgba(52, 211, 153, 0.25) !important;
-      color: #f1f5f9 !important;
+      background: #171d1a !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #f8fafc !important;
+
+      &::placeholder {
+        color: #64748b !important;
+      }
 
       &:focus {
+        background: #1c2420 !important;
         border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
       }
 
       &:-webkit-autofill,
       &:-webkit-autofill:hover,
       &:-webkit-autofill:focus {
-        -webkit-text-fill-color: #f1f5f9 !important;
-        -webkit-box-shadow: 0 0 0px 1000px #1c2824 inset !important;
+        -webkit-text-fill-color: #f8fafc !important;
+        -webkit-box-shadow: 0 0 0px 1000px #171d1a inset !important;
       }
     }
   }
 
+  .forgot-password-container {
+    .btn-link {
+      color: #34d399 !important;
+    }
+  }
+
+  .btn-submit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.45) !important;
+
+    &:active {
+      filter: brightness(0.92);
+    }
+  }
+
+  .auth-divider {
+    &::before,
+    &::after {
+      border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    span {
+      color: #64748b !important;
+    }
+  }
+
   .btn-google {
-    background: #1c2824 !important;
-    border-color: rgba(52, 211, 153, 0.25) !important;
-    color: #f1f5f9 !important;
+    background: #171d1a !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+
+    &:hover {
+      background: #1c2420 !important;
+      border-color: rgba(52, 211, 153, 0.35) !important;
+    }
   }
 
   .btn-toggle-mode {
@@ -798,6 +860,223 @@ body.dark ion-alert,
 
       &:active {
         background: rgba(255, 255, 255, 0.14) !important;
+      }
+    }
+  }
+}
+
+/* ==========================================================================
+   CUSTOM AUTH REQUIRED PROMPT SHEET (Global Modal)
+   ========================================================================== */
+.auth-prompt-modal {
+  --background: transparent;
+
+  &::part(content) {
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    background: #ffffff;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  &::part(handle) {
+    background: rgba(0, 0, 0, 0.2);
+    width: 42px;
+    height: 4.5px;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+}
+
+.auth-prompt-sheet {
+  padding: 20px 24px max(38px, calc(env(safe-area-inset-bottom, 0px) + 28px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+
+  .auth-prompt-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border: 1.5px solid #86efac;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.18);
+
+    .auth-lock-icon {
+      font-size: 2rem;
+      color: #059669;
+    }
+  }
+
+  .auth-prompt-title {
+    font-size: 1.38rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.4px;
+  }
+
+  .auth-prompt-subtitle {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+    max-width: 320px;
+  }
+
+  .auth-prompt-perks {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+
+    .perk-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+
+      .perk-check {
+        font-size: 1.25rem;
+        color: #10b981;
+        flex-shrink: 0;
+      }
+
+      .perk-text {
+        flex: 1;
+        line-height: 1.35;
+      }
+    }
+  }
+
+  .auth-prompt-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .btn-auth-signin {
+      width: 100%;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:active {
+        transform: scale(0.98);
+        filter: brightness(0.92);
+      }
+    }
+
+    .btn-auth-cancel {
+      width: 100%;
+      height: 44px;
+      border-radius: 14px;
+      background: transparent;
+      color: #64748b;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: all 0.2s ease;
+
+      &:active {
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+    }
+  }
+}
+
+/* Dark Mode Overrides for Auth Prompt Sheet */
+body.dark,
+.ion-palette-dark {
+  .auth-prompt-modal {
+    &::part(content) {
+      background: #141916 !important;
+      border-top: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.85) !important;
+    }
+
+    &::part(handle) {
+      background: rgba(255, 255, 255, 0.25) !important;
+    }
+  }
+
+  .auth-prompt-sheet {
+    .auth-prompt-badge {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.28)) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.4) !important;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.22) !important;
+
+      .auth-lock-icon {
+        color: #34d399 !important;
+      }
+    }
+
+    .auth-prompt-title {
+      color: #ffffff !important;
+    }
+
+    .auth-prompt-subtitle {
+      color: #cbd5e1 !important;
+    }
+
+    .auth-prompt-perks {
+      background: #1b221f !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+      .perk-row {
+        color: #f1f5f9 !important;
+
+        .perk-check {
+          color: #34d399 !important;
+        }
+      }
+    }
+
+    .auth-prompt-actions {
+      .btn-auth-signin {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.45) !important;
+
+        &:active {
+          filter: brightness(0.92);
+        }
+      }
+
+      .btn-auth-cancel {
+        color: #94a3b8 !important;
+
+        &:active {
+          background: rgba(255, 255, 255, 0.06) !important;
+          color: #f8fafc !important;
+        }
       }
     }
   }

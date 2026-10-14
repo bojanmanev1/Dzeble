@@ -1,7 +1,9 @@
 <ion-content [fullscreen]="true" class="auth-content">
 
   <div class="back-btn-container">
-    <button class="btn-back" (click)="goBack()">←</button>
+    <button class="btn-back" (click)="goBack()" type="button" aria-label="Back">
+      <ion-icon name="arrow-back-outline"></ion-icon>
+    </button>
   </div>
    @if (!(networkService.isOnline$ | async)) {
   <div style="background: #ef4444; color: white; padding: 8px 12px; border-radius: 12px; text-align: center; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
@@ -11,7 +13,9 @@
 
   <div class="auth-wrapper">
     <div class="auth-header">
-      <span class="auth-logo">📱</span>
+      <div class="auth-logo-badge">
+        <span class="auth-logo">📱</span>
+      </div>
       <h1>{{ (isSignUpMode ? 'AUTH.REGISTER_TITLE' : 'AUTH.LOGIN_TITLE') | translate }}</h1>
     </div>
 

@@ -1731,8 +1731,8 @@
   [isOpen]="isAuthPromptModalOpen" 
   (didDismiss)="isAuthPromptModalOpen = false"
   class="premium-modal auth-prompt-modal"
-  [initialBreakpoint]="0.6"
-  [breakpoints]="[0, 0.6]"
+  [initialBreakpoint]="0.68"
+  [breakpoints]="[0, 0.68]"
   [handle]="true">
   <ng-template>
     <div class="auth-prompt-sheet">
@@ -1749,15 +1749,15 @@
 
       <div class="auth-prompt-perks">
         <div class="perk-row">
-          <span class="perk-icon">📊</span>
+          <ion-icon name="checkmark-circle" class="perk-check"></ion-icon>
           <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_1' | translate }}</span>
         </div>
         <div class="perk-row">
-          <span class="perk-icon">🔔</span>
+          <ion-icon name="checkmark-circle" class="perk-check"></ion-icon>
           <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_2' | translate }}</span>
         </div>
         <div class="perk-row">
-          <span class="perk-icon">☁️</span>
+          <ion-icon name="checkmark-circle" class="perk-check"></ion-icon>
           <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_3' | translate }}</span>
         </div>
       </div>
