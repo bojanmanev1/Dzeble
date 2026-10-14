@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseService } from '../services/supabase';
 import { WeatherService } from '../services/weather';
@@ -36,7 +36,14 @@ import {
   statsChart,
   trendingUp,
   chevronDownOutline,
-  chevronUpOutline
+  chevronUpOutline,
+  lockClosed,
+  close,
+  chevronBack,
+  chevronForward,
+  add,
+  refreshOutline,
+  checkmark
 } from 'ionicons/icons';
 
 import { 
@@ -114,6 +121,7 @@ export class HomePage implements OnInit, OnDestroy {
   private pushService = inject(PushNotificationService);
   private zone = inject(NgZone);
   private stockService = inject(StockService);
+  private cdr = inject(ChangeDetectorRef);
 
   private stockSub: Subscription | null = null;
   private weatherSub: Subscription | null = null;
@@ -169,10 +177,16 @@ export class HomePage implements OnInit, OnDestroy {
   newWidgetTitle = '';
   newWidgetDate: string = new Date().toISOString();
   inputMkdAmount: number = 100;
-  todayHealthData: HealthData = { steps: 0, calories: 0, distanceKm: 0 };
+  todayHealthData: HealthData = { 
+    steps: parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10), 
+    calories: Math.round(parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.04), 
+    distanceKm: parseFloat((parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.000762).toFixed(2)) 
+  };
   last7DaysHealth: any[] = [];
   notified10k = false;
   notified15k = false;
+  private healthSyncDebounceTimeout: any = null;
+  isAuthPromptModalOpen = false;
   selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_display_currency') as any) || 'MKD';
 
   private storeColorMap: { [key: string]: string } = {
@@ -213,12 +227,40 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'stock', translationKey: 'WIDGETS.STOCK', value: 'AAPL', unit: 'AAPL', icon: 'trending-up' },
     { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' },
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
-    { id: 'activity', translationKey: 'WIDGETS.STEPS', value: '0', unit: '0 kcal', icon: 'footsteps' },
+    { 
+      id: 'activity', 
+      translationKey: 'WIDGETS.STEPS', 
+      value: parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10).toLocaleString('mk-MK'), 
+      unit: `${Math.round(parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.04)} kcal`, 
+      icon: 'footsteps' 
+    },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
   ];
 
+  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'uv', 'activity'];
+  readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
+
+  activeWidgetIds: string[] = [];
   visibleWidgets: Widget[] = [];
   isHealthPermGranted: boolean = true;
+
+  // Widget Edit & Drag-and-Drop State
+  isWidgetEditMode: boolean = false;
+  draggedWidgetId: string | null = null;
+  dragStartX: number = 0;
+  dragStartY: number = 0;
+  dragCurrentX: number = 0;
+  dragCurrentY: number = 0;
+  isDragging: boolean = false;
+  private lastSwapTime: number = 0;
+  private activePointerId: number | null = null;
+  private activePointerTarget: HTMLElement | null = null;
+
+  // 1-Second Long Press Tracking
+  private longPressTimer: any = null;
+  longPressTriggered: boolean = false;
+  private touchStartX: number = 0;
+  private touchStartY: number = 0;
 
   constructor() {
     const savedLang = localStorage.getItem('app_language') || 'mk';
@@ -250,8 +292,18 @@ export class HomePage implements OnInit, OnDestroy {
       'stats-chart': statsChart,
       'trending-up': trendingUp,
       'chevron-down-outline': chevronDownOutline,
-      'chevron-up-outline': chevronUpOutline
+      'chevron-up-outline': chevronUpOutline,
+      'lock-closed': lockClosed,
+      'close': close,
+      'chevron-back': chevronBack,
+      'chevron-forward': chevronForward,
+      'add': add,
+      'refresh-outline': refreshOutline,
+      'checkmark': checkmark
     });
+
+    this.loadSavedWidgetOrder();
+    this.syncVisibleWidgets();
   }
 
   async ngOnInit() {
@@ -281,11 +333,30 @@ export class HomePage implements OnInit, OnDestroy {
 
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
+      this.healthService.setUserLoggedIn(!!user);
 
       if (user) {
+        // 1. Immediately restore today's steps from Supabase if available (e.g. after fresh reinstall)
+        try {
+          const remoteToday = await this.supabaseService.getTodayHealthMetrics(user.id);
+          if (remoteToday && remoteToday.step_count > 0) {
+            const restored = await this.healthService.restoreStepsFromDatabase(remoteToday.step_count);
+            this.todayHealthData = restored;
+            this.updateActivityWidgetDisplay(restored);
+            this.cdr.markForCheck();
+          }
+        } catch (e) {
+          console.warn('Could not restore steps from cloud on login:', e);
+        }
+
         const token = await this.pushService.requestPushPermissionAndRegister();
         await this.supabaseService.syncDeviceRecord(user.id, user.email, token || undefined);
         await this.syncHealthData(user.id);
+        const remoteHistory = await this.supabaseService.getLast7DaysHealthMetrics(user.id);
+        if (remoteHistory && remoteHistory.length > 0) {
+          this.last7DaysHealth = remoteHistory;
+          await this.healthService.syncHistoryFromRemote(remoteHistory);
+        }
         await this.loadLoyaltyCards(user.id);
         await this.loadUserEvents(user.id);
       } else {
@@ -293,23 +364,27 @@ export class HomePage implements OnInit, OnDestroy {
         this.combineHighlightedDates();
       }
       this.filterWidgets();
+      this.cdr.markForCheck();
     });
 
     if (Capacitor.isNativePlatform()) {
       App.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
-          // Immediately fetch and display fresh steps on frame 1
-          const freshSteps = await this.healthService.getTodayDeviceSteps();
-          this.todayHealthData = freshSteps;
-          this.updateActivityWidgetDisplay(freshSteps);
+          this.zone.run(async () => {
+            // Immediately fetch and display fresh steps on frame 1
+            const freshSteps = await this.healthService.getTodayDeviceSteps();
+            this.todayHealthData = freshSteps;
+            this.updateActivityWidgetDisplay(freshSteps);
+            this.cdr.markForCheck();
 
-          const cachedToken = this.pushService.getCurrentToken();
-          if (this.currentUser) {
-            await this.supabaseService.syncDeviceRecord(this.currentUser.id, this.currentUser.email, cachedToken || undefined);
-            await this.syncHealthData(this.currentUser.id);
-          } else {
-            await this.supabaseService.syncDeviceRecord();
-          }
+            const cachedToken = this.pushService.getCurrentToken();
+            if (this.currentUser) {
+              await this.supabaseService.syncDeviceRecord(this.currentUser.id, this.currentUser.email, cachedToken || undefined);
+              await this.syncHealthData(this.currentUser.id);
+            } else {
+              await this.supabaseService.syncDeviceRecord();
+            }
+          });
         }
       });
     }
@@ -486,8 +561,10 @@ export class HomePage implements OnInit, OnDestroy {
 
 async handleLogout() {
   this.isSettingsSheetOpen = false;
+  this.healthService.setUserLoggedIn(false);
   await this.supabaseService.signOut();
   this.filterWidgets();
+  this.cdr.markForCheck();
 }
 
   async loadLoyaltyCards(userId: string) {
@@ -676,6 +753,17 @@ async handleLogout() {
     this.healthService.currentHealth$.subscribe(data => {
       this.todayHealthData = data;
       this.updateActivityWidgetDisplay(data);
+
+      if (this.currentUser) {
+        if (this.healthSyncDebounceTimeout) {
+          clearTimeout(this.healthSyncDebounceTimeout);
+        }
+        this.healthSyncDebounceTimeout = setTimeout(() => {
+          if (this.currentUser) {
+            this.syncHealthData(this.currentUser.id);
+          }
+        }, 15000);
+      }
     });
 
     const localHistory = await this.healthService.getLocal7DaysHistory();
@@ -698,7 +786,7 @@ async handleLogout() {
           this.todayHealthData = fresh;
           this.updateActivityWidgetDisplay(fresh);
         }
-      }, 3500);
+      }, 800);
     }
   }
 
@@ -714,17 +802,20 @@ async handleLogout() {
   }
 
   updateActivityWidgetDisplay(data: HealthData) {
-    this.allWidgets = this.allWidgets.map(widget => {
-      if (widget.id === 'activity') {
-        return {
-          ...widget,
-          value: (data.steps || 0).toLocaleString('mk-MK'),
-          unit: `${data.calories || 0} kcal`
-        };
-      }
-      return widget;
+    this.zone.run(() => {
+      this.allWidgets = this.allWidgets.map(widget => {
+        if (widget.id === 'activity') {
+          return {
+            ...widget,
+            value: (data.steps || 0).toLocaleString('mk-MK'),
+            unit: `${data.calories || 0} kcal`
+          };
+        }
+        return widget;
+      });
+      this.filterWidgets();
+      this.cdr.markForCheck();
     });
-    this.filterWidgets();
   }
 
   getStepsProgressPercent(): number {
@@ -742,7 +833,7 @@ async handleLogout() {
     this.updateActivityWidgetDisplay(data);
 
     const milestones = this.healthService.getMilestonesStatus();
-    await this.supabaseService.syncTodayHealthMetrics(userId, {
+    const synced = await this.supabaseService.syncTodayHealthMetrics(userId, {
       steps: data.steps,
       calories: data.calories,
       distanceKm: data.distanceKm,
@@ -750,6 +841,19 @@ async handleLogout() {
       notified10k: milestones.reached10k,
       notified15k: milestones.reached15k
     });
+
+    if (synced && synced.step_count > data.steps) {
+      // Remote had higher steps (e.g. reinstall or other device), restore locally
+      const restored = await this.healthService.restoreStepsFromDatabase(synced.step_count);
+      this.todayHealthData = restored;
+      this.updateActivityWidgetDisplay(restored);
+      this.cdr.markForCheck();
+    }
+
+    const localHistory = await this.healthService.getLocal7DaysHistory();
+    if (localHistory && localHistory.length > 0) {
+      await this.supabaseService.syncHealthHistory(userId, localHistory);
+    }
   }
 
   combineHighlightedDates() {
@@ -1104,15 +1208,267 @@ async handleLogout() {
   }
 
 
-filterWidgets() {
-  if (!this.currentUser) {
-    this.visibleWidgets = this.allWidgets.filter(
-      widget => widget.id !== 'loyalty'
-    );
-  } else {
-    this.visibleWidgets = [...this.allWidgets];
+  loadSavedWidgetOrder() {
+    try {
+      const saved = localStorage.getItem(this.STORAGE_WIDGET_ORDER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const validIds = parsed.filter(id => this.allWidgets.some(w => w.id === id));
+          const uniqueIds = Array.from(new Set(validIds)).slice(0, 9);
+          if (uniqueIds.length > 0) {
+            this.activeWidgetIds = uniqueIds;
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Default 9 widgets layout
+    this.activeWidgetIds = [...this.DEFAULT_WIDGET_IDS];
   }
-}
+
+  saveWidgetOrder() {
+    try {
+      localStorage.setItem(this.STORAGE_WIDGET_ORDER_KEY, JSON.stringify(this.activeWidgetIds.slice(0, 9)));
+    } catch (e) {}
+  }
+
+  syncVisibleWidgets() {
+    if (!this.activeWidgetIds || this.activeWidgetIds.length === 0) {
+      this.loadSavedWidgetOrder();
+    }
+    this.visibleWidgets = this.activeWidgetIds
+      .slice(0, 9)
+      .map(id => this.allWidgets.find(w => w.id === id)!)
+      .filter(Boolean);
+  }
+
+  filterWidgets() {
+    this.syncVisibleWidgets();
+  }
+
+  getAvailableWidgets(): Widget[] {
+    return this.allWidgets.filter(w => !this.activeWidgetIds.includes(w.id));
+  }
+
+  getEmptySlotsCount(): number[] {
+    const emptyCount = Math.max(0, 9 - this.visibleWidgets.length);
+    return Array(emptyCount).fill(0);
+  }
+
+  enterWidgetEditMode() {
+    this.isWidgetEditMode = true;
+    this.triggerHaptic(50);
+    this.cdr.markForCheck();
+  }
+
+  exitWidgetEditMode() {
+    this.isWidgetEditMode = false;
+    this.draggedWidgetId = null;
+    this.isDragging = false;
+    this.cancelLongPress();
+    this.triggerHaptic(30);
+    this.cdr.markForCheck();
+  }
+
+  toggleWidgetEditMode() {
+    if (this.isWidgetEditMode) {
+      this.exitWidgetEditMode();
+    } else {
+      this.enterWidgetEditMode();
+    }
+  }
+
+  removeWidget(widgetId: string, event?: Event) {
+    if (event) event.stopPropagation();
+    this.activeWidgetIds = this.activeWidgetIds.filter(id => id !== widgetId);
+    this.saveWidgetOrder();
+    this.syncVisibleWidgets();
+    this.triggerHaptic(35);
+    this.cdr.markForCheck();
+  }
+
+  openAddWidgetModal() {
+    if (this.activeWidgetIds.length >= 9) return;
+    this.isAddWidgetModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeAddWidgetModal() {
+    this.isAddWidgetModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  addWidget(widgetId: string) {
+    if (this.activeWidgetIds.length >= 9) return;
+    if (!this.activeWidgetIds.includes(widgetId)) {
+      this.activeWidgetIds.push(widgetId);
+      this.saveWidgetOrder();
+      this.syncVisibleWidgets();
+      this.triggerHaptic(30);
+    }
+    if (this.getAvailableWidgets().length === 0 || this.activeWidgetIds.length >= 9) {
+      this.isAddWidgetModalOpen = false;
+    }
+    this.cdr.markForCheck();
+  }
+
+  resetWidgetsToDefault() {
+    this.activeWidgetIds = [...this.DEFAULT_WIDGET_IDS];
+    this.saveWidgetOrder();
+    this.syncVisibleWidgets();
+    this.triggerHaptic(40);
+    this.cdr.markForCheck();
+  }
+
+  // Pointer-Driven Drag and Drop (Unified Touch, Pen & Mouse)
+  onWidgetPointerDown(event: PointerEvent, widgetId: string, index: number) {
+    if (event.button !== 0) return;
+
+    this.activePointerId = event.pointerId;
+
+    if (!this.isWidgetEditMode) {
+      // 1-second hold to enter edit mode
+      this.touchStartX = event.clientX;
+      this.touchStartY = event.clientY;
+      this.cancelLongPress();
+      this.longPressTriggered = false;
+
+      this.longPressTimer = setTimeout(() => {
+        this.longPressTriggered = true;
+        this.enterWidgetEditMode();
+        // Immediately start dragging in the same gesture!
+        this.draggedWidgetId = widgetId;
+        this.dragStartX = event.clientX;
+        this.dragStartY = event.clientY;
+        this.dragCurrentX = 0;
+        this.dragCurrentY = 0;
+        this.isDragging = true;
+        this.triggerHaptic(50);
+        this.cdr.detectChanges();
+      }, 1000);
+      return;
+    }
+
+    // Already in edit mode: prepare drag
+    this.draggedWidgetId = widgetId;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.dragCurrentX = 0;
+    this.dragCurrentY = 0;
+    this.isDragging = false;
+  }
+
+  @HostListener('window:pointermove', ['$event'])
+  onWindowPointerMove(event: PointerEvent) {
+    if (!this.draggedWidgetId && !this.longPressTimer) return;
+
+    if (!this.isWidgetEditMode) {
+      if (Math.hypot(event.clientX - this.touchStartX, event.clientY - this.touchStartY) > 12) {
+        this.cancelLongPress();
+      }
+      return;
+    }
+
+    if (!this.draggedWidgetId) return;
+
+    const dx = event.clientX - this.dragStartX;
+    const dy = event.clientY - this.dragStartY;
+
+    if (!this.isDragging && Math.hypot(dx, dy) > 4) {
+      this.isDragging = true;
+      this.triggerHaptic(20);
+    }
+
+    if (this.isDragging) {
+      this.dragCurrentX = dx;
+      this.dragCurrentY = dy;
+      this.checkDropTarget(event.clientX, event.clientY);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private checkDropTarget(clientX: number, clientY: number) {
+    if (!this.draggedWidgetId) return;
+
+    const now = Date.now();
+    if (now - this.lastSwapTime < 160) return;
+
+    const elem = document.elementFromPoint(clientX, clientY);
+    if (!elem) return;
+
+    const targetWrapper = elem.closest('.widget-card-wrapper') as HTMLElement;
+    if (!targetWrapper || targetWrapper.classList.contains('empty-slot-card')) return;
+
+    const targetWidgetId = targetWrapper.getAttribute('data-widget-id');
+    if (!targetWidgetId || targetWidgetId === this.draggedWidgetId) return;
+
+    const fromIndex = this.activeWidgetIds.indexOf(this.draggedWidgetId);
+    const toIndex = this.activeWidgetIds.indexOf(targetWidgetId);
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const draggedElem = document.querySelector(`[data-widget-id="${this.draggedWidgetId}"]`) as HTMLElement;
+      const fromRect = draggedElem ? draggedElem.getBoundingClientRect() : null;
+      const toRect = targetWrapper.getBoundingClientRect();
+
+      if (fromRect && toRect) {
+        const deltaX = toRect.left - fromRect.left;
+        const deltaY = toRect.top - fromRect.top;
+        this.dragStartX += deltaX;
+        this.dragStartY += deltaY;
+        this.dragCurrentX -= deltaX;
+        this.dragCurrentY -= deltaY;
+      }
+
+      const moved = this.activeWidgetIds.splice(fromIndex, 1)[0];
+      this.activeWidgetIds.splice(toIndex, 0, moved);
+
+      this.lastSwapTime = now;
+      this.syncVisibleWidgets();
+      this.triggerHaptic(25);
+      this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('window:pointerup', ['$event'])
+  @HostListener('window:pointercancel', ['$event'])
+  onWindowPointerUp(event: PointerEvent) {
+    this.cancelLongPress();
+
+    if (this.isDragging && this.draggedWidgetId) {
+      this.saveWidgetOrder();
+      this.triggerHaptic(30);
+    }
+
+    this.draggedWidgetId = null;
+    this.isDragging = false;
+    this.dragCurrentX = 0;
+    this.dragCurrentY = 0;
+    this.activePointerId = null;
+    this.cdr.detectChanges();
+  }
+
+  onWidgetContextMenu(event: MouseEvent) {
+    if (this.longPressTriggered || this.isWidgetEditMode) {
+      event.preventDefault();
+    }
+  }
+
+  cancelLongPress() {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
+  private triggerHaptic(durationMs: number = 30) {
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(durationMs);
+      }
+    } catch (e) {}
+  }
 
   getAqiColor(aqiValue: number): string {
     const val = Number(aqiValue);
@@ -1197,8 +1553,29 @@ filterWidgets() {
     }
   }
 
-  async onWidgetClick(widgetId: string) {
-    if (widgetId === 'loyalty' && !this.currentUser) return;
+  promptGuestLogin() {
+    this.isAuthPromptModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  onAuthPromptLogin() {
+    this.isAuthPromptModalOpen = false;
+    this.goToLogin();
+  }
+
+  async onWidgetClick(widgetId: string, index?: number) {
+    if (this.longPressTriggered) {
+      this.longPressTriggered = false;
+      return;
+    }
+    if (this.isWidgetEditMode || this.isDragging) {
+      return;
+    }
+
+    if (!this.currentUser) {
+      await this.promptGuestLogin();
+      return;
+    }
 
     this.activeDetailWidgetId = widgetId;
     if (widgetId === 'loyalty') this.loyaltyModalView = 'list';
@@ -1212,8 +1589,11 @@ filterWidgets() {
       this.updateActivityWidgetDisplay(refreshed);
 
       if (this.currentUser) {
-        this.last7DaysHealth = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
-        if (!this.last7DaysHealth || this.last7DaysHealth.length === 0) {
+        await this.syncHealthData(this.currentUser.id);
+        const remoteMetrics = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
+        if (remoteMetrics && remoteMetrics.length > 0) {
+          this.last7DaysHealth = remoteMetrics;
+        } else {
           this.last7DaysHealth = await this.healthService.getLocal7DaysHistory();
         }
       } else {
@@ -1627,6 +2007,10 @@ supportsNotification(widgetId: string): boolean {
 // 3. Toggle handler (stops click propagation so it doesn't open the detail modal)
 toggleWidgetNotification(widgetId: string, event: Event) {
   event.stopPropagation();
+  if (!this.currentUser) {
+    this.promptGuestLogin();
+    return;
+  }
   const currentVal = this.notificationPreferences[widgetId] ?? true;
   const newVal = !currentVal;
   
@@ -1645,6 +2029,7 @@ toggleWidgetNotification(widgetId: string, event: Event) {
 }
 
 isNotificationActive(widgetId: string): boolean {
+  if (!this.currentUser) return false;
   return this.notificationPreferences[widgetId] ?? true;
 }
 }

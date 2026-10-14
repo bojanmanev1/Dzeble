@@ -69,8 +69,9 @@ serve(async (req) => {
     // 1. Fetch active devices subscribed to stock updates
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, stock_alert_symbol, stock_alert_threshold, last_stock_alert_at, language")
-      .not("push_token", "is", null);
+      .select("device_id, user_id, push_token, stock_alert_symbol, stock_alert_threshold, last_stock_alert_at, language")
+      .not("push_token", "is", null)
+      .not("user_id", "is", null);
 
     if (devError || !devices || devices.length === 0) {
       return new Response(JSON.stringify({ message: "No active devices to notify." }), { status: 200 });

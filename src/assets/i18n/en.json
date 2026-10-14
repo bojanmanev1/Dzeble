@@ -1,4 +1,12 @@
 {
+  "COMMON": {
+    "CANCEL": "Cancel",
+    "CLOSE": "Close",
+    "CONFIRM": "Confirm",
+    "SAVE": "Save",
+    "DELETE": "Delete",
+    "OK": "OK"
+  },
   "HOME": {
     "CITY": "Skopje",
     "TODAY": "Today",
@@ -28,7 +36,16 @@
     "CRYPTO": "Crypto",
     "STOCK": "Stocks",
     "NOTIF_ON": "Enable notifications",
-    "NOTIF_OFF": "Disable notifications"
+    "NOTIF_OFF": "Disable notifications",
+    "EDIT_MODE_TITLE": "Edit Widgets",
+    "EDIT_MODE_HINT": "Drag to reorder or remove",
+    "DONE": "Done",
+    "RESET": "Reset",
+    "ADD_WIDGET": "Add Widget",
+    "AVAILABLE_WIDGETS": "Available Widgets",
+    "NO_AVAILABLE_WIDGETS": "All widgets are already added",
+    "MAX_WIDGETS_REACHED": "Maximum 9 widgets reached",
+    "REMOVE_TOOLTIP": "Remove widget"
   },
   "STOCK_MODAL": {
     "TITLE": "Stock Market",
@@ -260,6 +277,13 @@
   "DAYS_LEFT": "in"
 },
 "AUTH": {
+  "REQUIRED_TITLE": "Account Required",
+  "REQUIRED_MSG": "Please sign in or create an account to view widget details and enable smart notifications.",
+  "REQUIRED_FEAT_1": "Detailed stats & charts",
+  "REQUIRED_FEAT_2": "Real-time smart notifications",
+  "REQUIRED_FEAT_3": "Cloud sync across all your devices",
+  "LOGIN_ACTION": "Sign In",
+  "CANCEL": "Cancel",
   "LOGIN_TITLE": "Sign In",
   "REGISTER_TITLE": "Create Account",
   "FULL_NAME": "Full Name",

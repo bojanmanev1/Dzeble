@@ -665,3 +665,140 @@ html.dark {
     color: #34d399 !important;
   }
 }
+
+/* ==========================================================================
+   PREMIUM ION-ALERT GLOBAL STYLING (Modern iOS/Dzeble Theme)
+   ========================================================================== */
+ion-alert {
+  --backdrop-opacity: 0.65;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  .alert-wrapper {
+    border-radius: 26px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.28) !important;
+    padding: 24px 20px 20px !important;
+    max-width: 325px !important;
+    width: 90% !important;
+    text-align: center !important;
+  }
+
+  .alert-head {
+    padding: 0 0 10px 0 !important;
+    text-align: center !important;
+  }
+
+  .alert-title {
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  .alert-sub-title {
+    font-size: 0.95rem !important;
+    color: #64748b !important;
+    margin-top: 4px !important;
+  }
+
+  .alert-message {
+    padding: 0 0 20px 0 !important;
+    font-size: 0.92rem !important;
+    line-height: 1.5 !important;
+    color: #475569 !important;
+    text-align: center !important;
+  }
+
+  .alert-button-group {
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .alert-button {
+    flex: 1 !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    /* Primary Action Button (Sign In / Confirm / OK) */
+    &:not([role="cancel"]) {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+
+      &:active {
+        transform: scale(0.96) !important;
+        background: #1e293b !important;
+      }
+    }
+
+    /* Cancel Button */
+    &[role="cancel"] {
+      background: #f1f5f9 !important;
+      color: #64748b !important;
+
+      &:active {
+        transform: scale(0.96) !important;
+        background: #e2e8f0 !important;
+      }
+    }
+  }
+}
+
+/* Dark Mode Overrides for Alerts */
+body.dark ion-alert,
+.ion-palette-dark ion-alert {
+  .alert-wrapper {
+    background: #181d1b !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+  }
+
+  .alert-title {
+    color: #f8fafc !important;
+  }
+
+  .alert-sub-title {
+    color: #94a3b8 !important;
+  }
+
+  .alert-message {
+    color: #94a3b8 !important;
+  }
+
+  .alert-button {
+    /* Primary Action Button in Dark Mode */
+    &:not([role="cancel"]) {
+      background: #10b981 !important;
+      color: #042f2e !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+
+      &:active {
+        background: #059669 !important;
+      }
+    }
+
+    /* Cancel Button in Dark Mode */
+    &[role="cancel"] {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #cbd5e1 !important;
+
+      &:active {
+        background: rgba(255, 255, 255, 0.14) !important;
+      }
+    }
+  }
+}

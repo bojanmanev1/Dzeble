@@ -37,51 +37,31 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannels();
-        startForegroundSafely();
-
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        registerSensors();
+        try {
+            stopForeground(true);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(FOREGROUND_NOTIFICATION_ID);
+            }
+        } catch (Exception ignored) {}
+        stopSelf();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForegroundSafely();
-        registerSensors();
-        return START_STICKY;
+        try {
+            stopForeground(true);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(FOREGROUND_NOTIFICATION_ID);
+            }
+        } catch (Exception ignored) {}
+        stopSelf();
+        return START_NOT_STICKY;
     }
 
     private void startForegroundSafely() {
-        try {
-            Intent notificationIntent = new Intent(this, MainActivity.class);
-            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                notificationIntent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-            );
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, SILENT_CHANNEL_ID)
-                .setContentTitle("Dzeble Активност")
-                .setContentText("Следење на чекори во позадина")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentIntent(pendingIntent)
-                .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW);
-
-            if (Build.VERSION.SDK_INT >= 34) { // Android 14+
-                try {
-                    startForeground(FOREGROUND_NOTIFICATION_ID, builder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH);
-                } catch (Exception e) {
-                    startForeground(FOREGROUND_NOTIFICATION_ID, builder.build());
-                }
-            } else {
-                startForeground(FOREGROUND_NOTIFICATION_ID, builder.build());
-            }
-        } catch (Exception e) {
-            // Log fallback if background constraints apply
-        }
+        // Disabled: persistent notification removed per user request
     }
 
     private void registerSensors() {
@@ -165,6 +145,45 @@ public class StepService extends Service implements SensorEventListener {
         return stepsToday;
     }
 
+    public static synchronized void setRestoredSteps(Context ctx, int restoredSteps) {
+        if (restoredSteps <= 0) return;
+
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        String today = sdf.format(new Date());
+
+        int currentSteps = prefs.getInt("today_steps", 0);
+        if (restoredSteps > currentSteps) {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("today_date", today);
+
+            int baseline = prefs.getInt("hardware_baseline", -1);
+            int lastRaw = prefs.getInt("last_raw_steps", -1);
+
+            if (baseline != -1 && lastRaw != -1 && lastRaw >= baseline) {
+                int sensorDelta = lastRaw - baseline;
+                editor.putInt("reboot_offset", Math.max(0, restoredSteps - sensorDelta));
+            } else {
+                editor.putInt("reboot_offset", restoredSteps);
+            }
+
+            editor.putInt("today_steps", restoredSteps);
+
+            // Avoid re-alerting milestones already achieved prior to reinstall
+            if (restoredSteps >= 5000) {
+                editor.putBoolean("notified_5k", true);
+            }
+            if (restoredSteps >= 10000) {
+                editor.putBoolean("notified_10k", true);
+            }
+            if (restoredSteps >= 15000) {
+                editor.putBoolean("notified_15k", true);
+            }
+
+            editor.apply();
+        }
+    }
+
     public static synchronized int processSteps(Context ctx, int raw) {
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -200,7 +219,9 @@ public class StepService extends Service implements SensorEventListener {
         }
 
         lastRaw = raw;
-        int stepsToday = Math.max(0, (raw - baseline) + rebootOffset);
+        int savedSteps = prefs.getInt("today_steps", 0);
+        int calculatedSteps = Math.max(0, (raw - baseline) + rebootOffset);
+        int stepsToday = Math.max(savedSteps, calculatedSteps);
 
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("today_date", savedDate);

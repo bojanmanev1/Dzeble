@@ -97,8 +97,9 @@ serve(async (_req) => {
 
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, crypto_alert_pair, last_crypto_alert_at, language")
-      .not("push_token", "is", null);
+      .select("device_id, user_id, push_token, crypto_alert_pair, last_crypto_alert_at, language")
+      .not("push_token", "is", null)
+      .not("user_id", "is", null);
 
     if (devError) throw devError;
     if (!devices || devices.length === 0) {

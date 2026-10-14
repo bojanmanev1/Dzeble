@@ -79,12 +79,16 @@ export class PushNotificationService {
   public async saveTokenToSupabase(pushToken: string): Promise<void> {
     try {
       const { data: { user } } = await this.supabaseService.supabase.auth.getUser();
+      if (!user) {
+        console.log('Skipping push token Supabase sync: No user session.');
+        return;
+      }
       await this.supabaseService.syncDeviceRecord(
-        user?.id,
-        user?.email,
+        user.id,
+        user.email,
         pushToken
       );
-      console.log('🔥 Push token updated in Supabase user_devices.');
+      console.log('🔥 Push token updated in Supabase user_devices for user:', user.id);
     } catch (err) {
       console.error('❌ Failed to save token in Supabase:', err);
     }

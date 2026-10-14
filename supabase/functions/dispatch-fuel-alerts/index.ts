@@ -161,8 +161,9 @@ serve(async (req) => {
     // 4. Query devices ready for alerts (filtering disabled devices and checking cooldown)
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, last_fuel_alert_at, notify_fuel, language")
+      .select("device_id, user_id, push_token, last_fuel_alert_at, notify_fuel, language")
       .not("push_token", "is", null)
+      .not("user_id", "is", null)
       .neq("notify_fuel", false);
 
     if (devError) {

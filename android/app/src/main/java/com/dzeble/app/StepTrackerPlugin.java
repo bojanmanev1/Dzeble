@@ -42,6 +42,15 @@ public class StepTrackerPlugin extends Plugin implements SensorEventListener {
             stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
             stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
         }
+
+        // Remove persistent background step notification if previously active
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(9001);
+            }
+            context.stopService(new Intent(context, StepService.class));
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -68,6 +77,16 @@ public class StepTrackerPlugin extends Plugin implements SensorEventListener {
         ret.put("distanceKm", distanceKm);
         ret.put("isAvailable", isAvailable);
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setTodaySteps(PluginCall call) {
+        int steps = call.getInt("steps", 0);
+        Context ctx = getContext();
+        if (steps > 0 && ctx != null) {
+            StepService.setRestoredSteps(ctx, steps);
+        }
+        call.resolve();
     }
 
     @PluginMethod
@@ -98,10 +117,10 @@ public class StepTrackerPlugin extends Plugin implements SensorEventListener {
         if (sensorManager != null && !isListening) {
             try {
                 if (stepCounterSensor != null) {
-                    sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI);
+                    sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_FASTEST);
                     isListening = true;
                 } else if (stepDetectorSensor != null) {
-                    sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
+                    sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
                     isListening = true;
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -114,15 +133,12 @@ public class StepTrackerPlugin extends Plugin implements SensorEventListener {
 
         try {
             Context ctx = getContext();
-            Intent serviceIntent = new Intent(ctx, StepService.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ctx.startForegroundService(serviceIntent);
-            } else {
-                ctx.startService(serviceIntent);
+            android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(9001);
             }
-        } catch (Exception e) {
-            Logger.warn("Failed to start StepService: " + e.getMessage());
-        }
+            ctx.stopService(new Intent(ctx, StepService.class));
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -223,9 +239,9 @@ public class StepTrackerPlugin extends Plugin implements SensorEventListener {
         if (isListening && sensorManager != null) {
             try {
                 if (stepCounterSensor != null) {
-                    sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI);
+                    sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_FASTEST);
                 } else if (stepDetectorSensor != null) {
-                    sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
+                    sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                     sensorManager.flush(this);

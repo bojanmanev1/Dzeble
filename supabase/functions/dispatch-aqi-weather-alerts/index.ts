@@ -259,11 +259,12 @@ serve(async (req) => {
     const fcmAccessToken = await getFcmAccessToken(serviceAccount);
     const projectId = serviceAccount.project_id;
 
-    // 4. Fetch active devices (excluding devices where push_token is null)
+    // 4. Fetch active devices (excluding devices where push_token or user_id is null)
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, push_token, city_preference, last_aqi_alert_at, last_uv_alert_at, last_weather_alert_at, last_weather_category, notify_weather, notify_aqi, language")
-      .not("push_token", "is", null);
+      .select("device_id, user_id, push_token, city_preference, last_aqi_alert_at, last_uv_alert_at, last_weather_alert_at, last_weather_category, notify_weather, notify_aqi, language")
+      .not("push_token", "is", null)
+      .not("user_id", "is", null);
 
     if (devError) {
       return new Response(JSON.stringify({ error: "Database error", details: devError }), { status: 500 });

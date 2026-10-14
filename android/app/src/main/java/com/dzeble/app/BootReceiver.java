@@ -10,15 +10,11 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             try {
-                Intent serviceIntent = new Intent(context, StepService.class);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(serviceIntent);
-                } else {
-                    context.startService(serviceIntent);
+                android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    nm.cancel(9001);
                 }
-            } catch (Exception e) {
-                // Background start may be constrained by vendor battery managers until opened
-            }
+            } catch (Exception ignored) {}
         }
     }
 }

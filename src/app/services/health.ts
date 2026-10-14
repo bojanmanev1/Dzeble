@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { CapacitorPedometer } from '@capgo/capacitor-pedometer';
 import { Preferences } from '@capacitor/preferences';
@@ -26,6 +26,7 @@ export interface StepTrackerPlugin {
     distanceKm: number;
     isAvailable: boolean;
   }>;
+  setTodaySteps(options: { steps: number }): Promise<void>;
   startUpdates(): Promise<{ started: boolean }>;
   stopUpdates(): Promise<void>;
   setNotificationsEnabled(options: { enabled: boolean }): Promise<void>;
@@ -59,8 +60,18 @@ export class HealthService {
   private notified5k = false;
   private notified10k = false;
   private notified15k = false;
+  private isUserLoggedIn = false;
 
-  constructor() {
+  setUserLoggedIn(loggedIn: boolean) {
+    this.isUserLoggedIn = loggedIn;
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        StepTracker.setNotificationsEnabled({ enabled: loggedIn });
+      } catch (e) {}
+    }
+  }
+
+  constructor(private zone: NgZone) {
     this.initPedometer();
   }
 
@@ -81,6 +92,16 @@ export class HealthService {
   async loadSavedSteps(): Promise<HealthData> {
     try {
       const todayStr = new Date().toISOString().split('T')[0];
+
+      // Instant synchronous recovery from localStorage (0 ms)
+      const cachedDate = localStorage.getItem(STORAGE_DATE_KEY);
+      const cachedSteps = localStorage.getItem(STORAGE_STEPS_KEY);
+      if (cachedDate === todayStr && cachedSteps) {
+        this.dailySteps = parseInt(cachedSteps, 10);
+        const fastMetrics = this.calculateMetrics(this.dailySteps);
+        this.zone.run(() => this.healthData$.next(fastMetrics));
+      }
+
       const { value: savedDate } = await Preferences.get({ key: STORAGE_DATE_KEY });
 
       // Midnight Reset Logic
@@ -92,6 +113,8 @@ export class HealthService {
           await this.archiveDayHistory(savedDate, parseInt(prevSteps, 10));
         }
 
+        localStorage.setItem(STORAGE_DATE_KEY, todayStr);
+        localStorage.setItem(STORAGE_STEPS_KEY, '0');
         await Preferences.set({ key: STORAGE_DATE_KEY, value: todayStr });
         await Preferences.set({ key: STORAGE_STEPS_KEY, value: '0' });
         await Preferences.remove({ key: STORAGE_NOTIF_5K_KEY });
@@ -104,7 +127,7 @@ export class HealthService {
         this.notified15k = false;
       } else {
         const { value: savedSteps } = await Preferences.get({ key: STORAGE_STEPS_KEY });
-        this.dailySteps = savedSteps ? parseInt(savedSteps, 10) : 0;
+        this.dailySteps = savedSteps ? parseInt(savedSteps, 10) : this.dailySteps;
 
         const { value: n5k } = await Preferences.get({ key: STORAGE_NOTIF_5K_KEY });
         const { value: n10k } = await Preferences.get({ key: STORAGE_NOTIF_10K_KEY });
@@ -115,7 +138,7 @@ export class HealthService {
       }
 
       const metrics = this.calculateMetrics(this.dailySteps);
-      this.healthData$.next(metrics);
+      this.zone.run(() => this.healthData$.next(metrics));
       return metrics;
     } catch (e) {
       console.error('Error loading stored steps:', e);
@@ -129,13 +152,23 @@ export class HealthService {
   public async saveSteps(newTotal: number): Promise<HealthData> {
     this.dailySteps = Math.max(this.dailySteps, newTotal);
     const todayStr = new Date().toISOString().split('T')[0];
-    await Preferences.set({ key: STORAGE_DATE_KEY, value: todayStr });
-    await Preferences.set({ key: STORAGE_STEPS_KEY, value: this.dailySteps.toString() });
 
+    // Synchronous immediate memory and localStorage write
+    localStorage.setItem(STORAGE_DATE_KEY, todayStr);
+    localStorage.setItem(STORAGE_STEPS_KEY, this.dailySteps.toString());
+
+    // 1. Instantly emit to reactive stream inside NgZone so Angular repaints in 0ms
     const metrics = this.calculateMetrics(this.dailySteps);
-    this.healthData$.next(metrics);
-    await this.checkAndNotifyMilestones(this.dailySteps);
-    await this.updateTodayHistoryRecord(todayStr, this.dailySteps);
+    this.zone.run(() => {
+      this.healthData$.next(metrics);
+    });
+
+    // 2. Background async storage & milestones without blocking UI
+    Preferences.set({ key: STORAGE_DATE_KEY, value: todayStr }).catch(() => {});
+    Preferences.set({ key: STORAGE_STEPS_KEY, value: this.dailySteps.toString() }).catch(() => {});
+    this.checkAndNotifyMilestones(this.dailySteps).catch(() => {});
+    this.updateTodayHistoryRecord(todayStr, this.dailySteps).catch(() => {});
+
     return metrics;
   }
 
@@ -228,10 +261,12 @@ export class HealthService {
 
       if (platform === 'android') {
         await StepTracker.startUpdates();
-        await StepTracker.addListener('stepUpdate', async (data: { steps: number; calories: number; distanceKm: number }) => {
+        await StepTracker.addListener('stepUpdate', (data: { steps: number; calories: number; distanceKm: number }) => {
           if (data && data.steps !== undefined) {
             console.log(`👟 [ANDROID STEP] Live hardware update: ${data.steps} steps`);
-            await this.saveSteps(data.steps);
+            this.zone.run(() => {
+              this.saveSteps(data.steps);
+            });
           }
         });
         this.isListening = true;
@@ -239,9 +274,12 @@ export class HealthService {
         const avail = await CapacitorPedometer.isAvailable();
         if (avail.stepCounting) {
           await CapacitorPedometer.startMeasurementUpdates();
-          await CapacitorPedometer.addListener('measurement', async (data: { numberOfSteps?: number }) => {
-            if (data.numberOfSteps !== undefined) {
-              await this.saveSteps(this.dailySteps + data.numberOfSteps);
+          await CapacitorPedometer.addListener('measurement', (data: { numberOfSteps?: number }) => {
+            const iosSteps = data.numberOfSteps;
+            if (iosSteps !== undefined) {
+              this.zone.run(() => {
+                this.saveSteps(this.dailySteps + iosSteps);
+              });
             }
           });
           this.isListening = true;
@@ -261,7 +299,7 @@ export class HealthService {
 
       if (platform === 'android') {
         const res = await StepTracker.getTodaySteps();
-        if (res && res.steps !== undefined && res.steps > 0) {
+        if (res && res.steps !== undefined) {
           return await this.saveSteps(res.steps);
         }
       } else if (platform === 'ios') {
@@ -322,6 +360,7 @@ export class HealthService {
    */
   async checkAndNotifyMilestones(steps: number) {
     try {
+      if (!this.isUserLoggedIn) return;
       const isEnabled = await this.isNotificationEnabled();
       if (!isEnabled) return;
 
@@ -450,5 +489,69 @@ export class HealthService {
 
   private async archiveDayHistory(dateStr: string, steps: number) {
     await this.updateTodayHistoryRecord(dateStr, steps);
+  }
+
+  /**
+   * Restores steps from Supabase database (e.g. after fresh app install or login on new device)
+   */
+  async restoreStepsFromDatabase(remoteSteps: number): Promise<HealthData> {
+    if (!remoteSteps || remoteSteps <= this.dailySteps) {
+      return this.calculateMetrics(this.dailySteps);
+    }
+
+    console.log(`📥 [HEALTH] Restoring ${remoteSteps} steps from cloud database...`);
+    this.dailySteps = remoteSteps;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    localStorage.setItem(STORAGE_DATE_KEY, todayStr);
+    localStorage.setItem(STORAGE_STEPS_KEY, this.dailySteps.toString());
+
+    await Preferences.set({ key: STORAGE_DATE_KEY, value: todayStr });
+    await Preferences.set({ key: STORAGE_STEPS_KEY, value: this.dailySteps.toString() });
+
+    if (remoteSteps >= 5000) {
+      this.notified5k = true;
+      await Preferences.set({ key: STORAGE_NOTIF_5K_KEY, value: 'true' });
+    }
+    if (remoteSteps >= 10000) {
+      this.notified10k = true;
+      await Preferences.set({ key: STORAGE_NOTIF_10K_KEY, value: 'true' });
+    }
+    if (remoteSteps >= 15000) {
+      this.notified15k = true;
+      await Preferences.set({ key: STORAGE_NOTIF_15K_KEY, value: 'true' });
+    }
+
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        await StepTracker.setTodaySteps({ steps: remoteSteps });
+      } catch (e) {
+        console.warn('Could not set today steps in native StepTracker:', e);
+      }
+    }
+
+    const metrics = this.calculateMetrics(this.dailySteps);
+    this.zone.run(() => {
+      this.healthData$.next(metrics);
+    });
+
+    await this.updateTodayHistoryRecord(todayStr, this.dailySteps);
+    return metrics;
+  }
+
+  /**
+   * Syncs historical metrics from remote to local cache if local cache is empty
+   */
+  async syncHistoryFromRemote(remoteHistory: DayHealthRecord[]) {
+    if (!remoteHistory || remoteHistory.length === 0) return;
+    try {
+      const localHistory = await this.getLocal7DaysHistory();
+      if (localHistory.length === 0) {
+        await Preferences.set({
+          key: STORAGE_HISTORY_KEY,
+          value: JSON.stringify(remoteHistory.slice(0, 14))
+        });
+      }
+    } catch (e) {}
   }
 }

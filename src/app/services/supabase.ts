@@ -108,13 +108,25 @@ async signOut() {
   try {
     const deviceId = await this.getDeviceId();
 
-    // 1. Unbind the user and clear push token in database
+    // 1. Unbind the user and clear push token and notifications in database
     if (deviceId) {
       await this.supabase
         .from('user_devices')
-        .update({ push_token: null, user_id: null, email: null })
+        .update({
+          push_token: null,
+          user_id: null,
+          email: null,
+          notify_weather: false,
+          notify_aqi: false,
+          notify_fuel: false,
+          notify_stock: false,
+          notify_crypto: false,
+          notify_calendar: false
+        })
         .eq('device_id', deviceId);
     }
+
+    localStorage.removeItem('app_fcm_push_token');
 
     // 2. Clear listeners (DO NOT call unregister() - it breaks FCM re-registration)
     if (Capacitor.isNativePlatform()) {
@@ -328,19 +340,30 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       // Multi-favorite arrays
       stock_alert_symbols: savedStocks,
       crypto_alert_pairs: savedCryptos,
-      // Notification switches
-      notify_weather: notifPrefs.weather ?? true,
-      notify_aqi: notifPrefs.aqi ?? true,
-      notify_fuel: notifPrefs.fuel ?? true,
-      notify_stock: notifPrefs.stock ?? true,
-      notify_crypto: notifPrefs.crypto ?? true,
-      notify_calendar: notifPrefs.holidays ?? true,
       last_active: new Date().toISOString()
     };
 
-    if (userId) payload.user_id = userId;
-    if (userEmail) payload.email = userEmail;
-    if (resolvedPushToken) payload.push_token = resolvedPushToken;
+    if (userId) {
+      payload.user_id = userId;
+      if (userEmail) payload.email = userEmail;
+      if (resolvedPushToken) payload.push_token = resolvedPushToken;
+      payload.notify_weather = notifPrefs.weather ?? true;
+      payload.notify_aqi = notifPrefs.aqi ?? true;
+      payload.notify_fuel = notifPrefs.fuel ?? true;
+      payload.notify_stock = notifPrefs.stock ?? true;
+      payload.notify_crypto = notifPrefs.crypto ?? true;
+      payload.notify_calendar = notifPrefs.holidays ?? true;
+    } else {
+      payload.user_id = null;
+      payload.email = null;
+      payload.push_token = null; // No user = NO push notifications allowed
+      payload.notify_weather = false;
+      payload.notify_aqi = false;
+      payload.notify_fuel = false;
+      payload.notify_stock = false;
+      payload.notify_crypto = false;
+      payload.notify_calendar = false;
+    }
 
     const cachedCity = localStorage.getItem('user_current_city');
     if (cachedCity) {
@@ -467,23 +490,56 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
     return true;
   }
 
+  async getTodayHealthMetrics(userId: string): Promise<any | null> {
+    const todayStr = new Date().toISOString().split('T')[0];
+    try {
+      const { data, error } = await this.supabase
+        .from('user_health_metrics')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('logged_date', todayStr)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Error fetching today health metrics from Supabase:', error);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('Error fetching today health metrics:', e);
+      return null;
+    }
+  }
+
   async syncTodayHealthMetrics(userId: string, metrics: { steps: number; calories: number; distanceKm: number; notified5k?: boolean; notified10k: boolean; notified15k: boolean; }) {
     const todayStr = new Date().toISOString().split('T')[0];
 
     try {
+      // Safety check: ensure we don't accidentally downgrade steps if remote has higher (e.g. after reinstall)
+      const existing = await this.getTodayHealthMetrics(userId);
+      let stepCount = metrics.steps;
+      let calories = metrics.calories;
+      let distanceKm = metrics.distanceKm;
+
+      if (existing && existing.step_count > stepCount) {
+        stepCount = existing.step_count;
+        calories = Math.max(calories, existing.calories_burned || 0);
+        distanceKm = Math.max(distanceKm, existing.distance_km || 0);
+      }
+
       const payload: any = {
         user_id: userId,
-        step_count: metrics.steps,
-        calories_burned: metrics.calories,
-        distance_km: metrics.distanceKm,
-        milestone_10k_notified: metrics.notified10k,
-        milestone_15k_notified: metrics.notified15k,
+        step_count: stepCount,
+        calories_burned: calories,
+        distance_km: distanceKm,
+        milestone_10k_notified: metrics.notified10k || !!existing?.milestone_10k_notified,
+        milestone_15k_notified: metrics.notified15k || !!existing?.milestone_15k_notified,
         logged_date: todayStr,
         updated_at: new Date().toISOString()
       };
 
-      if (metrics.notified5k !== undefined) {
-        payload.milestone_5k_notified = metrics.notified5k;
+      if (metrics.notified5k !== undefined || existing?.milestone_5k_notified !== undefined) {
+        payload.milestone_5k_notified = metrics.notified5k ?? existing?.milestone_5k_notified;
       }
 
       const { data, error } = await this.supabase
@@ -507,6 +563,26 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
     } catch (e) {
       console.warn('Could not sync health metrics to Supabase (offline or table pending):', e);
       return null;
+    }
+  }
+
+  async syncHealthHistory(userId: string, history: any[]) {
+    if (!history || history.length === 0) return;
+    try {
+      const records = history.map(h => ({
+        user_id: userId,
+        logged_date: h.logged_date,
+        step_count: h.step_count || 0,
+        calories_burned: h.calories_burned || 0,
+        distance_km: h.distance_km || 0,
+        updated_at: new Date().toISOString()
+      }));
+
+      await this.supabase
+        .from('user_health_metrics')
+        .upsert(records, { onConflict: 'user_id,logged_date' });
+    } catch (e) {
+      console.warn('Could not sync health history to Supabase:', e);
     }
   }
 

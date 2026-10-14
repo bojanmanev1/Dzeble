@@ -26,24 +26,77 @@
     <!-- 2. TITLES SECTION -->
     <div class="dashboard-titles">
       <span class="city-subtitle" [class.is-locating]="isLocatingCity">{{ currentCityName }}</span>
-      <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
+      <div class="title-with-actions">
+        <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
+        @if (isWidgetEditMode) {
+          <button class="btn-done-edit" (click)="exitWidgetEditMode()">
+            <ion-icon name="checkmark"></ion-icon>
+            {{ 'WIDGETS.DONE' | translate }}
+          </button>
+        }
+      </div>
     </div>
 
+    @if (isWidgetEditMode) {
+      <div class="widget-edit-banner">
+        <div class="edit-banner-left">
+          <span class="edit-banner-title">✨ {{ 'WIDGETS.EDIT_MODE_TITLE' | translate }}</span>
+          <span class="edit-banner-hint">
+            {{ visibleWidgets.length }}/9 • {{ 'WIDGETS.EDIT_MODE_HINT' | translate }}
+          </span>
+        </div>
+        <div class="edit-banner-right">
+          <button class="btn-banner-reset" (click)="resetWidgetsToDefault()">
+            <ion-icon name="refresh-outline"></ion-icon>
+            {{ 'WIDGETS.RESET' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
     <!-- 3. WIDGETS GRID LAYER -->
-    <div class="widgets-container premium-grid">
-      @for (widget of visibleWidgets; track widget.id) {
-        <div class="widget-card-wrapper" (click)="onWidgetClick(widget.id)">
+    <div class="widgets-container premium-grid" [class.is-edit-mode]="isWidgetEditMode">
+      @for (widget of visibleWidgets; track widget.id; let i = $index) {
+        <div 
+          class="widget-card-wrapper" 
+          [attr.data-widget-id]="widget.id"
+          [class.guest-locked]="!currentUser && !isWidgetEditMode"
+          [class.in-edit-mode]="isWidgetEditMode"
+          [class.is-being-dragged]="isDragging && draggedWidgetId === widget.id"
+          [style.--drag-x.px]="draggedWidgetId === widget.id ? dragCurrentX : 0"
+          [style.--drag-y.px]="draggedWidgetId === widget.id ? dragCurrentY : 0"
+          (pointerdown)="onWidgetPointerDown($event, widget.id, i)"
+          (contextmenu)="onWidgetContextMenu($event)"
+          (click)="onWidgetClick(widget.id, i)">
+          
           <div class="interactive-card">
 
-       @if (supportsNotification(widget.id) && (currentUser || widget.id === 'activity')) {
-          <div 
-            class="widget-notif-toggle" 
-            (click)="toggleWidgetNotification(widget.id, $event)"
-            [class.active]="isNotificationActive(widget.id)"
-            [title]="isNotificationActive(widget.id) ? ('WIDGETS.NOTIF_ON' | translate) : ('WIDGETS.NOTIF_OFF' | translate)">
-            <ion-icon [name]="isNotificationActive(widget.id) ? 'notifications' : 'notifications-off-outline'"></ion-icon>
-          </div>
-        }
+            @if (isWidgetEditMode) {
+              <!-- Remove Widget Badge Button -->
+              <button 
+                class="widget-remove-btn" 
+                (pointerdown)="$event.stopPropagation()"
+                (click)="removeWidget(widget.id, $event)"
+                [title]="'WIDGETS.REMOVE_TOOLTIP' | translate">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            }
+
+            @if (supportsNotification(widget.id) && currentUser && !isWidgetEditMode) {
+              <div 
+                class="widget-notif-toggle" 
+                (click)="toggleWidgetNotification(widget.id, $event)"
+                [class.active]="isNotificationActive(widget.id)"
+                [title]="isNotificationActive(widget.id) ? ('WIDGETS.NOTIF_ON' | translate) : ('WIDGETS.NOTIF_OFF' | translate)">
+                <ion-icon [name]="isNotificationActive(widget.id) ? 'notifications' : 'notifications-off-outline'"></ion-icon>
+              </div>
+            }
+
+            @if (!currentUser && !isWidgetEditMode) {
+              <div class="widget-guest-lock" [title]="'AUTH.REQUIRED_TITLE' | translate">
+                <ion-icon name="lock-closed"></ion-icon>
+              </div>
+            }
 
             <div class="card-icon-frame">
               @if (widget.id === 'weather' && widget.weatherEmoji) {
@@ -64,6 +117,18 @@
             </div>
 
             <div class="card-label">{{ widget.translationKey | translate }}</div>
+          </div>
+        </div>
+      }
+
+      <!-- Empty Slots when fewer than 9 widgets -->
+      @for (slot of getEmptySlotsCount(); track $index) {
+        <div class="widget-card-wrapper empty-slot-card" (click)="openAddWidgetModal()">
+          <div class="empty-slot-inner">
+            <div class="empty-slot-icon-frame">
+              <ion-icon name="add"></ion-icon>
+            </div>
+            <span class="empty-slot-label">{{ 'WIDGETS.ADD_WIDGET' | translate }}</span>
           </div>
         </div>
       }
@@ -279,53 +344,6 @@
               </li>
             }
           </ul>
-
-          <!-- SKOPJE MUNICIPALITIES AQI IN WEATHER MODAL -->
-          @if (isSkopjeCity() && getSkopjeMunicipalities().length > 0) {
-            <div style="margin-top: 16px;">
-              <div 
-                (click)="toggleSkopjeMunicipalities()" 
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer; user-select: none;">
-                <h3 style="font-size: 0.92rem; font-weight: 700; color: #475569; margin: 0; display: flex; align-items: center; gap: 6px;">
-                  <span>🏛️</span>
-                  <span>{{ 'AQI_MODAL.MUNICIPALITIES_TITLE' | translate }}</span>
-                </h3>
-                <button 
-                  type="button"
-                  (click)="$event.stopPropagation(); toggleSkopjeMunicipalities()" 
-                  style="display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 11px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: #1e293b; cursor: pointer; transition: all 0.2s ease;">
-                  <span>{{ 'AQI_MODAL.MUNICIPALITIES_SUBTITLE' | translate }}</span>
-                  <ion-icon [name]="isSkopjeMunicipalitiesExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" style="font-size: 0.85rem; color: #64748b;"></ion-icon>
-                </button>
-              </div>
-
-              @if (isSkopjeMunicipalitiesExpanded) {
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                  @for (muni of getSkopjeMunicipalities(); track muni.name) {
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px;">
-                      <div>
-                        <span style="font-size: 0.92rem; font-weight: 700; color: #0f172a; display: block;">
-                          {{ getMunicipalityName(muni) }}
-                        </span>
-                        <span style="font-size: 0.72rem; color: #64748b;">
-                          PM10: {{ muni.pm10 }} • PM2.5: {{ muni.pm2_5 }} µg/m³
-                        </span>
-                      </div>
-
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">
-                          {{ getLocalizedAqiStatus(muni.aqi_value) }}
-                        </span>
-                        <span [style.background]="getAqiColor(muni.aqi_value)" style="color: white; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 12px; min-width: 32px; text-align: center;">
-                          {{ muni.aqi_value }}
-                        </span>
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
         </div>
       }
 
@@ -1705,5 +1723,107 @@
     </div>
   </ng-template>
 </ion-modal>
+
+<!-- ========================================== -->
+<!-- CUSTOM MODAL: AUTH REQUIRED PROMPT SHEET   -->
+<!-- ========================================== -->
+<ion-modal 
+  [isOpen]="isAuthPromptModalOpen" 
+  (didDismiss)="isAuthPromptModalOpen = false"
+  class="premium-modal auth-prompt-modal"
+  [initialBreakpoint]="0.6"
+  [breakpoints]="[0, 0.6]"
+  [handle]="true">
+  <ng-template>
+    <div class="auth-prompt-sheet">
+      <div class="auth-prompt-badge">
+        <ion-icon name="lock-closed" class="auth-lock-icon"></ion-icon>
+      </div>
+
+      <h2 class="auth-prompt-title">
+        {{ 'AUTH.REQUIRED_TITLE' | translate }}
+      </h2>
+      <p class="auth-prompt-subtitle">
+        {{ 'AUTH.REQUIRED_MSG' | translate }}
+      </p>
+
+      <div class="auth-prompt-perks">
+        <div class="perk-row">
+          <span class="perk-icon">📊</span>
+          <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_1' | translate }}</span>
+        </div>
+        <div class="perk-row">
+          <span class="perk-icon">🔔</span>
+          <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_2' | translate }}</span>
+        </div>
+        <div class="perk-row">
+          <span class="perk-icon">☁️</span>
+          <span class="perk-text">{{ 'AUTH.REQUIRED_FEAT_3' | translate }}</span>
+        </div>
+      </div>
+
+      <div class="auth-prompt-actions">
+        <button class="btn-auth-signin" (click)="onAuthPromptLogin()">
+          {{ 'AUTH.LOGIN_ACTION' | translate }}
+        </button>
+        <button class="btn-auth-cancel" (click)="isAuthPromptModalOpen = false">
+          {{ 'COMMON.CANCEL' | translate }}
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ADD WIDGET PICKER SHEET             -->
+  <!-- ========================================== -->
+  <ion-modal [isOpen]="isAddWidgetModalOpen" 
+    (didDismiss)="closeAddWidgetModal()" 
+    class="premium-modal add-widget-modal"
+    [initialBreakpoint]="0.6"
+    [breakpoints]="[0, 0.6, 0.9]"
+    [handle]="true">
+    <ng-template>
+      <div class="add-widget-sheet-wrapper">
+        <div class="modal-hero" style="text-align: center; padding-bottom: 12px;">
+          <h2 style="font-size: 1.2rem; font-weight: 700; margin: 0 0 4px 0; color: #0f172a;">
+            ➕ {{ 'WIDGETS.AVAILABLE_WIDGETS' | translate }}
+          </h2>
+          <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
+            {{ visibleWidgets.length }}/9 • {{ 'WIDGETS.ADD_WIDGET' | translate }}
+          </p>
+        </div>
+
+        <div class="available-widgets-list">
+          @if (getAvailableWidgets().length === 0) {
+            <div class="no-available-widgets">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              <p>{{ 'WIDGETS.NO_AVAILABLE_WIDGETS' | translate }}</p>
+            </div>
+          } @else {
+            @for (w of getAvailableWidgets(); track w.id) {
+              <div class="available-widget-item" (click)="addWidget(w.id)">
+                <div class="item-icon-box">
+                  @if (w.id === 'weather' && w.weatherEmoji) {
+                    <span style="font-size: 1.6rem;">{{ w.weatherEmoji }}</span>
+                  } @else {
+                    <ion-icon [name]="w.icon" [style.color]="w.customColor || '#3b82f6'"></ion-icon>
+                  }
+                </div>
+                <div class="item-text-info">
+                  <div class="item-name">{{ w.translationKey | translate }}</div>
+                  <div class="item-preview-value">{{ w.value }} <span *ngIf="w.unit && w.unit !== '...'">{{ w.unit }}</span></div>
+                </div>
+                <button class="btn-add-item" (click)="addWidget(w.id); $event.stopPropagation()">
+                  <ion-icon name="add"></ion-icon>
+                  {{ 'STOCK_MODAL.ADD_BTN' | translate }}
+                </button>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
 
 </ion-content>

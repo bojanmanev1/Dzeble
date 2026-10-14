@@ -1,4 +1,12 @@
 {
+  "COMMON": {
+    "CANCEL": "Anulo",
+    "CLOSE": "Mbyll",
+    "CONFIRM": "Konfirmo",
+    "SAVE": "Ruaj",
+    "DELETE": "Fshij",
+    "OK": "Në rregull"
+  },
   "HOME": {
     "CITY": "Shkup",
     "TODAY": "Sot",
@@ -28,7 +36,16 @@
     "CRYPTO": "Kripto",
     "STOCK": "Bursa",
     "NOTIF_ON": "Aktivizo njoftimet",
-    "NOTIF_OFF": "Çaktivizo njoftimet"
+    "NOTIF_OFF": "Çaktivizo njoftimet",
+    "EDIT_MODE_TITLE": "Ndrysho mini-aplikacionet",
+    "EDIT_MODE_HINT": "Tërhiq për të rirregulluar ose hiq",
+    "DONE": "Kryer",
+    "RESET": "Rivendos",
+    "ADD_WIDGET": "Shto mini-aplikacion",
+    "AVAILABLE_WIDGETS": "Mini-aplikacione të disponueshme",
+    "NO_AVAILABLE_WIDGETS": "Të gjitha mini-aplikacionet janë shtuar",
+    "MAX_WIDGETS_REACHED": "Maksimumi 9 mini-aplikacione është arritur",
+    "REMOVE_TOOLTIP": "Hiq mini-aplikacionin"
   },
   "STOCK_MODAL": {
     "TITLE": "Tregu i Aksioneve",
@@ -260,6 +277,13 @@
   "DAYS_LEFT": "edhe"
 },
 "AUTH": {
+  "REQUIRED_TITLE": "Kërkohet llogari",
+  "REQUIRED_MSG": "Hyni ose regjistrohuni për të parë detajet e widget-it dhe për të aktivizuar njoftimet e zgjuara.",
+  "REQUIRED_FEAT_1": "Statistika dhe grafikë të detajuar",
+  "REQUIRED_FEAT_2": "Njoftime inteligjente në kohë reale",
+  "REQUIRED_FEAT_3": "Sinkronizim në të gjitha pajisjet",
+  "LOGIN_ACTION": "Kyçu",
+  "CANCEL": "Anulo",
   "LOGIN_TITLE": "Kycja",
   "REGISTER_TITLE": "Regjistrimi",
   "FULL_NAME": "Emri dhe mbiemri",
