@@ -67,6 +67,45 @@ async function sendFcmPush(
   return fcmRes.ok;
 }
 
+function extractDevicePairs(dev: any): string[] {
+  const result: string[] = [];
+  if (Array.isArray(dev.crypto_alert_pairs) && dev.crypto_alert_pairs.length > 0) {
+    for (const p of dev.crypto_alert_pairs) {
+      if (typeof p === "string" && p.trim()) {
+        result.push(p.trim().toUpperCase());
+      }
+    }
+  } else if (typeof dev.crypto_alert_pairs === "string" && dev.crypto_alert_pairs.trim()) {
+    try {
+      const parsed = JSON.parse(dev.crypto_alert_pairs);
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) {
+          if (typeof p === "string" && p.trim()) {
+            result.push(p.trim().toUpperCase());
+          }
+        }
+      }
+    } catch {
+      result.push(dev.crypto_alert_pairs.trim().toUpperCase());
+    }
+  }
+
+  if (result.length === 0 && dev.crypto_alert_pair) {
+    result.push(String(dev.crypto_alert_pair).trim().toUpperCase());
+  }
+
+  if (result.length === 0) {
+    result.push("BTCUSDT");
+  }
+
+  // Normalize (ensure USDT suffix if missing) and remove duplicates
+  return Array.from(
+    new Set(
+      result.map((p) => (p.endsWith("USDT") ? p : `${p}USDT`))
+    )
+  );
+}
+
 serve(async (_req) => {
   try {
     const localHour = parseInt(
@@ -95,9 +134,10 @@ serve(async (_req) => {
     const fcmAccessToken = await getFcmAccessToken(serviceAccount);
     const projectId = serviceAccount.project_id;
 
+    // Fetch active devices with tokens and per-coin alert history
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
-      .select("device_id, user_id, push_token, crypto_alert_pair, last_crypto_alert_at, language")
+      .select("device_id, user_id, push_token, crypto_alert_pair, crypto_alert_pairs, last_crypto_alert_at, last_crypto_alerts_per_coin, notify_crypto, language")
       .not("push_token", "is", null)
       .not("user_id", "is", null);
 
@@ -106,86 +146,138 @@ serve(async (_req) => {
       return new Response(JSON.stringify({ success: true, message: "No devices found." }), { status: 200 });
     }
 
-    const pairsToFetch = Array.from(
-      new Set(devices.map((d: any) => (d.crypto_alert_pair || "BTCUSDT").toUpperCase()))
-    );
+    // Filter devices where user explicitly disabled crypto notifications
+    const activeDevices = devices.filter((d: any) => d.notify_crypto !== false);
+    if (activeDevices.length === 0) {
+      return new Response(JSON.stringify({ success: true, message: "No devices with crypto alerts enabled." }), { status: 200 });
+    }
 
-    const tickerMap = new Map<string, { price: number; change24h: number; high24h: number; low24h: number }>();
-
-    for (const pair of pairsToFetch) {
-      try {
-        const binanceRes = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
-        if (binanceRes.ok) {
-          const t = await binanceRes.json();
-          tickerMap.set(pair, {
-            price: parseFloat(t.lastPrice),
-            change24h: parseFloat(t.priceChangePercent),
-            high24h: parseFloat(t.highPrice),
-            low24h: parseFloat(t.lowPrice),
-          });
-        }
-      } catch (err) {
-        console.warn(`Failed to fetch Binance ticker for ${pair}:`, err);
+    // Collect ALL unique pairs across all active users' favorites
+    const allUniquePairs = new Set<string>();
+    for (const dev of activeDevices) {
+      const pairs = extractDevicePairs(dev);
+      for (const p of pairs) {
+        allUniquePairs.add(p);
       }
     }
+
+    // Fetch 24-hr ticker for all requested pairs from Binance
+    const tickerMap = new Map<string, { price: number; change24h: number; high24h: number; low24h: number }>();
+
+    await Promise.all(
+      Array.from(allUniquePairs).map(async (pair) => {
+        try {
+          const binanceRes = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`);
+          if (binanceRes.ok) {
+            const t = await binanceRes.json();
+            tickerMap.set(pair, {
+              price: parseFloat(t.lastPrice),
+              change24h: parseFloat(t.priceChangePercent),
+              high24h: parseFloat(t.highPrice),
+              low24h: parseFloat(t.lowPrice),
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch Binance ticker for ${pair}:`, err);
+        }
+      })
+    );
 
     const COOLDOWN_HOURS = 8;
     const SIGNIFICANT_CHANGE_THRESHOLD = 4.5;
     const now = new Date();
     let sentCount = 0;
 
-    for (const dev of devices) {
-      const pair = (dev.crypto_alert_pair || "BTCUSDT").toUpperCase();
-      const ticker = tickerMap.get(pair);
-      if (!ticker) continue;
+    for (const dev of activeDevices) {
+      const userPairs = extractDevicePairs(dev);
+      const perCoinHistory: Record<string, string> =
+        dev.last_crypto_alerts_per_coin && typeof dev.last_crypto_alerts_per_coin === "object"
+          ? { ...dev.last_crypto_alerts_per_coin }
+          : {};
 
-      const hoursDiff = dev.last_crypto_alert_at
-        ? (now.getTime() - new Date(dev.last_crypto_alert_at).getTime()) / (1000 * 60 * 60)
-        : 999;
+      // Check which favorite pairs qualify independently based on their OWN individual cooldown
+      const qualifyingPairs: { pair: string; ticker: any }[] = [];
 
-      const symbol = pair.replace("USDT", "");
-      const isUp = ticker.change24h >= 0;
-      const emoji = isUp ? "📈" : "📉";
-      const sign = isUp ? "+" : "";
-      const priceStr = ticker.price >= 1 ? ticker.price.toLocaleString("en-US", { maximumFractionDigits: 2 }) : ticker.price.toFixed(4);
+      for (const pair of userPairs) {
+        const ticker = tickerMap.get(pair);
+        if (!ticker) continue;
 
-      const isCooldownPassed = hoursDiff >= COOLDOWN_HOURS;
-      const isBigMove = Math.abs(ticker.change24h) >= SIGNIFICANT_CHANGE_THRESHOLD && hoursDiff >= 3;
+        // Individual coin timestamp check
+        const coinLastAlert = perCoinHistory[pair];
+        const coinHoursDiff = coinLastAlert
+          ? (now.getTime() - new Date(coinLastAlert).getTime()) / (1000 * 60 * 60)
+          : 999;
 
-      if (!isCooldownPassed && !isBigMove) continue;
+        const isPeriodic = coinHoursDiff >= COOLDOWN_HOURS;
+        const isBigMoveWindow = coinHoursDiff >= 3;
 
-      const lang = dev.language || "mk";
-      const title = `${emoji} ${symbol} ${sign}${ticker.change24h.toFixed(2)}% ($${priceStr})`;
-      let body = "";
-
-      if (lang === "en") {
-        body = isUp
-          ? `${symbol} is up by ${sign}${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
-          : `${symbol} is down by ${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
-      } else if (lang === "al") {
-        body = isUp
-          ? `${symbol} shënon rritje prej ${sign}${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
-          : `${symbol} shënon rënie prej ${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
-      } else {
-        body = isUp
-          ? `${symbol} бележи раст од ${sign}${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
-          : `${symbol} бележи пад од ${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+        if (isPeriodic) {
+          // In periodic 8-hour cycle for this specific coin
+          qualifyingPairs.push({ pair, ticker });
+        } else if (isBigMoveWindow && Math.abs(ticker.change24h) >= SIGNIFICANT_CHANGE_THRESHOLD) {
+          // Significant market move on this coin and its own 3-hour cooldown passed
+          qualifyingPairs.push({ pair, ticker });
+        }
       }
 
-      const ok = await sendFcmPush(
-        dev.push_token,
-        title,
-        body,
-        { widgetId: "crypto", pair },
-        fcmAccessToken,
-        projectId
-      );
+      if (qualifyingPairs.length === 0) continue;
 
-      if (ok) {
-        sentCount++;
+      let devSentAny = false;
+      const lang = dev.language || "mk";
+
+      // Cap at top 4 pairs if user has a large number of favorites
+      const pairsToAlert = qualifyingPairs.slice(0, 4);
+
+      for (const { pair, ticker } of pairsToAlert) {
+        const symbol = pair.replace("USDT", "");
+        const isUp = ticker.change24h >= 0;
+        const emoji = isUp ? "📈" : "📉";
+        const sign = isUp ? "+" : "";
+        const priceStr = ticker.price >= 1
+          ? ticker.price.toLocaleString("en-US", { maximumFractionDigits: 2 })
+          : ticker.price.toFixed(4);
+
+        let title = `${emoji} ${symbol} ${sign}${ticker.change24h.toFixed(2)}% ($${priceStr})`;
+        let body = "";
+
+        if (lang === "en") {
+          body = isUp
+            ? `${symbol} is up by ${sign}${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+            : `${symbol} is down by ${ticker.change24h.toFixed(2)}% in the past 24 hours. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+        } else if (lang === "al") {
+          body = isUp
+            ? `${symbol} shënon rritje prej ${sign}${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+            : `${symbol} shënon rënie prej ${ticker.change24h.toFixed(2)}% gjatë 24 orëve të fundit. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+        } else {
+          body = isUp
+            ? `${symbol} бележи раст од ${sign}${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h High: $${ticker.high24h.toLocaleString("en-US")}.`
+            : `${symbol} бележи пад од ${ticker.change24h.toFixed(2)}% во изминатите 24 часа. 24h Low: $${ticker.low24h.toLocaleString("en-US")}.`;
+        }
+
+        const ok = await sendFcmPush(
+          dev.push_token,
+          title,
+          body,
+          { widgetId: "crypto", pair },
+          fcmAccessToken,
+          projectId
+        );
+
+        if (ok) {
+          sentCount++;
+          devSentAny = true;
+          // Track per-coin alert time individually
+          perCoinHistory[pair] = now.toISOString();
+        }
+      }
+
+      if (devSentAny) {
         await supabase
           .from("user_devices")
-          .update({ last_crypto_alert_at: now.toISOString() })
+          .update({
+            last_crypto_alert_at: now.toISOString(),
+            last_crypto_alerts_per_coin: perCoinHistory,
+          })
           .eq("device_id", dev.device_id);
       }
     }

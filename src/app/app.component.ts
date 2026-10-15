@@ -1,5 +1,6 @@
 import { Component, inject, NgZone, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavController } from '@ionic/angular';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { TranslateService } from '@ngx-translate/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
@@ -22,6 +23,7 @@ export class AppComponent implements OnInit {
   private pushService = inject(PushNotificationService);
   private permissionService = inject(PermissionService);
   private router = inject(Router);
+  private navCtrl = inject(NavController);
   private translate = inject(TranslateService);
   private zone = inject(NgZone);
 
@@ -54,10 +56,13 @@ export class AppComponent implements OnInit {
           const hashParams = new URLSearchParams(urlObj.hash.substring(1));
           const queryParams = new URLSearchParams(urlObj.search);
 
+          const code = queryParams.get('code') || hashParams.get('code');
           const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
-          if (accessToken && refreshToken) {
+          if (code) {
+            await this.supabaseService.supabase.auth.exchangeCodeForSession(code);
+          } else if (accessToken && refreshToken) {
             await this.supabaseService.supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
@@ -65,21 +70,21 @@ export class AppComponent implements OnInit {
           }
 
           if (event.url.includes('reset-password')) {
-            this.router.navigate(['/reset-password']);
+            this.navCtrl.navigateForward('/reset-password');
             return;
           }
 
           const { data } = await this.supabaseService.getCurrentUser();
           const user = data?.user;
-          const isVerified = user?.email_confirmed_at != null || user?.app_metadata?.provider === 'google';
+          const isVerified = this.supabaseService.isUserVerified(user);
 
           if (user && isVerified) {
             await this.supabaseService.registerNewDeviceSession(user.id);
             await this.pushService.requestPushPermissionAndRegister();
-            this.router.navigate(['/']);
+            this.navCtrl.navigateRoot('/dashboard');
           } else {
             await this.supabaseService.signOut();
-            this.router.navigate(['/login']);
+            this.navCtrl.navigateRoot('/login');
           }
         }
       });
@@ -96,7 +101,7 @@ export class AppComponent implements OnInit {
         if (!isValid) {
           const alertMessage = this.translate.instant('AUTH.LOGGED_OUT_OTHER_DEVICE');
           alert(alertMessage);
-          this.router.navigate(['/login']);
+          this.navCtrl.navigateRoot('/login');
         }
       }
     } catch (err) {

@@ -16,10 +16,10 @@ export class SupabaseService {
   constructor() {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
 
-    // Global listener: Stream user ONLY if email is confirmed or authenticated via Google
+    // Global listener: Stream user if email is confirmed, OAuth, or valid session
     this.supabase.auth.onAuthStateChange((event, session) => {
       const user = session?.user ?? null;
-      const isEmailVerified = user?.email_confirmed_at != null || user?.app_metadata?.provider === 'google';
+      const isEmailVerified = this.isUserVerified(user);
 
       if (user && isEmailVerified) {
         this.currentUser$.next(user);
@@ -27,6 +27,19 @@ export class SupabaseService {
         this.currentUser$.next(null);
       }
     });
+  }
+
+  isUserVerified(user: User | null): boolean {
+    if (!user) return false;
+    // 1. Explicit confirmation timestamp
+    if (user.email_confirmed_at != null || user.confirmed_at != null) return true;
+    // 2. OAuth provider (Google, Apple, etc.)
+    if (user.app_metadata?.provider && user.app_metadata.provider !== 'email') return true;
+    // 3. User metadata verified flag
+    if (user.user_metadata?.['email_verified'] === true) return true;
+    // 4. If no confirmation email was ever required/sent by the project
+    if (!user.confirmation_sent_at) return true;
+    return false;
   }
 
   get client(): SupabaseClient {
@@ -38,39 +51,39 @@ export class SupabaseService {
   }
 
   // --- SIGN UP ---
- async signUp(email: string, password: string, fullName: string) {
-  const isNative = (window as any).Capacitor?.isNativePlatform();
-  
-  // Mobile app uses custom scheme, desktop/browser uses origin URL
-  const redirectTo = isNative ? 'dzeble://auth/callback' : window.location.origin;
+  async signUp(email: string, password: string, fullName: string) {
+    const isNative = Capacitor.isNativePlatform();
+    
+    // Mobile app uses custom scheme, desktop/browser uses origin URL
+    const redirectTo = isNative ? 'dzeble://auth/callback' : window.location.origin;
 
-  const { data, error } = await this.supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName },
-      emailRedirectTo: redirectTo
-    }
-  });
-  if (error) throw error;
-  return data;
-}
+    const { data, error } = await this.supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: redirectTo
+      }
+    });
+    if (error) throw error;
+    return data;
+  }
 
   // --- SIGN IN WITH GOOGLE ---
-async signInWithGoogle() {
-  const isNative = (window as any).Capacitor?.isNativePlatform();
-  const redirectTo = isNative ? 'dzeble://auth/callback' : `${window.location.origin}/login`;
+  async signInWithGoogle() {
+    const isNative = Capacitor.isNativePlatform();
+    const redirectTo = isNative ? 'dzeble://auth/callback' : `${window.location.origin}/login`;
 
-  const { data, error } = await this.supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    }
-  });
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      }
+    });
 
   if (error) throw error;
   return data;
@@ -79,13 +92,14 @@ async signInWithGoogle() {
   // --- SIGN IN WITH PASSWORD ---
   async signIn(email: string, password: string) {
     const { data, error } = await this.supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password
     });
     if (error) throw error;
     
-    if (data.user && data.user.email_confirmed_at) {
+    if (data.user) {
       await this.registerNewDeviceSession(data.user.id);
+      this.currentUser$.next(data.user);
     }
     return data;
   }
@@ -142,15 +156,21 @@ async signOut() {
 }
 
   async registerNewDeviceSession(userId: string) {
-    const newSessionId = crypto.randomUUID();
+    const newSessionId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     localStorage.setItem('app_device_session_id', newSessionId);
 
-    const { error } = await this.supabase
-      .from('profiles')
-      .update({ active_session_id: newSessionId })
-      .eq('id', userId);
+    try {
+      const { error } = await this.supabase
+        .from('profiles')
+        .update({ active_session_id: newSessionId })
+        .eq('id', userId);
 
-    if (error) console.error('Failed to register device session:', error);
+      if (error) console.warn('Failed to register device session in profiles:', error);
+    } catch (err) {
+      console.warn('registerNewDeviceSession error:', err);
+    }
   }
 
 async validateSession(user: User): Promise<boolean> {
@@ -488,114 +508,6 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
 
     if (error) throw error;
     return true;
-  }
-
-  async getTodayHealthMetrics(userId: string): Promise<any | null> {
-    const todayStr = new Date().toISOString().split('T')[0];
-    try {
-      const { data, error } = await this.supabase
-        .from('user_health_metrics')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('logged_date', todayStr)
-        .maybeSingle();
-
-      if (error) {
-        console.warn('Error fetching today health metrics from Supabase:', error);
-        return null;
-      }
-      return data;
-    } catch (e) {
-      console.warn('Error fetching today health metrics:', e);
-      return null;
-    }
-  }
-
-  async syncTodayHealthMetrics(userId: string, metrics: { steps: number; calories: number; distanceKm: number; notified5k?: boolean; notified10k: boolean; notified15k: boolean; }) {
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    try {
-      // Safety check: ensure we don't accidentally downgrade steps if remote has higher (e.g. after reinstall)
-      const existing = await this.getTodayHealthMetrics(userId);
-      let stepCount = metrics.steps;
-      let calories = metrics.calories;
-      let distanceKm = metrics.distanceKm;
-
-      if (existing && existing.step_count > stepCount) {
-        stepCount = existing.step_count;
-        calories = Math.max(calories, existing.calories_burned || 0);
-        distanceKm = Math.max(distanceKm, existing.distance_km || 0);
-      }
-
-      const payload: any = {
-        user_id: userId,
-        step_count: stepCount,
-        calories_burned: calories,
-        distance_km: distanceKm,
-        milestone_10k_notified: metrics.notified10k || !!existing?.milestone_10k_notified,
-        milestone_15k_notified: metrics.notified15k || !!existing?.milestone_15k_notified,
-        logged_date: todayStr,
-        updated_at: new Date().toISOString()
-      };
-
-      if (metrics.notified5k !== undefined || existing?.milestone_5k_notified !== undefined) {
-        payload.milestone_5k_notified = metrics.notified5k ?? existing?.milestone_5k_notified;
-      }
-
-      const { data, error } = await this.supabase
-        .from('user_health_metrics')
-        .upsert(payload, { onConflict: 'user_id,logged_date' })
-        .select()
-        .single();
-
-      if (error && error.message && error.message.includes('milestone_5k_notified')) {
-        // Fallback if user hasn't added milestone_5k_notified column yet
-        delete payload.milestone_5k_notified;
-        const fallbackRes = await this.supabase
-          .from('user_health_metrics')
-          .upsert(payload, { onConflict: 'user_id,logged_date' })
-          .select()
-          .single();
-        return fallbackRes.data;
-      }
-
-      return data;
-    } catch (e) {
-      console.warn('Could not sync health metrics to Supabase (offline or table pending):', e);
-      return null;
-    }
-  }
-
-  async syncHealthHistory(userId: string, history: any[]) {
-    if (!history || history.length === 0) return;
-    try {
-      const records = history.map(h => ({
-        user_id: userId,
-        logged_date: h.logged_date,
-        step_count: h.step_count || 0,
-        calories_burned: h.calories_burned || 0,
-        distance_km: h.distance_km || 0,
-        updated_at: new Date().toISOString()
-      }));
-
-      await this.supabase
-        .from('user_health_metrics')
-        .upsert(records, { onConflict: 'user_id,logged_date' });
-    } catch (e) {
-      console.warn('Could not sync health history to Supabase:', e);
-    }
-  }
-
-  async getLast7DaysHealthMetrics(userId: string) {
-    const { data, error } = await this.supabase
-      .from('user_health_metrics')
-      .select('*')
-      .eq('user_id', userId)
-      .order('logged_date', { ascending: false })
-      .limit(7);
-
-    if (error) return [];
-    return data || [];
   }
 
   async getHolidays(): Promise<any[]> {

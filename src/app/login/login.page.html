@@ -104,4 +104,77 @@
     </button>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODERN IN-APP SUCCESS & FEEDBACK MODAL     -->
+  <!-- ========================================== -->
+  @if (isSuccessModalOpen) {
+    <div class="auth-popup-backdrop" (click)="closeSuccessModal()">
+      <div class="auth-popup-card" (click)="$event.stopPropagation()">
+        
+        <!-- Close Button (top-right) -->
+        <button class="popup-close-btn" (click)="closeSuccessModal()" type="button" aria-label="Close">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+
+        <!-- Animated Hero Icon Badge -->
+        <div class="popup-icon-badge">
+          <ion-icon name="mail-unread-outline" class="hero-icon"></ion-icon>
+        </div>
+
+        <!-- Title -->
+        <h2 class="popup-title">
+          {{ popupTitle }}
+        </h2>
+
+        <!-- Subtitle / Instruction -->
+        <p class="popup-subtitle">
+          {{ popupSubtitle }}
+        </p>
+
+        <!-- User Email Highlight Tag (if available) -->
+        @if (popupEmail) {
+          <div class="popup-email-pill">
+            <ion-icon name="mail-outline"></ion-icon>
+            <span class="email-text">{{ popupEmail }}</span>
+          </div>
+        }
+
+        <!-- Note / Hints -->
+        <div class="popup-hint-box">
+          <p class="hint-primary">
+            {{ popupNote }}
+          </p>
+          <p class="hint-spam">
+            💡 {{ 'AUTH.SIGNUP_SUCCESS_SPAM_HINT' | translate }}
+          </p>
+        </div>
+
+        @if (resendFeedbackMessage) {
+          <div class="resend-feedback-chip">
+            {{ resendFeedbackMessage }}
+          </div>
+        }
+
+        <!-- Actions -->
+        <div class="popup-actions">
+          <button class="btn-popup-primary" (click)="onPopupPrimaryAction()" type="button">
+            {{ 'AUTH.PROCEED_TO_LOGIN' | translate }}
+          </button>
+
+          @if (isVerificationModal) {
+            <button class="btn-popup-secondary" (click)="onPopupResendEmail()" type="button" [disabled]="isResending">
+              @if (isResending) {
+                <ion-spinner name="crescent" style="width: 18px; height: 18px;"></ion-spinner>
+              } @else {
+                <ion-icon name="refresh-outline"></ion-icon>
+                <span>{{ 'AUTH.RESEND_EMAIL' | translate }}</span>
+              }
+            </button>
+          }
+        </div>
+
+      </div>
+    </div>
+  }
+
 </ion-content>

@@ -25,7 +25,7 @@
 
     <!-- 2. TITLES SECTION -->
     <div class="dashboard-titles">
-      <span class="city-subtitle" [class.is-locating]="isLocatingCity">{{ currentCityName }}</span>
+      <span class="city-subtitle" [class.is-locating]="isLocatingCity">{{ getLocalizedCityName(currentCityName) }}</span>
       <div class="title-with-actions">
         <h1 class="main-title">{{ 'HOME.TODAY' | translate }}</h1>
         @if (isWidgetEditMode) {
@@ -248,7 +248,7 @@
           <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 4px 0; color: #0f172a;">
             {{ 'WEATHER_MODAL.TITLE' | translate }}
           </h2>
-          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ currentCityName }} • {{ 'WEATHER_MODAL.SUBTITLE' | translate }}</p>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ getLocalizedCityName(currentCityName) }} • {{ 'WEATHER_MODAL.SUBTITLE' | translate }}</p>
         </div>
         
         <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 4px 16px 4px;">
@@ -322,7 +322,7 @@
           <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px; -webkit-overflow-scrolling: touch;">
             @for (hourItem of getHourlyForecast(); track hourItem.time) {
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 14px; text-align: center; min-width: 68px; flex-shrink: 0;">
-                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; display: block;">{{ hourItem.time }}</span>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; display: block;">{{ formatHourlyTime(hourItem.time) }}</span>
                 <span style="font-size: 1.35rem; display: block; margin: 4px 0;">{{ hourItem.icon }}</span>
                 <span style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">{{ hourItem.temp }}</span>
               </div>
@@ -336,7 +336,7 @@
           <ul class="benefits-list" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 4px 14px; margin: 0; list-style: none;">
             @for (dayItem of getWeeklyForecast(); track dayItem.day) {
               <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem;">
-                <span style="font-weight: 600; color: #1e293b;">{{ dayItem.day }}</span>
+                <span style="font-weight: 600; color: #1e293b;">{{ formatForecastDay(dayItem.day) }}</span>
                 <span style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                   <span style="font-size: 1.1rem;">{{ dayItem.icon }}</span>
                   <span>{{ dayItem.temps }}</span>
@@ -550,7 +550,7 @@
           <div style="background: #f7f7f5; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
             <span style="font-size: 0.85rem; color: #666; font-weight: 600; display: block; text-transform: uppercase;">{{ 'AQI_MODAL.CURRENT_STATUS' | translate }}</span>
             <h2 [style.color]="getAqiColor(parsedWeatherData?.aqi_value)" style="font-size: 2.2rem; font-weight: 800; margin: 8px 0; transition: color 0.3s ease;">
-              {{ parsedWeatherData?.aqi_status_text }}
+              {{ getLocalizedAqiStatus(parsedWeatherData?.aqi_value, parsedWeatherData?.aqi_status_text) }}
             </h2>
             <div style="display: inline-block; background: #e2e2df; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 800;">
               {{ 'AQI_MODAL.INDEX_LABEL' | translate }}: {{ parsedWeatherData?.aqi_value }}
@@ -605,7 +605,7 @@
 
                       <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">
-                          {{ getLocalizedAqiStatus(muni.aqi_value) }}
+                          {{ getLocalizedAqiStatus(muni.aqi_value, muni.aqi_status_text) }}
                         </span>
                         <span [style.background]="getAqiColor(muni.aqi_value)" style="color: white; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 12px; min-width: 32px; text-align: center;">
                           {{ muni.aqi_value }}
@@ -1127,167 +1127,6 @@
         }
       }
 
-      <!-- MODULE E: ACTIVITY TRACKER & 7-DAY HISTORY -->
-      @if (activeDetailWidgetId === 'activity') {
-        <div class="modal-hero" style="padding-bottom: 10px; text-align: center; margin-top: 8px;">
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-            <ion-icon name="footsteps" style="font-size: 1.3rem; color: #10b981;"></ion-icon>
-            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
-              {{ 'ACTIVITY_MODAL.TITLE' | translate }}
-            </h2>
-          </div>
-          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'ACTIVITY_MODAL.SUBTITLE' | translate }}</p>
-        </div>
-        
-        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
-          <!-- Permission Banner if Activity Recognition is not granted -->
-          @if (!isHealthPermGranted) {
-            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1.5px solid #f59e0b; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; text-align: center;">
-              <span style="font-size: 1.3rem; display: block; margin-bottom: 4px;">👟 ⚠️</span>
-              <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; font-weight: 800; color: #92400e;">
-                {{ 'ACTIVITY_MODAL.PERM_REQUIRED_TITLE' | translate }}
-              </h4>
-              <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #78350f; font-weight: 600;">
-                {{ 'ACTIVITY_MODAL.PERM_REQUIRED_DESC' | translate }}
-              </p>
-              <button 
-                (click)="promptHealthPermission()" 
-                type="button"
-                style="background: #0f172a; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
-                {{ 'ACTIVITY_MODAL.PERM_BTN' | translate }}
-              </button>
-            </div>
-          }
-
-          <!-- Big Today Summary Card -->
-          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 22px 20px; border-radius: 20px; text-align: center; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);">
-            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; font-weight: 700; display: block; margin-bottom: 4px;">
-              {{ 'ACTIVITY_MODAL.TODAY_SUMMARY' | translate }}
-            </span>
-            
-            <h1 style="font-size: 2.8rem; font-weight: 800; margin: 2px 0 6px 0; letter-spacing: -0.5px;">
-              {{ (todayHealthData.steps || 0).toLocaleString('mk-MK') }}
-            </h1>
-            <span style="font-size: 0.85rem; opacity: 0.9; font-weight: 600; display: block; margin-bottom: 14px;">
-              {{ 'ACTIVITY_MODAL.STEPS_LABEL' | translate }}
-            </span>
-
-            <!-- Goal Progress Bar -->
-            <div style="background: rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 700; margin-bottom: 6px;">
-                <span>🎯 {{ 'ACTIVITY_MODAL.DAILY_GOAL' | translate }}</span>
-                <span style="color: #34d399;">{{ getStepsProgressPercent() }}% ({{ (todayHealthData.steps || 0).toLocaleString('mk-MK') }} / 10,000)</span>
-              </div>
-              <div style="background: rgba(255, 255, 255, 0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-                <div [style.width.%]="getStepsProgressPercent()" style="background: #10b981; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
-              </div>
-            </div>
-
-            <!-- Calories & Distance Grid inside Hero -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div style="background: rgba(255, 255, 255, 0.08); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px);">
-                <span style="font-size: 0.72rem; opacity: 0.8; display: block; margin-bottom: 2px;">{{ 'ACTIVITY_MODAL.CALORIES' | translate }}</span>
-                <span style="font-size: 1.15rem; font-weight: 800; color: #fb7185;">{{ todayHealthData.calories || 0 }} kcal</span>
-              </div>
-              <div style="background: rgba(255, 255, 255, 0.08); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px);">
-                <span style="font-size: 0.72rem; opacity: 0.8; display: block; margin-bottom: 2px;">{{ 'ACTIVITY_MODAL.DISTANCE' | translate }}</span>
-                <span style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">{{ todayHealthData.distanceKm || 0 }} км</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Daily Milestones Badges Card -->
-          <div style="background: #f8fafc; padding: 14px 16px; border-radius: 16px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 0.8rem; font-weight: 800; color: #0f172a;">
-                🏅 {{ 'ACTIVITY_MODAL.MILESTONES_TITLE' | translate }}
-              </span>
-              <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Push Notifications</span>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-              <!-- 5,000 Milestone -->
-              <div [style.border-color]="getMilestonesStatus().reached5k ? '#10b981' : '#e2e8f0'"
-                   [style.background]="getMilestonesStatus().reached5k ? '#ecfdf5' : '#ffffff'"
-                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
-                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
-                  {{ getMilestonesStatus().reached5k ? '🎉' : '👟' }}
-                </span>
-                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">5K</span>
-                <span [style.color]="getMilestonesStatus().reached5k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
-                  {{ getMilestonesStatus().reached5k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
-                </span>
-              </div>
-
-              <!-- 10,000 Milestone -->
-              <div [style.border-color]="getMilestonesStatus().reached10k ? '#10b981' : '#e2e8f0'"
-                   [style.background]="getMilestonesStatus().reached10k ? '#ecfdf5' : '#ffffff'"
-                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
-                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
-                  {{ getMilestonesStatus().reached10k ? '🔥' : '🎯' }}
-                </span>
-                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">10K</span>
-                <span [style.color]="getMilestonesStatus().reached10k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
-                  {{ getMilestonesStatus().reached10k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
-                </span>
-              </div>
-
-              <!-- 15,000 Milestone -->
-              <div [style.border-color]="getMilestonesStatus().reached15k ? '#10b981' : '#e2e8f0'"
-                   [style.background]="getMilestonesStatus().reached15k ? '#ecfdf5' : '#ffffff'"
-                   style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 6px; text-align: center;">
-                <span style="font-size: 1.2rem; display: block; margin-bottom: 2px;">
-                  {{ getMilestonesStatus().reached15k ? '🏆' : '⭐' }}
-                </span>
-                <span style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block;">15K</span>
-                <span [style.color]="getMilestonesStatus().reached15k ? '#10b981' : '#94a3b8'" style="font-size: 0.68rem; font-weight: 700;">
-                  {{ getMilestonesStatus().reached15k ? ('ACTIVITY_MODAL.ACHIEVED' | translate) : ('ACTIVITY_MODAL.PENDING' | translate) }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 7-Day History Section -->
-          <div style="margin-bottom: 10px;">
-            <span style="font-size: 0.8rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 8px;">
-              📊 {{ 'ACTIVITY_MODAL.LAST_7_DAYS' | translate }}
-            </span>
-
-            @if (last7DaysHealth.length === 0) {
-              <div style="text-align: center; padding: 24px 10px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
-                <p style="margin: 0; color: #64748b; font-size: 0.85rem; font-weight: 600;">
-                  {{ 'ACTIVITY_MODAL.NO_HISTORY' | translate }}
-                </p>
-              </div>
-            } @else {
-              <div style="display: flex; flex-direction: column; gap: 8px;">
-                @for (day of last7DaysHealth; track (day.id || day.logged_date)) {
-                  <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0;">
-                    <div>
-                      <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a; display: block;">
-                        🗓️ {{ formatHistoryDate(day.logged_date) }}
-                      </span>
-                      <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-                        📍 {{ day.distance_km }} км
-                      </span>
-                    </div>
-
-                    <div style="text-align: right;">
-                      <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a; display: block;">
-                        👟 {{ day.step_count.toLocaleString('mk-MK') }}
-                      </span>
-                      <span style="font-size: 0.75rem; font-weight: 700; color: #e63946;">
-                        🔥 {{ day.calories_burned }} kcal
-                      </span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        </div>
-      }
-
       <!-- HOLIDAYS & PERSONAL CALENDAR WIDGET MODULE -->
       @if (activeDetailWidgetId === 'holidays') {
         <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
@@ -1713,6 +1552,160 @@
   </div>
 }
 
+      <!-- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) DETAILS -->
+      @if (activeDetailWidgetId === 'pharmacy') {
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="medkit" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ 'PHARMACY_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'PHARMACY_MODAL.SUBTITLE' | translate }}</p>
+
+          <!-- View Mode Switcher: List vs Leaflet Map -->
+          <div class="pharmacy-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="pharmacyModalView === 'list'"
+              (click)="setPharmacyModalView('list')">
+              <ion-icon name="list"></ion-icon>
+              <span>{{ 'PHARMACY_MODAL.LIST_VIEW' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="pharmacyModalView === 'map'"
+              (click)="setPharmacyModalView('map')">
+              <ion-icon name="map"></ion-icon>
+              <span>{{ 'PHARMACY_MODAL.MAP_VIEW' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <!-- Filter Bar: Search Input -->
+          <div class="pharmacy-search-box">
+            <ion-icon name="search" class="search-icon"></ion-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="pharmacySearchQuery" 
+              (input)="onPharmacySearchChange()"
+              [placeholder]="'PHARMACY_MODAL.SEARCH_PLACEHOLDER' | translate" 
+              class="pharmacy-search-input" />
+            @if (pharmacySearchQuery) {
+              <button class="pharmacy-search-clear" (click)="pharmacySearchQuery = ''; onPharmacySearchChange()">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            }
+          </div>
+
+          <!-- City Filter Pills Scrollable Row -->
+          <div class="pharmacy-city-scroll">
+            <button 
+              type="button"
+              class="city-chip" 
+              [class.active]="selectedPharmacyCity === ''" 
+              (click)="selectPharmacyCity('')">
+              {{ 'PHARMACY_MODAL.ALL_CITIES' | translate }}
+            </button>
+            @for (city of pharmacyCities; track city) {
+              <button 
+                type="button"
+                class="city-chip" 
+                [class.active]="selectedPharmacyCity === city" 
+                (click)="selectPharmacyCity(city)">
+                {{ city }}
+              </button>
+            }
+          </div>
+
+          <!-- VIEW 1: LIST VIEW -->
+          @if (pharmacyModalView === 'list') {
+            @if (filteredPharmacies.length === 0) {
+              <div class="pharmacy-empty-state">
+                <ion-icon name="medkit" style="font-size: 2.2rem; color: #94a3b8;"></ion-icon>
+                <p>{{ 'PHARMACY_MODAL.NO_RESULTS' | translate }}</p>
+              </div>
+            } @else {
+              <div class="pharmacy-cards-container">
+                @for (p of filteredPharmacies; track p.id) {
+                  <div class="pharmacy-card">
+                    <div class="pharmacy-card-top">
+                      <div class="pharmacy-name-block">
+                        <div class="pharmacy-name-row">
+                          <span class="pharmacy-name">{{ p.name }}</span>
+                          @if (p.is_24_7) {
+                            <span class="pharmacy-badge-open">24/7</span>
+                          } @else {
+                            <span [class.pharmacy-badge-open]="isPharmacyOpenNow(p)" [class.pharmacy-badge-closed]="!isPharmacyOpenNow(p)">
+                              {{ isPharmacyOpenNow(p) ? ('PHARMACY_MODAL.OPEN' | translate) : ('PHARMACY_MODAL.CLOSED' | translate) }}
+                            </span>
+                          }
+                        </div>
+                        <div class="pharmacy-address-row">
+                          <ion-icon name="location" class="addr-icon"></ion-icon>
+                          <span>{{ p.address }}@if (p.municipality) {, {{ p.municipality }}} ({{ p.city }})</span>
+                        </div>
+                        @if (p.working_hours) {
+                          <div class="pharmacy-hours-row">
+                            <ion-icon name="time-outline" class="hours-icon"></ion-icon>
+                            <div class="pharmacy-hours-lines">
+                              @for (line of getFormattedWorkingHoursLines(p.working_hours); track line) {
+                                <span class="hours-line">{{ line }}</span>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+
+                      @if (p.distanceKm != null) {
+                        <div class="pharmacy-distance-tag">
+                          <span>📍 {{ formatPharmacyDistance(p.distanceKm) }}</span>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="pharmacy-card-actions">
+                      @if (p.phone) {
+                        <button class="pharmacy-action-btn btn-call" (click)="onCallPharmacyClick(p)">
+                          <ion-icon name="call" class="call-btn-icon"></ion-icon>
+                          @if (getPharmacyPhoneList(p.phone).length <= 1) {
+                            <span>{{ getPharmacyPhoneList(p.phone)[0] || p.phone }}</span>
+                          } @else {
+                            <div class="multi-phone-col">
+                              @for (num of getPharmacyPhoneList(p.phone); track num) {
+                                <span class="phone-number-line">{{ num }}</span>
+                              }
+                            </div>
+                            <ion-icon name="chevron-down-outline" class="phone-dropdown-icon"></ion-icon>
+                          }
+                        </button>
+                      }
+                      <button class="pharmacy-action-btn btn-directions" (click)="openDirections(p)">
+                        <ion-icon name="navigate"></ion-icon>
+                        <span>{{ 'PHARMACY_MODAL.DIRECTIONS' | translate }}</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- VIEW 2: LEAFLET MAP VIEW -->
+          @if (pharmacyModalView === 'map') {
+            <div class="pharmacy-map-wrapper">
+              <div id="pharmacy-leaflet-map" class="pharmacy-leaflet-container"></div>
+              <div class="pharmacy-map-badge">
+                <span>🟢 {{ filteredPharmacies.length }} {{ 'PHARMACY_MODAL.TITLE' | translate }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
       <!-- DISMISS FOOTER ANCHORED ABOVE MOBILE NAVIGATION BAR -->
       <div class="modal-footer" style="padding-top: 10px; flex-shrink: 0;">
         <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold; border: none; cursor: pointer;">
@@ -1790,7 +1783,7 @@
             ➕ {{ 'WIDGETS.AVAILABLE_WIDGETS' | translate }}
           </h2>
           <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
-            {{ visibleWidgets.length }}/9 • {{ 'WIDGETS.ADD_WIDGET' | translate }}
+            {{ visibleWidgets.length }}/{{ MAX_WIDGET_COUNT }} • {{ 'WIDGETS.ADD_WIDGET' | translate }}
           </p>
         </div>
 
@@ -1807,7 +1800,7 @@
                   @if (w.id === 'weather' && w.weatherEmoji) {
                     <span style="font-size: 1.6rem;">{{ w.weatherEmoji }}</span>
                   } @else {
-                    <ion-icon [name]="w.icon" [style.color]="w.customColor || '#3b82f6'"></ion-icon>
+                    <ion-icon [name]="w.icon" [style.color]="w.customColor || '#10b981'"></ion-icon>
                   }
                 </div>
                 <div class="item-text-info">

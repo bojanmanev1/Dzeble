@@ -31,7 +31,6 @@ import {
   notificationsOffOutline,
   checkmarkCircleOutline,
   checkmarkCircle,
-  footsteps,
   card,
   personOutline,
   statsChart,
@@ -44,7 +43,15 @@ import {
   chevronForward,
   add,
   refreshOutline,
-  checkmark
+  checkmark,
+  medkit,
+  map,
+  list,
+  call,
+  navigate,
+  search,
+  location,
+  timeOutline
 } from 'ionicons/icons';
 
 import { 
@@ -55,16 +62,18 @@ import {
   IonIcon,
   IonDatetime,
   IonToggle,
-  AlertController
+  AlertController,
+  ActionSheetController
 } from '@ionic/angular/standalone';
 import { Capacitor } from '@capacitor/core';
 import { StockService, StockTicker } from '../services/stock';
-import { HealthData, HealthService } from '../services/health';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
+import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
 import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
 import { App } from '@capacitor/app';
 import { PushNotificationService } from '../services/push-notification';
+import * as L from 'leaflet';
 
 interface Widget {
   id: string;
@@ -114,7 +123,6 @@ export class HomePage implements OnInit, OnDestroy {
   private weatherService = inject(WeatherService);
   private cryptoService = inject(CryptoService);
   private translate = inject(TranslateService);
-  private healthService = inject(HealthService);
   private loyaltyService = inject(LoyaltyService);
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
@@ -178,15 +186,6 @@ export class HomePage implements OnInit, OnDestroy {
   newWidgetTitle = '';
   newWidgetDate: string = new Date().toISOString();
   inputMkdAmount: number = 100;
-  todayHealthData: HealthData = { 
-    steps: parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10), 
-    calories: Math.round(parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.04), 
-    distanceKm: parseFloat((parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.000762).toFixed(2)) 
-  };
-  last7DaysHealth: any[] = [];
-  notified10k = false;
-  notified15k = false;
-  private healthSyncDebounceTimeout: any = null;
   isAuthPromptModalOpen = false;
   selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_display_currency') as any) || 'MKD';
 
@@ -219,6 +218,25 @@ export class HomePage implements OnInit, OnDestroy {
   isSearchingCrypto: boolean = false;
   cryptoSearchError: string = '';
 
+  // Pharmacy State
+  private pharmacyService = inject(PharmacyService);
+  private actionSheetCtrl = inject(ActionSheetController);
+  pharmaciesList: DutyPharmacy[] = [];
+  filteredPharmacies: DutyPharmacy[] = [];
+  nearestPharmacy: DutyPharmacy | null = null;
+  pharmacyModalView: 'list' | 'map' = 'list';
+  pharmacySearchQuery: string = '';
+  selectedPharmacyCity: string = '';
+  pharmacyCities: string[] = [
+    'Скопје', 'Битола', 'Куманово', 'Прилеп', 'Тетово', 'Охрид', 'Велес', 'Штип',
+    'Струмица', 'Кавадарци', 'Кочани', 'Гостивар', 'Гевгелија', 'Кичево', 'Неготино',
+    'Ресен', 'Струга', 'Крушево', 'Дебар', 'Берово', 'Валандово', 'Виница',
+    'Делчево', 'Крива Паланка', 'Кратово', 'Пробиштип', 'Свети Николе', 'Демир Хисар',
+    'Македонски Брод', 'Македонска Каменица'
+  ];
+  private leafletMap: L.Map | null = null;
+  private leafletMarkers: L.Marker[] = [];
+
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
@@ -228,22 +246,17 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'stock', translationKey: 'WIDGETS.STOCK', value: 'AAPL', unit: 'AAPL', icon: 'trending-up' },
     { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' },
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
-    { 
-      id: 'activity', 
-      translationKey: 'WIDGETS.STEPS', 
-      value: parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10).toLocaleString('mk-MK'), 
-      unit: `${Math.round(parseInt(localStorage.getItem('dzeble_today_steps') || '0', 10) * 0.04)} kcal`, 
-      icon: 'footsteps' 
-    },
-    { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' }
+    { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
+    { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' }
   ];
 
-  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'uv', 'activity'];
+  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'loyalty'];
+  readonly MAX_WIDGET_COUNT = 9;
   readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
 
+  currentUserCoords: { latitude: number; longitude: number } | null = null;
   activeWidgetIds: string[] = [];
   visibleWidgets: Widget[] = [];
-  isHealthPermGranted: boolean = true;
 
   // Widget Edit & Drag-and-Drop State
   isWidgetEditMode: boolean = false;
@@ -288,7 +301,6 @@ export class HomePage implements OnInit, OnDestroy {
       'notifications-off-outline': notificationsOffOutline,
       'checkmark-circle-outline': checkmarkCircleOutline,
       'checkmark-circle': checkmarkCircle,
-      'footsteps': footsteps,
       'card': card,
       'person-outline': personOutline,
       'stats-chart': statsChart,
@@ -301,7 +313,15 @@ export class HomePage implements OnInit, OnDestroy {
       'chevron-forward': chevronForward,
       'add': add,
       'refresh-outline': refreshOutline,
-      'checkmark': checkmark
+      'checkmark': checkmark,
+      'medkit': medkit,
+      'map': map,
+      'list': list,
+      'call': call,
+      'navigate': navigate,
+      'search': search,
+      'location': location,
+      'time-outline': timeOutline
     });
 
     this.loadSavedWidgetOrder();
@@ -330,35 +350,12 @@ export class HomePage implements OnInit, OnDestroy {
       } catch {}
     }
 
-    await this.initHealthTracking();
-    this.healthService.setLanguage(this.currentLang);
-
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
-      this.healthService.setUserLoggedIn(!!user);
 
       if (user) {
-        // 1. Immediately restore today's steps from Supabase if available (e.g. after fresh reinstall)
-        try {
-          const remoteToday = await this.supabaseService.getTodayHealthMetrics(user.id);
-          if (remoteToday && remoteToday.step_count > 0) {
-            const restored = await this.healthService.restoreStepsFromDatabase(remoteToday.step_count);
-            this.todayHealthData = restored;
-            this.updateActivityWidgetDisplay(restored);
-            this.cdr.markForCheck();
-          }
-        } catch (e) {
-          console.warn('Could not restore steps from cloud on login:', e);
-        }
-
         const token = await this.pushService.requestPushPermissionAndRegister();
         await this.supabaseService.syncDeviceRecord(user.id, user.email, token || undefined);
-        await this.syncHealthData(user.id);
-        const remoteHistory = await this.supabaseService.getLast7DaysHealthMetrics(user.id);
-        if (remoteHistory && remoteHistory.length > 0) {
-          this.last7DaysHealth = remoteHistory;
-          await this.healthService.syncHistoryFromRemote(remoteHistory);
-        }
         await this.loadLoyaltyCards(user.id);
         await this.loadUserEvents(user.id);
       } else {
@@ -373,16 +370,9 @@ export class HomePage implements OnInit, OnDestroy {
       App.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
           this.zone.run(async () => {
-            // Immediately fetch and display fresh steps on frame 1
-            const freshSteps = await this.healthService.getTodayDeviceSteps();
-            this.todayHealthData = freshSteps;
-            this.updateActivityWidgetDisplay(freshSteps);
-            this.cdr.markForCheck();
-
             const cachedToken = this.pushService.getCurrentToken();
             if (this.currentUser) {
               await this.supabaseService.syncDeviceRecord(this.currentUser.id, this.currentUser.email, cachedToken || undefined);
-              await this.syncHealthData(this.currentUser.id);
             } else {
               await this.supabaseService.syncDeviceRecord();
             }
@@ -398,6 +388,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.initLiveCrypto();
     this.initLiveStock();
     this.startMultiFavoritesSlider();
+    this.loadDutyPharmacies();
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -563,7 +554,6 @@ export class HomePage implements OnInit, OnDestroy {
 
 async handleLogout() {
   this.isSettingsSheetOpen = false;
-  this.healthService.setUserLoggedIn(false);
   await this.supabaseService.signOut();
   this.filterWidgets();
   this.cdr.markForCheck();
@@ -751,112 +741,6 @@ async handleLogout() {
     }
   }
 
-  async initHealthTracking() {
-    this.healthService.currentHealth$.subscribe(data => {
-      this.todayHealthData = data;
-      this.updateActivityWidgetDisplay(data);
-
-      if (this.currentUser) {
-        if (this.healthSyncDebounceTimeout) {
-          clearTimeout(this.healthSyncDebounceTimeout);
-        }
-        this.healthSyncDebounceTimeout = setTimeout(() => {
-          if (this.currentUser) {
-            this.syncHealthData(this.currentUser.id);
-          }
-        }, 15000);
-      }
-    });
-
-    const localHistory = await this.healthService.getLocal7DaysHistory();
-    this.last7DaysHealth = localHistory;
-
-    const initialSteps = await this.healthService.getTodayDeviceSteps();
-    this.todayHealthData = initialSteps;
-    this.updateActivityWidgetDisplay(initialSteps);
-
-    if (Capacitor.isNativePlatform()) {
-      const permCheck = await this.healthService.checkHealthPermissions();
-      this.isHealthPermGranted = permCheck.granted;
-
-      // After sequential permissions complete in AppComponent, refresh status and steps
-      setTimeout(async () => {
-        const recheck = await this.healthService.checkHealthPermissions();
-        this.isHealthPermGranted = recheck.granted;
-        if (recheck.granted) {
-          const fresh = await this.healthService.getTodayDeviceSteps();
-          this.todayHealthData = fresh;
-          this.updateActivityWidgetDisplay(fresh);
-        }
-      }, 800);
-    }
-  }
-
-  async promptHealthPermission() {
-    const granted = await this.healthService.requestHealthPermissions();
-    this.isHealthPermGranted = granted;
-    if (granted) {
-      await this.healthService.startContinuousPedometer();
-      const refreshed = await this.healthService.getTodayDeviceSteps();
-      this.todayHealthData = refreshed;
-      this.updateActivityWidgetDisplay(refreshed);
-    }
-  }
-
-  updateActivityWidgetDisplay(data: HealthData) {
-    this.zone.run(() => {
-      this.allWidgets = this.allWidgets.map(widget => {
-        if (widget.id === 'activity') {
-          return {
-            ...widget,
-            value: (data.steps || 0).toLocaleString('mk-MK'),
-            unit: `${data.calories || 0} kcal`
-          };
-        }
-        return widget;
-      });
-      this.filterWidgets();
-      this.cdr.markForCheck();
-    });
-  }
-
-  getStepsProgressPercent(): number {
-    const steps = this.todayHealthData?.steps || 0;
-    return Math.min(100, Math.round((steps / 10000) * 100));
-  }
-
-  getMilestonesStatus() {
-    return this.healthService.getMilestonesStatus();
-  }
-
-  async syncHealthData(userId: string) {
-    const data = await this.healthService.getTodayDeviceSteps();
-    this.todayHealthData = data;
-    this.updateActivityWidgetDisplay(data);
-
-    const milestones = this.healthService.getMilestonesStatus();
-    const synced = await this.supabaseService.syncTodayHealthMetrics(userId, {
-      steps: data.steps,
-      calories: data.calories,
-      distanceKm: data.distanceKm,
-      notified5k: milestones.reached5k,
-      notified10k: milestones.reached10k,
-      notified15k: milestones.reached15k
-    });
-
-    if (synced && synced.step_count > data.steps) {
-      // Remote had higher steps (e.g. reinstall or other device), restore locally
-      const restored = await this.healthService.restoreStepsFromDatabase(synced.step_count);
-      this.todayHealthData = restored;
-      this.updateActivityWidgetDisplay(restored);
-      this.cdr.markForCheck();
-    }
-
-    const localHistory = await this.healthService.getLocal7DaysHistory();
-    if (localHistory && localHistory.length > 0) {
-      await this.supabaseService.syncHealthHistory(userId, localHistory);
-    }
-  }
 
   combineHighlightedDates() {
     const holidayHighlights = (this.holidaysList || []).map(h => ({
@@ -963,6 +847,11 @@ async handleLogout() {
     this.isLocatingCity = true;
     this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
       next: async (coords: { latitude: number; longitude: number }) => {
+        this.currentUserCoords = coords;
+        this.updateNearestPharmacy();
+        this.updateFilteredPharmacies();
+        this.updatePharmacyWidgetDisplay();
+
         // 1. Instantly determine nearest city locally in memory (0ms)
         const resolvedCity = this.weatherService.resolveCityName(coords.latitude, coords.longitude);
         if (resolvedCity) {
@@ -1038,7 +927,7 @@ async handleLogout() {
         return { 
           ...widget, 
           value: `${metrics.aqi_value}`,
-          unit: metrics.aqi_status_text,
+          unit: this.getLocalizedAqiStatus(aqiNum, metrics.aqi_status_text),
           customColor: this.getAqiColor(aqiNum)
         };
       }
@@ -1064,7 +953,7 @@ async handleLogout() {
         return {
           ...widget,
           value: `${metrics.aqi_value}`,
-          unit: metrics.aqi_status_text,
+          unit: this.getLocalizedAqiStatus(aqiNum, metrics.aqi_status_text),
           customColor: this.getAqiColor(aqiNum)
         };
       }
@@ -1137,7 +1026,8 @@ async handleLogout() {
   getWeeklyForecast() { return this.parsedWeatherData?.weekly_forecast || []; }
 
   getTodayWeatherHigh(): number | null {
-    const today = (this.parsedWeatherData?.weekly_forecast || []).find((d: any) => d.day === 'Денес' || d.isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
+    const isToday = (d: any) => d.day === 'Денес' || d.day === 'Today' || d.day === 'Sot' || d.isToday;
+    const today = (this.parsedWeatherData?.weekly_forecast || []).find(isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
     if (today?.max != null) return today.max;
     if (typeof today?.temps === 'string') {
       const match = today.temps.match(/([0-9.-]+)°/);
@@ -1147,7 +1037,8 @@ async handleLogout() {
   }
 
   getTodayWeatherLow(): number | null {
-    const today = (this.parsedWeatherData?.weekly_forecast || []).find((d: any) => d.day === 'Денес' || d.isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
+    const isToday = (d: any) => d.day === 'Денес' || d.day === 'Today' || d.day === 'Sot' || d.isToday;
+    const today = (this.parsedWeatherData?.weekly_forecast || []).find(isToday) || this.parsedWeatherData?.weekly_forecast?.[0];
     if (today?.min != null) return today.min;
     if (typeof today?.temps === 'string') {
       const parts = today.temps.split('/');
@@ -1217,22 +1108,34 @@ async handleLogout() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const validIds = parsed.filter(id => this.allWidgets.some(w => w.id === id));
-          const uniqueIds = Array.from(new Set(validIds)).slice(0, 9);
+          const uniqueIds = Array.from(new Set(validIds)).slice(0, this.MAX_WIDGET_COUNT);
+          const uvIdx = uniqueIds.indexOf('uv');
+          if (uvIdx !== -1 && !uniqueIds.includes('pharmacy')) {
+            uniqueIds[uvIdx] = 'pharmacy';
+          }
+          for (const defaultId of this.DEFAULT_WIDGET_IDS) {
+            if (uniqueIds.length >= this.MAX_WIDGET_COUNT) break;
+            if (!uniqueIds.includes(defaultId) && this.allWidgets.some(w => w.id === defaultId)) {
+              uniqueIds.push(defaultId);
+            }
+          }
           if (uniqueIds.length > 0) {
             this.activeWidgetIds = uniqueIds;
+            this.saveWidgetOrder();
             return;
           }
         }
       }
     } catch (e) {}
 
-    // Default 9 widgets layout
+    // Default widgets layout
     this.activeWidgetIds = [...this.DEFAULT_WIDGET_IDS];
+    this.saveWidgetOrder();
   }
 
   saveWidgetOrder() {
     try {
-      localStorage.setItem(this.STORAGE_WIDGET_ORDER_KEY, JSON.stringify(this.activeWidgetIds.slice(0, 9)));
+      localStorage.setItem(this.STORAGE_WIDGET_ORDER_KEY, JSON.stringify(this.activeWidgetIds.slice(0, this.MAX_WIDGET_COUNT)));
     } catch (e) {}
   }
 
@@ -1241,7 +1144,7 @@ async handleLogout() {
       this.loadSavedWidgetOrder();
     }
     this.visibleWidgets = this.activeWidgetIds
-      .slice(0, 9)
+      .slice(0, this.MAX_WIDGET_COUNT)
       .map(id => this.allWidgets.find(w => w.id === id)!)
       .filter(Boolean);
   }
@@ -1255,7 +1158,7 @@ async handleLogout() {
   }
 
   getEmptySlotsCount(): number[] {
-    const emptyCount = Math.max(0, 9 - this.visibleWidgets.length);
+    const emptyCount = Math.max(0, this.MAX_WIDGET_COUNT - this.visibleWidgets.length);
     return Array(emptyCount).fill(0);
   }
 
@@ -1292,7 +1195,7 @@ async handleLogout() {
   }
 
   openAddWidgetModal() {
-    if (this.activeWidgetIds.length >= 9) return;
+    if (this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) return;
     this.isAddWidgetModalOpen = true;
     this.cdr.markForCheck();
   }
@@ -1303,14 +1206,14 @@ async handleLogout() {
   }
 
   addWidget(widgetId: string) {
-    if (this.activeWidgetIds.length >= 9) return;
+    if (this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) return;
     if (!this.activeWidgetIds.includes(widgetId)) {
       this.activeWidgetIds.push(widgetId);
       this.saveWidgetOrder();
       this.syncVisibleWidgets();
       this.triggerHaptic(30);
     }
-    if (this.getAvailableWidgets().length === 0 || this.activeWidgetIds.length >= 9) {
+    if (this.getAvailableWidgets().length === 0 || this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) {
       this.isAddWidgetModalOpen = false;
     }
     this.cdr.markForCheck();
@@ -1504,26 +1407,193 @@ async handleLogout() {
     return muni.name || '';
   }
 
-  getLocalizedAqiStatus(val: number): string {
-    const num = Number(val);
-    if (this.currentLang === 'en') {
-      if (num <= 50) return 'Good';
-      if (num <= 100) return 'Moderate';
-      if (num <= 150) return 'Sensitive';
-      if (num <= 200) return 'Unhealthy';
-      return 'Hazardous';
-    } else if (this.currentLang === 'al') {
-      if (num <= 50) return 'Mirë';
-      if (num <= 100) return 'Mesatar';
-      if (num <= 150) return 'E dëmshme';
-      if (num <= 200) return 'Shumë e dëmshme';
-      return 'E rrezikshme';
+  getLocalizedAqiStatus(val?: number | string | null, fallbackText?: string): string {
+    let num = val != null ? Number(val) : NaN;
+
+    if (isNaN(num) && fallbackText) {
+      const fb = fallbackText.toLowerCase().trim();
+      if (fb.includes('одличен') || fb.includes('good') || fb.includes('shkëlqyeshëm') || fb.includes('shkelqyeshem') || fb.includes('mirë') || fb.includes('mire')) num = 25;
+      else if (fb.includes('умерен') || fb.includes('moderate') || fb.includes('moderuar') || fb.includes('mesatar')) num = 75;
+      else if (fb.includes('чувствител') || fb.includes('sensitive') || fb.includes('pazakont') || fb.includes('ndjesh')) num = 125;
+      else if (fb.includes('многу') || fb.includes('very') || fb.includes('shumë') || fb.includes('shume')) num = 250;
+      else if (fb.includes('загаден') || fb.includes('unhealthy') || fb.includes('ndotur')) num = 175;
+      else if (fb.includes('опасн') || fb.includes('hazard') || fb.includes('rrezik') || fb.includes('dëmsh') || fb.includes('demsh') || fb.includes('штетен')) num = 350;
     }
-    if (num <= 50) return 'Одличен';
-    if (num <= 100) return 'Умерен';
-    if (num <= 150) return 'Чувствителен';
-    if (num <= 200) return 'Загаден';
-    return 'Опасно';
+
+    if (isNaN(num)) {
+      return fallbackText || this.translate.instant('AQI_MODAL.STATUS_MODERATE');
+    }
+
+    if (num <= 50) return this.translate.instant('AQI_MODAL.STATUS_GOOD');
+    if (num <= 100) return this.translate.instant('AQI_MODAL.STATUS_MODERATE');
+    if (num <= 150) return this.translate.instant('AQI_MODAL.STATUS_SENSITIVE');
+    if (num <= 200) return this.translate.instant('AQI_MODAL.STATUS_UNHEALTHY');
+    if (num <= 300) return this.translate.instant('AQI_MODAL.STATUS_VERY_UNHEALTHY');
+    return this.translate.instant('AQI_MODAL.STATUS_HAZARDOUS');
+  }
+
+  formatHourlyTime(time?: string): string {
+    if (!time) return '';
+    const trimmed = time.trim().toLowerCase();
+    if (trimmed === 'сега' || trimmed === 'now' || trimmed === 'tani') {
+      return this.translate.instant('WEATHER_MODAL.NOW');
+    }
+    return time;
+  }
+
+  formatForecastDay(day?: string): string {
+    if (!day) return '';
+    const trimmed = day.trim().toLowerCase();
+
+    // Today
+    if (trimmed === 'денес' || trimmed === 'today' || trimmed === 'sot') {
+      return this.translate.instant('WEATHER_MODAL.TODAY');
+    }
+    // Tomorrow
+    if (trimmed === 'утре' || trimmed === 'tomorrow' || trimmed === 'nesër' || trimmed === 'neser') {
+      return this.translate.instant('WEATHER_MODAL.TOMORROW');
+    }
+    // Day after tomorrow
+    if (trimmed === 'задутре' || trimmed.includes('after tomorrow') || trimmed === 'pasnesër' || trimmed === 'pasneser') {
+      return this.translate.instant('WEATHER_MODAL.DAY_AFTER_TOMORROW');
+    }
+    // Sunday
+    if (trimmed === 'недела' || trimmed === 'sunday' || trimmed === 'e diel') {
+      return this.translate.instant('WEATHER_MODAL.SUNDAY');
+    }
+    // Monday
+    if (trimmed === 'понеделник' || trimmed === 'monday' || trimmed === 'e hënë' || trimmed === 'e hene') {
+      return this.translate.instant('WEATHER_MODAL.MONDAY');
+    }
+    // Tuesday
+    if (trimmed === 'вторник' || trimmed === 'tuesday' || trimmed === 'e martë' || trimmed === 'e marte') {
+      return this.translate.instant('WEATHER_MODAL.TUESDAY');
+    }
+    // Wednesday
+    if (trimmed === 'среда' || trimmed === 'wednesday' || trimmed === 'e mërkurë' || trimmed === 'e merkure') {
+      return this.translate.instant('WEATHER_MODAL.WEDNESDAY');
+    }
+    // Thursday
+    if (trimmed === 'четврток' || trimmed === 'thursday' || trimmed === 'e enjte') {
+      return this.translate.instant('WEATHER_MODAL.THURSDAY');
+    }
+    // Friday
+    if (trimmed === 'петок' || trimmed === 'friday' || trimmed === 'e premte') {
+      return this.translate.instant('WEATHER_MODAL.FRIDAY');
+    }
+    // Saturday
+    if (trimmed === 'сабота' || trimmed === 'saturday' || trimmed === 'e shtunë' || trimmed === 'e shtune') {
+      return this.translate.instant('WEATHER_MODAL.SATURDAY');
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+      const d = new Date(day.trim());
+      const dayIndex = d.getDay();
+      const keys = [
+        'WEATHER_MODAL.SUNDAY',
+        'WEATHER_MODAL.MONDAY',
+        'WEATHER_MODAL.TUESDAY',
+        'WEATHER_MODAL.WEDNESDAY',
+        'WEATHER_MODAL.THURSDAY',
+        'WEATHER_MODAL.FRIDAY',
+        'WEATHER_MODAL.SATURDAY'
+      ];
+      return this.translate.instant(keys[dayIndex]);
+    }
+
+    return day;
+  }
+
+  getLocalizedCityName(city?: string): string {
+    if (!city) return '';
+    const norm = city.trim().toLowerCase();
+
+    const cityMap: Record<string, { mk: string; en: string; al: string }> = {
+      'скопје': { mk: 'Скопје', en: 'Skopje', al: 'Shkup' },
+      'skopje': { mk: 'Скопје', en: 'Skopje', al: 'Shkup' },
+      'shkup': { mk: 'Скопје', en: 'Skopje', al: 'Shkup' },
+      'битола': { mk: 'Битола', en: 'Bitola', al: 'Manastir' },
+      'bitola': { mk: 'Битола', en: 'Bitola', al: 'Manastir' },
+      'manastir': { mk: 'Битола', en: 'Bitola', al: 'Manastir' },
+      'охрид': { mk: 'Охрид', en: 'Ohrid', al: 'Ohër' },
+      'ohrid': { mk: 'Охрид', en: 'Ohrid', al: 'Ohër' },
+      'ohër': { mk: 'Охрид', en: 'Ohrid', al: 'Ohër' },
+      'oher': { mk: 'Охрид', en: 'Ohrid', al: 'Ohër' },
+      'тетово': { mk: 'Тетово', en: 'Tetovo', al: 'Tetovë' },
+      'tetovo': { mk: 'Тетово', en: 'Tetovo', al: 'Tetovë' },
+      'tetovë': { mk: 'Тетово', en: 'Tetovo', al: 'Tetovë' },
+      'tetove': { mk: 'Тетово', en: 'Tetovo', al: 'Tetovë' },
+      'куманово': { mk: 'Куманово', en: 'Kumanovo', al: 'Kumanovë' },
+      'kumanovo': { mk: 'Куманово', en: 'Kumanovo', al: 'Kumanovë' },
+      'kumanovë': { mk: 'Куманово', en: 'Kumanovo', al: 'Kumanovë' },
+      'гостивар': { mk: 'Гостивар', en: 'Gostivar', al: 'Gostivar' },
+      'gostivar': { mk: 'Гостивар', en: 'Gostivar', al: 'Gostivar' },
+      'струга': { mk: 'Струга', en: 'Struga', al: 'Strugë' },
+      'struga': { mk: 'Струга', en: 'Struga', al: 'Strugë' },
+      'strugë': { mk: 'Струга', en: 'Struga', al: 'Strugë' },
+      'дебар': { mk: 'Дебар', en: 'Debar', al: 'Dibër' },
+      'debar': { mk: 'Дебар', en: 'Debar', al: 'Dibër' },
+      'dibër': { mk: 'Дебар', en: 'Debar', al: 'Dibër' },
+      'кичево': { mk: 'Кичево', en: 'Kichevo', al: 'Kërçovë' },
+      'kichevo': { mk: 'Кичево', en: 'Kichevo', al: 'Kërçovë' },
+      'kërçovë': { mk: 'Кичево', en: 'Kichevo', al: 'Kërçovë' },
+      'велес': { mk: 'Велес', en: 'Veles', al: 'Veles' },
+      'veles': { mk: 'Велес', en: 'Veles', al: 'Veles' },
+      'прилеп': { mk: 'Прилеп', en: 'Prilep', al: 'Përlep' },
+      'prilep': { mk: 'Прилеп', en: 'Prilep', al: 'Përlep' },
+      'струмица': { mk: 'Струмица', en: 'Strumica', al: 'Strumicë' },
+      'strumica': { mk: 'Струмица', en: 'Strumica', al: 'Strumicë' },
+      'штип': { mk: 'Штип', en: 'Shtip', al: 'Shtip' },
+      'stip': { mk: 'Штип', en: 'Shtip', al: 'Shtip' },
+      'shtip': { mk: 'Штип', en: 'Shtip', al: 'Shtip' },
+      'кавадарци': { mk: 'Кавадарци', en: 'Kavadarci', al: 'Kavadar' },
+      'kavadarci': { mk: 'Кавадарци', en: 'Kavadarci', al: 'Kavadar' },
+      'кочани': { mk: 'Кочани', en: 'Kochani', al: 'Koçan' },
+      'kochani': { mk: 'Кочани', en: 'Kochani', al: 'Koçan' },
+      'гевгелија': { mk: 'Гевгелија', en: 'Gevgelija', al: 'Gjevgjeli' },
+      'gevgelija': { mk: 'Гевгелија', en: 'Gevgelija', al: 'Gjevgjeli' },
+      'ресен': { mk: 'Ресен', en: 'Resen', al: 'Resnjë' },
+      'resen': { mk: 'Ресен', en: 'Resen', al: 'Resnjë' },
+      'радовиш': { mk: 'Радовиш', en: 'Radovish', al: 'Radovisht' },
+      'radovish': { mk: 'Радовиш', en: 'Radovish', al: 'Radovisht' },
+      'крива паланка': { mk: 'Крива Паланка', en: 'Kriva Palanka', al: 'Kriva Pallankë' },
+      'kriva palanka': { mk: 'Крива Паланка', en: 'Kriva Palanka', al: 'Kriva Pallankë' },
+      'берово': { mk: 'Берово', en: 'Berovo', al: 'Berovë' },
+      'berovo': { mk: 'Берово', en: 'Berovo', al: 'Berovë' },
+      'делчево': { mk: 'Делчево', en: 'Delchevo', al: 'Dellçevë' },
+      'delchevo': { mk: 'Делчево', en: 'Delchevo', al: 'Dellçevë' },
+      'виница': { mk: 'Виница', en: 'Vinica', al: 'Vinicë' },
+      'vinica': { mk: 'Виница', en: 'Vinica', al: 'Vinicë' },
+      'крушево': { mk: 'Крушево', en: 'Krushevo', al: 'Krushevë' },
+      'krushevo': { mk: 'Крушево', en: 'Krushevo', al: 'Krushevë' },
+      'неготино': { mk: 'Неготино', en: 'Negotino', al: 'Negotinë' },
+      'negotino': { mk: 'Неготино', en: 'Negotino', al: 'Negotinë' },
+      'свети николе': { mk: 'Свети Николе', en: 'Sveti Nikole', al: 'Sveti Nikollë' },
+      'sveti nikole': { mk: 'Свети Николе', en: 'Sveti Nikole', al: 'Sveti Nikollë' },
+      'пробиштип': { mk: 'Пробиштип', en: 'Probishtip', al: 'Probishtip' },
+      'probishtip': { mk: 'Пробиштип', en: 'Probishtip', al: 'Probishtip' },
+      'валандово': { mk: 'Валандово', en: 'Valandovo', al: 'Vallandovë' },
+      'valandovo': { mk: 'Валандово', en: 'Valandovo', al: 'Vallandovë' },
+      'богданци': { mk: 'Богданци', en: 'Bogdanci', al: 'Bogdancë' },
+      'bogdanci': { mk: 'Богданци', en: 'Bogdanci', al: 'Bogdancë' },
+      'кратово': { mk: 'Кратово', en: 'Kratovo', al: 'Kratovë' },
+      'kratovo': { mk: 'Кратово', en: 'Kratovo', al: 'Kratovë' },
+      'демир капија': { mk: 'Демир Капија', en: 'Demir Kapija', al: 'Demir Kapi' },
+      'demir kapija': { mk: 'Демир Капија', en: 'Demir Kapija', al: 'Demir Kapi' },
+      'демир хисар': { mk: 'Демир Хисар', en: 'Demir Hisar', al: 'Demir Hisar' },
+      'demir hisar': { mk: 'Демир Хисар', en: 'Demir Hisar', al: 'Demir Hisar' },
+      'македонски брод': { mk: 'Македонски Брод', en: 'Makedonski Brod', al: 'Makedonski Brod' },
+      'makedonski brod': { mk: 'Македонски Брод', en: 'Makedonski Brod', al: 'Makedonski Brod' },
+      'македонска каменица': { mk: 'Македонска Каменица', en: 'Makedonska Kamenica', al: 'Makedonska Kamenicë' },
+      'makedonska kamenica': { mk: 'Македонска Каменица', en: 'Makedonska Kamenica', al: 'Makedonska Kamenicë' },
+      'пехчево': { mk: 'Пехчево', en: 'Pehchevo', al: 'Pehçevë' },
+      'pehchevo': { mk: 'Пехчево', en: 'Pehchevo', al: 'Pehçevë' }
+    };
+
+    const entry = cityMap[norm];
+    if (!entry) return city;
+    const lang = (this.currentLang || 'mk') as 'mk' | 'en' | 'al';
+    return entry[lang] || entry.mk || city;
   }
 
   async changeLanguage(event: any) {
@@ -1531,9 +1601,12 @@ async handleLogout() {
     this.currentLang = selectedLang;
     this.translate.use(selectedLang);
     localStorage.setItem('app_language', selectedLang);
-    await this.healthService.setLanguage(selectedLang);
     await this.supabaseService.updateDeviceLanguage(selectedLang);
+    if (this.parsedWeatherData) {
+      this.applyWeatherMetricsToWidgets(this.parsedWeatherData);
+    }
     this.filterWidgets();
+    this.cdr.markForCheck();
   }
 
   setDetailModal(isOpen: boolean) {
@@ -1541,6 +1614,7 @@ async handleLogout() {
     if (!isOpen) {
       this.activeDetailWidgetId = null;
       this.closeLoyaltySubView();
+      this.destroyLeafletMap();
     }
   }
 
@@ -1581,32 +1655,24 @@ async handleLogout() {
 
     this.activeDetailWidgetId = widgetId;
     if (widgetId === 'loyalty') this.loyaltyModalView = 'list';
-    if (widgetId === 'activity') {
-      if (Capacitor.isNativePlatform()) {
-        const permCheck = await this.healthService.checkHealthPermissions();
-        this.isHealthPermGranted = permCheck.granted;
-      }
-      const refreshed = await this.healthService.getTodayDeviceSteps();
-      this.todayHealthData = refreshed;
-      this.updateActivityWidgetDisplay(refreshed);
-
-      if (this.currentUser) {
-        await this.syncHealthData(this.currentUser.id);
-        const remoteMetrics = await this.supabaseService.getLast7DaysHealthMetrics(this.currentUser.id);
-        if (remoteMetrics && remoteMetrics.length > 0) {
-          this.last7DaysHealth = remoteMetrics;
-        } else {
-          this.last7DaysHealth = await this.healthService.getLocal7DaysHistory();
-        }
-      } else {
-        this.last7DaysHealth = await this.healthService.getLocal7DaysHistory();
-      }
-    }
     if (widgetId === 'currency') {
       try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
     }
     if (widgetId === 'fuel') {
       try { await this.fetchDatabaseFuelPrices(); } catch (e) {}
+    }
+    if (widgetId === 'pharmacy') {
+      this.pharmacyModalView = 'list';
+      if (!this.currentUserCoords) {
+        this.weatherService.getDeviceCoordinates().subscribe(coords => {
+          this.currentUserCoords = coords;
+          this.updateNearestPharmacy();
+          this.updateFilteredPharmacies();
+          this.updatePharmacyWidgetDisplay();
+          this.cdr.markForCheck();
+        });
+      }
+      this.loadDutyPharmacies();
     }
     this.isDetailModalOpen = true;
   }
@@ -1616,13 +1682,6 @@ async handleLogout() {
   }
 
   togglePastEventsView() { this.showPastEvents = !this.showPastEvents; }
-
-  formatHistoryDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const locale = this.currentLang === 'mk' ? 'mk-MK' : (this.currentLang === 'al' ? 'sq-AL' : 'en-US');
-    return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
-  }
 
   openStockDetail(stock: StockTicker) {
     this.selectedStockDetail = stock;
@@ -1642,6 +1701,7 @@ async handleLogout() {
     if (this.widgetRotationIntervalSub) clearInterval(this.widgetRotationIntervalSub);
     this.cryptoService.disconnect();
     this.stockService.disconnect();
+    this.destroyLeafletMap();
   }
 
   async onAddStockSubmit() {
@@ -1998,12 +2058,12 @@ async handleLogout() {
   // 1. Add notification state map
 notificationPreferences: Record<string, boolean> = JSON.parse(
   localStorage.getItem('widget_notification_prefs') || 
-  '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true,"activity":true,"aqi":true}'
+  '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true,"aqi":true}'
 );
 
 // 2. Check if a widget supports notification toggles
 supportsNotification(widgetId: string): boolean {
-  return ['weather', 'fuel', 'stock', 'crypto', 'holidays', 'activity', 'aqi'].includes(widgetId);
+  return ['weather', 'fuel', 'stock', 'crypto', 'holidays', 'aqi'].includes(widgetId);
 }
 
 // 3. Toggle handler (stops click propagation so it doesn't open the detail modal)
@@ -2023,15 +2083,380 @@ toggleWidgetNotification(widgetId: string, event: Event) {
   if (this.currentUser) {
     this.supabaseService.updateNotificationPreference(widgetId, newVal);
   }
-
-  // If activity, inform HealthService & native StepTracker
-  if (widgetId === 'activity') {
-    this.healthService.setNotificationEnabled(newVal);
-  }
 }
 
 isNotificationActive(widgetId: string): boolean {
   if (!this.currentUser) return false;
   return this.notificationPreferences[widgetId] ?? true;
 }
+
+  // --- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) METHODS ---
+
+  async loadDutyPharmacies() {
+    try {
+      const data = await this.pharmacyService.fetchPharmacies();
+      this.pharmaciesList = data || [];
+      this.updateNearestPharmacy();
+      this.updateFilteredPharmacies();
+      this.updatePharmacyWidgetDisplay();
+      this.cdr.markForCheck();
+    } catch (err) {
+      console.warn('Error loading pharmacies in home page:', err);
+    }
+  }
+
+  updateNearestPharmacy() {
+    if (!this.pharmaciesList || this.pharmaciesList.length === 0) return;
+
+    if (this.currentUserCoords) {
+      for (const p of this.pharmaciesList) {
+        if (p.latitude && p.longitude) {
+          p.distanceKm = this.pharmacyService.calculateDistanceKm(
+            this.currentUserCoords.latitude,
+            this.currentUserCoords.longitude,
+            p.latitude,
+            p.longitude
+          );
+        }
+      }
+
+      const sorted = [...this.pharmaciesList]
+        .filter(p => p.distanceKm != null)
+        .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+
+      this.nearestPharmacy = sorted.length > 0 ? sorted[0] : null;
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      const cityMatch = this.pharmaciesList.find(p => p.city.toLowerCase().includes(userCity));
+      this.nearestPharmacy = cityMatch || this.pharmaciesList[0] || null;
+    } else {
+      this.nearestPharmacy = this.pharmaciesList[0] || null;
+    }
+  }
+
+  isPharmacyOpenNow(p?: DutyPharmacy | null): boolean {
+    if (!p) return false;
+    if (p.is_24_7) return true;
+    if (!p.working_hours) return true;
+
+    const lower = p.working_hours.toLowerCase();
+    if (lower.includes('24/7') || lower.includes('00:00 - 24:00')) return true;
+
+    const match = p.working_hours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+    if (!match) return true;
+
+    const startH = parseInt(match[1], 10);
+    const startM = parseInt(match[2], 10);
+    const endH = parseInt(match[3], 10);
+    const endM = parseInt(match[4], 10);
+
+    const now = new Date();
+    const curMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = startH * 60 + startM;
+    let endMinutes = endH * 60 + endM;
+
+    if (endH === 24 || (endH === 0 && endM === 0 && startMinutes > 0)) {
+      endMinutes = 24 * 60;
+    }
+
+    if (endMinutes < startMinutes) {
+      return curMinutes >= startMinutes || curMinutes < endMinutes;
+    }
+    return curMinutes >= startMinutes && curMinutes < endMinutes;
+  }
+
+  updatePharmacyWidgetDisplay() {
+    const w = this.allWidgets.find(item => item.id === 'pharmacy');
+    if (w) {
+      if (this.nearestPharmacy && this.nearestPharmacy.distanceKm != null) {
+        w.value = this.pharmacyService.formatDistance(this.nearestPharmacy.distanceKm);
+        if (this.nearestPharmacy.is_24_7) {
+          w.unit = '24/7';
+        } else {
+          const isOpen = this.isPharmacyOpenNow(this.nearestPharmacy);
+          w.unit = isOpen 
+            ? (this.translate.instant('PHARMACY_MODAL.OPEN') || 'Отворено') 
+            : (this.translate.instant('PHARMACY_MODAL.CLOSED') || 'Затворено');
+        }
+      } else {
+        w.value = '24/7';
+        w.unit = this.translate.instant('PHARMACY_MODAL.OPEN_NOW') || 'Дежурна';
+      }
+      w.customColor = undefined;
+    }
+    this.filterWidgets();
+  }
+
+  updateFilteredPharmacies() {
+    let list = [...this.pharmaciesList];
+
+    if (this.selectedPharmacyCity) {
+      const cityFilter = this.selectedPharmacyCity.toLowerCase().trim();
+      list = list.filter(p => 
+        p.city.toLowerCase().includes(cityFilter) || 
+        (p.city_slug && p.city_slug.toLowerCase() === cityFilter)
+      );
+    }
+
+    if (this.pharmacySearchQuery && this.pharmacySearchQuery.trim()) {
+      const q = this.pharmacySearchQuery.toLowerCase().trim();
+      list = list.filter(p => 
+        p.name.toLowerCase().includes(q) ||
+        p.address.toLowerCase().includes(q) ||
+        (p.municipality && p.municipality.toLowerCase().includes(q)) ||
+        p.city.toLowerCase().includes(q)
+      );
+    }
+
+    if (this.currentUserCoords) {
+      list.sort((a, b) => (a.distanceKm ?? 999999) - (b.distanceKm ?? 999999));
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      list.sort((a, b) => {
+        const aMatch = a.city.toLowerCase().includes(userCity) ? 0 : 1;
+        const bMatch = b.city.toLowerCase().includes(userCity) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    this.filteredPharmacies = list;
+
+    if (this.pharmacyModalView === 'map' && this.leafletMap) {
+      this.renderLeafletMarkers();
+    }
+  }
+
+  selectPharmacyCity(city: string) {
+    if (this.selectedPharmacyCity === city) {
+      this.selectedPharmacyCity = '';
+    } else {
+      this.selectedPharmacyCity = city;
+    }
+    this.updateFilteredPharmacies();
+    if (this.pharmacyModalView === 'map' && this.leafletMap) {
+      this.centerLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onPharmacySearchChange() {
+    this.updateFilteredPharmacies();
+    this.cdr.markForCheck();
+  }
+
+  setPharmacyModalView(view: 'list' | 'map') {
+    this.pharmacyModalView = view;
+    if (view === 'map') {
+      setTimeout(() => {
+        this.initLeafletMap();
+      }, 100);
+    }
+    this.cdr.markForCheck();
+  }
+
+  initLeafletMap() {
+    const container = document.getElementById('pharmacy-leaflet-map');
+    if (!container) return;
+
+    if (this.leafletMap) {
+      this.leafletMap.remove();
+      this.leafletMap = null;
+      this.leafletMarkers = [];
+    }
+
+    const initialLat = this.currentUserCoords?.latitude ?? 41.9981;
+    const initialLng = this.currentUserCoords?.longitude ?? 21.4254;
+
+    this.leafletMap = L.map('pharmacy-leaflet-map', {
+      center: [initialLat, initialLng],
+      zoom: 13,
+      zoomControl: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.leafletMap);
+
+    if (this.currentUserCoords) {
+      const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `<div style="background: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(37,99,235,0.6);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([this.currentUserCoords.latitude, this.currentUserCoords.longitude], { icon: userIcon })
+        .addTo(this.leafletMap)
+        .bindPopup(`<b>${this.translate.instant('AQI_MODAL.YOUR_LOCATION') || 'Ваша локација'}</b>`);
+    }
+
+    this.renderLeafletMarkers();
+
+    setTimeout(() => {
+      if (this.leafletMap) {
+        this.leafletMap.invalidateSize();
+        this.centerLeafletMap();
+      }
+    }, 250);
+  }
+
+  renderLeafletMarkers() {
+    if (!this.leafletMap) return;
+
+    for (const marker of this.leafletMarkers) {
+      this.leafletMap.removeLayer(marker);
+    }
+    this.leafletMarkers = [];
+
+    const pharmacyIcon = L.divIcon({
+      className: 'pharmacy-leaflet-pin',
+      html: `<div style="background: #10b981; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 16px;">✚</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -15]
+    });
+
+    for (const p of this.filteredPharmacies) {
+      if (!p.latitude || !p.longitude) continue;
+
+      const marker = L.marker([p.latitude, p.longitude], { icon: pharmacyIcon });
+      
+      const phoneHtml = p.phone ? `<a href="tel:${p.phone}" style="display:inline-block; margin-top:6px; color:#10b981; font-weight:bold; text-decoration:none; font-size:13px;">📞 ${p.phone}</a>` : '';
+      const distHtml = p.distanceKm != null ? `<div style="color:#64748b; font-size:12px; margin-top:2px;">📍 ${this.pharmacyService.formatDistance(p.distanceKm)}</div>` : '';
+      const directionsUrl = p.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
+      
+      const isOpen = this.isPharmacyOpenNow(p);
+      const openLabel = this.translate.instant('PHARMACY_MODAL.OPEN') || 'Отворено';
+      const closedLabel = this.translate.instant('PHARMACY_MODAL.CLOSED') || 'Затворено';
+      const directionsLabel = this.translate.instant('PHARMACY_MODAL.DIRECTIONS') || 'Насоки';
+
+      const badgeHtml = p.is_24_7
+        ? `<div style="display:inline-block; background:#ecfdf5; color:#059669; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">24/7 ${openLabel}</div>`
+        : (isOpen
+            ? `<div style="display:inline-block; background:#ecfdf5; color:#059669; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">🟢 ${openLabel}</div>`
+            : `<div style="display:inline-block; background:#fef2f2; color:#dc2626; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">🔴 ${closedLabel}</div>`
+          );
+
+      const hoursHtml = p.working_hours 
+        ? `<div style="color:#0f766e; font-size:11px; font-weight:700; margin-top:4px;">🕒 ${p.working_hours}</div>` 
+        : '';
+
+      const popupContent = `
+        <div style="font-family: inherit; font-size: 13px; min-width: 170px; color: #1e293b;">
+          <div style="font-weight: 800; color: #0f172a; font-size: 14px; margin-bottom: 2px;">${p.name}</div>
+          <div style="color: #64748b; font-size: 12px;">${p.address}, ${p.city}</div>
+          ${hoursHtml}
+          ${badgeHtml}
+          ${distHtml}
+          ${phoneHtml}
+          <div style="margin-top: 8px;">
+            <a href="${directionsUrl}" target="_blank" style="background:#10b981; color:white; padding:5px 12px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">${directionsLabel} 🧭</a>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      marker.addTo(this.leafletMap);
+      this.leafletMarkers.push(marker);
+    }
+  }
+
+  centerLeafletMap() {
+    if (!this.leafletMap) return;
+    if (this.filteredPharmacies.length === 0) return;
+
+    if (this.selectedPharmacyCity) {
+      const firstInCity = this.filteredPharmacies.find(p => p.latitude && p.longitude);
+      if (firstInCity) {
+        this.leafletMap.setView([firstInCity.latitude, firstInCity.longitude], 13);
+        return;
+      }
+    }
+
+    if (this.currentUserCoords) {
+      this.leafletMap.setView([this.currentUserCoords.latitude, this.currentUserCoords.longitude], 13);
+    } else {
+      const first = this.filteredPharmacies.find(p => p.latitude && p.longitude);
+      if (first) {
+        this.leafletMap.setView([first.latitude, first.longitude], 12);
+      }
+    }
+  }
+
+  destroyLeafletMap() {
+    if (this.leafletMap) {
+      this.leafletMap.remove();
+      this.leafletMap = null;
+      this.leafletMarkers = [];
+    }
+  }
+
+  openDirections(pharmacy: DutyPharmacy) {
+    const url = pharmacy.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`;
+    window.open(url, '_blank');
+  }
+
+  getPharmacyPhoneList(phoneStr?: string | null): string[] {
+    if (!phoneStr) return [];
+    return phoneStr
+      .split(/[,;\n]|\s+или\s+|\s+or\s+/i)
+      .map(p => p.trim().replace(/^[,;.\s]+|[,;.\s]+$/g, ''))
+      .filter(p => p.length >= 5);
+  }
+
+  getFormattedWorkingHoursLines(hours?: string | null): string[] {
+    if (!hours) return [];
+    if (hours.includes('\n')) {
+      return hours.split('\n').map(l => l.trim()).filter(Boolean);
+    }
+    const parts = hours.split(/,\s*(?=(?:сабота|недела|нед\.|саб\.|sabota|nedela|saturday|sunday)\b)/i);
+    return parts.map(p => p.trim()).filter(Boolean);
+  }
+
+  dialPharmacy(phone?: string) {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    if (!cleanPhone) return;
+    window.location.href = `tel:${cleanPhone}`;
+  }
+
+  async onCallPharmacyClick(pharmacy: DutyPharmacy) {
+    const phones = this.getPharmacyPhoneList(pharmacy.phone);
+    if (phones.length === 0) return;
+    if (phones.length === 1) {
+      this.dialPharmacy(phones[0]);
+      return;
+    }
+
+    const cancelText = this.currentLang === 'en' ? 'Cancel' : (this.currentLang === 'al' ? 'Anulo' : 'Откажи');
+    const headerTitle = this.currentLang === 'en' 
+      ? 'Choose number to call' 
+      : (this.currentLang === 'al' ? 'Zgjidhni numrin për të thirrur' : 'Изберете број за повикување');
+
+    const buttons: any[] = phones.map(num => ({
+      text: num,
+      icon: 'call',
+      handler: () => {
+        this.dialPharmacy(num);
+      }
+    }));
+
+    buttons.push({
+      text: cancelText,
+      role: 'cancel',
+      icon: 'close'
+    });
+
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: pharmacy.name,
+      subHeader: headerTitle,
+      buttons
+    });
+
+    await actionSheet.present();
+  }
+
+  formatPharmacyDistance(distanceKm?: number): string {
+    return this.pharmacyService.formatDistance(distanceKm);
+  }
 }

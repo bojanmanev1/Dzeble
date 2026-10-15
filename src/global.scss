@@ -25,6 +25,9 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
+/* Leaflet Map Styles */
+@import "leaflet/dist/leaflet.css";
+
 /**
  * Ionic Dark Mode
  * -----------------------------------------------------
@@ -224,6 +227,10 @@ html.dark {
     color: #e2e8f0 !important; /* Clean silver-white loyalty card icon */
   }
 
+  .pharmacy-icon {
+    color: #10b981 !important; /* Medical / Pharmacy green icon */
+  }
+
   .widget-notif-toggle {
     background: rgba(52, 211, 153, 0.1) !important;
     color: #9bb0a7 !important;
@@ -303,8 +310,28 @@ html.dark {
   .lang-select-pill {
     --background: #23342f !important;
     --color: #f0fdf4 !important;
-    border: 1px solid rgba(52, 211, 153, 0.25) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    --border-width: 0 !important;
+    --border-color: transparent !important;
+    --border-style: none !important;
+    --highlight-height: 0 !important;
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    min-height: unset !important;
+
+    &::part(container) {
+      border: none !important;
+      border-radius: 12px !important;
+    }
+
+    &::part(highlight) {
+      display: none !important;
+      height: 0 !important;
+      opacity: 0 !important;
+    }
 
     &::part(text) {
       color: #f0fdf4 !important;
@@ -554,6 +581,172 @@ html.dark {
       background-color: #ffffff !important;
       border: 1px solid #cbd5e1 !important;
     }
+
+    /* Pharmacy Modal Dark Theme matching Stocks Design */
+    .pharmacy-view-switcher {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .switcher-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .pharmacy-search-box {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .search-icon {
+        color: #9bb0a7 !important;
+      }
+
+      .pharmacy-search-input {
+        background: transparent !important;
+        color: #f1f5f9 !important;
+
+        &::placeholder {
+          color: #9bb0a7 !important;
+        }
+      }
+
+      .pharmacy-search-clear {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    .pharmacy-city-scroll {
+      .city-chip {
+        background: #1c2824 !important;
+        border: 1px solid rgba(52, 211, 153, 0.18) !important;
+        color: #9bb0a7 !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          border-color: #10b981 !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .pharmacy-card {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+
+      .pharmacy-name-block {
+        .pharmacy-name-row {
+          .pharmacy-name {
+            color: #f1f5f9 !important;
+          }
+
+          .pharmacy-badge-open {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+            border: 1px solid rgba(52, 211, 153, 0.35) !important;
+          }
+
+          .pharmacy-badge-closed {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+            border: 1px solid rgba(248, 113, 113, 0.35) !important;
+          }
+        }
+
+        .pharmacy-address-row {
+          color: #9bb0a7 !important;
+
+          .addr-icon {
+            color: #6ee7b7 !important;
+          }
+
+          span {
+            color: #9bb0a7 !important;
+          }
+        }
+
+        .pharmacy-hours-row {
+          color: #34d399 !important;
+
+          .hours-icon {
+            color: #34d399 !important;
+          }
+
+          .pharmacy-hours-lines .hours-line {
+            color: #34d399 !important;
+          }
+        }
+      }
+
+      .pharmacy-distance-tag {
+        background: #121514 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+        color: #ffffff !important;
+      }
+
+      .pharmacy-card-actions {
+        .pharmacy-action-btn.btn-call {
+          background: rgba(16, 185, 129, 0.15) !important;
+          color: #34d399 !important;
+          border: 1px solid rgba(52, 211, 153, 0.35) !important;
+
+          ion-icon {
+            color: #34d399 !important;
+          }
+
+          .multi-phone-col .phone-number-line {
+            color: #34d399 !important;
+          }
+
+          .phone-dropdown-icon {
+            color: #34d399 !important;
+          }
+        }
+
+        .pharmacy-action-btn.btn-directions {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+          color: #ffffff !important;
+          border: none !important;
+        }
+      }
+    }
+
+    .pharmacy-map-wrapper {
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .pharmacy-map-badge {
+        background: rgba(28, 40, 36, 0.95) !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      }
+    }
+
+    .pharmacy-empty-state {
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+
+      p {
+        color: #9bb0a7 !important;
+      }
+    }
+  }
+
+  ion-action-sheet {
+    --background: #1c2824;
+    --button-background: #1c2824;
+    --button-background-selected: #23342f;
+    --button-color: #f1f5f9;
+    --color: #f1f5f9;
   }
 
   /* 8. Popovers (Language selector) */
@@ -725,6 +918,84 @@ html.dark {
 
   .btn-toggle-mode {
     color: #34d399 !important;
+  }
+
+  /* Modern Auth Popup Modal (Dark Mode) */
+  .auth-popup-card {
+    background: #151d19 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(16, 185, 129, 0.15) !important;
+  }
+
+  .popup-close-btn {
+    background: #1c2722 !important;
+    color: #94a3b8 !important;
+
+    &:hover {
+      background: #24332d !important;
+      color: #f8fafc !important;
+    }
+  }
+
+  .popup-icon-badge {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.35)) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.3) !important;
+
+    .hero-icon {
+      color: #34d399 !important;
+    }
+  }
+
+  .popup-title {
+    color: #f8fafc !important;
+  }
+
+  .popup-subtitle {
+    color: #94a3b8 !important;
+  }
+
+  .popup-email-pill {
+    background: #1a2520 !important;
+    border-color: rgba(52, 211, 153, 0.3) !important;
+
+    ion-icon {
+      color: #34d399 !important;
+    }
+
+    .email-text {
+      color: #f8fafc !important;
+    }
+  }
+
+  .popup-hint-box {
+    background: #19241f !important;
+    border-color: rgba(52, 211, 153, 0.18) !important;
+
+    .hint-primary {
+      color: #cbd5e1 !important;
+    }
+
+    .hint-spam {
+      color: #94a3b8 !important;
+    }
+  }
+
+  .resend-feedback-chip {
+    background: rgba(16, 185, 129, 0.16) !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    color: #6ee7b7 !important;
+  }
+
+  .btn-popup-secondary {
+    background: #1a2520 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    color: #cbd5e1 !important;
+
+    &:hover {
+      background: #23332c !important;
+      color: #f8fafc !important;
+    }
   }
 }
 

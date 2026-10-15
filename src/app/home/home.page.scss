@@ -153,34 +153,61 @@ input {
 }
 
 .lang-select-pill {
-  --background: #ffffff;
+  --background: #f1f5f9;
   --color: #0f172a;
   --placeholder-color: #0f172a;
-  --padding-start: 14px;
-  --padding-end: 12px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
-  --border-radius: 12px; /* Smoother, modern radius */
+  --padding-start: 16px !important;
+  --padding-end: 12px !important;
+  --padding-top: 6px !important;
+  --padding-bottom: 6px !important;
+  --border-radius: 12px;
+  --border-width: 0 !important;
+  --border-color: transparent !important;
+  --border-style: none !important;
+  --highlight-height: 0 !important;
+  --highlight-color-focused: transparent !important;
+  --highlight-color-valid: transparent !important;
+  --highlight-color-invalid: transparent !important;
   
   font-size: 0.85rem;
   font-weight: 700;
-  border: 1px solid #e2e8f0; /* Lighter slate border */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  min-height: 36px;
+  border-radius: 12px;
+  overflow: visible;
   transition: all 0.2s ease;
 
   &:active {
-    background: #f8fafc;
+    --background: #e2e8f0;
+  }
+
+  &::part(container) {
+    border: none !important;
+    border-radius: 12px;
+    padding-left: 14px !important;
+    padding-right: 10px !important;
+  }
+
+  &::part(highlight) {
+    display: none !important;
+    height: 0 !important;
+    opacity: 0 !important;
   }
 
   &::part(text) {
     font-weight: 700;
     color: #0f172a;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
   }
 
   &::part(icon) {
-    color: #64748b; /* Subtle arrow icon */
+    color: #64748b;
     opacity: 1;
     font-size: 14px;
+    margin-left: 4px;
   }
 }
 
@@ -263,7 +290,7 @@ ion-toggle {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    background: #2563eb;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: #ffffff;
     border: none;
     padding: 6px 14px;
@@ -271,8 +298,8 @@ ion-toggle {
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-    transition: transform 0.15s ease, background-color 0.2s ease;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
 
     ion-icon {
       font-size: 16px;
@@ -280,6 +307,7 @@ ion-toggle {
 
     &:active {
       transform: scale(0.95);
+      background: #059669;
     }
   }
 }
@@ -288,8 +316,8 @@ ion-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(59, 130, 246, 0.14) 100%);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.14) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.25);
   border-radius: 14px;
   padding: 8px 12px;
   margin-bottom: 10px;
@@ -303,13 +331,13 @@ ion-toggle {
   .edit-banner-title {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #1e3a8a;
+    color: #065f46;
   }
 
   .edit-banner-hint {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #3b82f6;
+    color: #059669;
   }
 
   .btn-banner-reset {
@@ -317,21 +345,23 @@ ion-toggle {
     align-items: center;
     gap: 4px;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #475569;
+    border: 1px solid #a7f3d0;
+    color: #047857;
     padding: 5px 10px;
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.15s ease;
 
     ion-icon {
       font-size: 14px;
+      color: #059669;
     }
 
     &:active {
       transform: scale(0.95);
-      background: #f1f5f9;
+      background: #ecfdf5;
     }
   }
 }
@@ -407,7 +437,7 @@ ion-toggle {
   &.is-being-dragged {
     z-index: 9999 !important;
     opacity: 0.95;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(37, 99, 235, 0.35) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(16, 185, 129, 0.4) !important;
     transform: translate3d(var(--drag-x, 0px), var(--drag-y, 0px), 0) scale(1.08) !important;
     animation: none !important;
     transition: none !important;
@@ -445,8 +475,8 @@ ion-toggle {
 }
 
 .empty-slot-card {
-  border: 2px dashed #cbd5e1 !important;
-  background: rgba(248, 250, 252, 0.7) !important;
+  border: 2px dashed #a7f3d0 !important;
+  background: rgba(236, 253, 245, 0.6) !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -454,8 +484,8 @@ ion-toggle {
   transition: all 0.2s ease;
 
   &:hover, &:active {
-    border-color: #3b82f6 !important;
-    background: rgba(59, 130, 246, 0.08) !important;
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
     transform: scale(0.98);
   }
 
@@ -474,11 +504,11 @@ ion-toggle {
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #e2e8f0;
+    background: #d1fae5;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #3b82f6;
+    color: #059669;
 
     ion-icon {
       font-size: 1.2rem;
@@ -488,7 +518,7 @@ ion-toggle {
   .empty-slot-label {
     font-size: 0.70rem;
     font-weight: 700;
-    color: #64748b;
+    color: #047857;
     text-align: center;
   }
 }
@@ -561,7 +591,7 @@ ion-toggle {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      background: #2563eb;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: #ffffff;
       border: none;
       padding: 6px 12px;
@@ -569,6 +599,7 @@ ion-toggle {
       font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 
       ion-icon {
         font-size: 14px;
@@ -576,6 +607,7 @@ ion-toggle {
 
       &:active {
         transform: scale(0.95);
+        background: #059669;
       }
     }
   }
@@ -639,6 +671,10 @@ ion-toggle {
   font-size: 1.65rem;
   color: #4e4e50;
   transition: color 0.2s ease;
+
+  &.pharmacy-icon {
+    color: #10b981;
+  }
 }
 
 .weather-rich-icon {
@@ -880,10 +916,6 @@ ion-toggle {
   color: #4e4e50;
 }
 
-.activity-icon {
-  color: #10b981;
-}
-
 /* Target your detail modal container */
 ion-modal {
   --height: auto;
@@ -938,8 +970,8 @@ ion-modal {
   z-index: 5;
 
   &.active {
-    background: #e0f2fe;
-    color: #0284c7;
+    background: #d1fae5;
+    color: #059669;
   }
 
   &:active {
@@ -947,30 +979,420 @@ ion-modal {
   }
 }
 
+/* --- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) STYLES --- */
+.pharmacy-view-switcher {
+  display: inline-flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin-top: 10px;
+
+  .switcher-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+  }
+}
+
+.pharmacy-search-box {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  gap: 8px;
+
+  .search-icon {
+    font-size: 1.1rem;
+    color: #94a3b8;
+  }
+
+  .pharmacy-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.88rem;
+    color: #0f172a;
+    font-weight: 500;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  .pharmacy-search-clear {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+  }
+}
+
+.pharmacy-city-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .city-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.active {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+  }
+}
+
+.pharmacy-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+
+  p {
+    margin: 8px 0 0 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+}
+
+.pharmacy-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pharmacy-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  .pharmacy-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pharmacy-name-block {
+    flex: 1;
+
+    .pharmacy-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+
+      .pharmacy-name {
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #0f172a;
+      }
+
+      .pharmacy-badge-open {
+        background: #ecfdf5;
+        color: #059669;
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(5, 150, 105, 0.2);
+      }
+
+      .pharmacy-badge-closed {
+        background: #fef2f2;
+        color: #dc2626;
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(220, 38, 38, 0.2);
+      }
+    }
+
+    .pharmacy-address-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-top: 3px;
+
+      .addr-icon {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+    }
+
+    .pharmacy-hours-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      color: #0f766e;
+      font-size: 0.76rem;
+      font-weight: 700;
+      margin-top: 4px;
+
+      .hours-icon {
+        font-size: 0.86rem;
+        color: #0d9488;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .pharmacy-hours-lines {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .hours-line {
+          line-height: 1.35;
+        }
+      }
+    }
+  }
+
+  .pharmacy-distance-tag {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
+
+  .pharmacy-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+
+    .pharmacy-action-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+
+      ion-icon {
+        font-size: 0.95rem;
+      }
+
+      &:active {
+        transform: scale(0.97);
+      }
+
+      &.btn-call {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+
+        .call-btn-icon {
+          flex-shrink: 0;
+        }
+
+        .multi-phone-col {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1px;
+          text-align: left;
+
+          .phone-number-line {
+            font-size: 0.78rem;
+            line-height: 1.25;
+            font-weight: 700;
+          }
+        }
+
+        .phone-dropdown-icon {
+          font-size: 0.8rem;
+          margin-left: 2px;
+          opacity: 0.8;
+          flex-shrink: 0;
+        }
+      }
+
+      &.btn-directions {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+      }
+    }
+  }
+}
+
+.pharmacy-map-wrapper {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+
+  .pharmacy-leaflet-container {
+    width: 100%;
+    height: 380px;
+    border-radius: 16px;
+    z-index: 1;
+  }
+
+  .pharmacy-map-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(8px);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
 /* Dark Mode Overrides */
 body.dark,
 .ion-palette-dark {
 
+  .lang-select-pill {
+    --background: #23342f !important;
+    --color: #f0fdf4 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    --border-width: 0 !important;
+    --highlight-height: 0 !important;
+
+    &::part(container) {
+      border: none !important;
+      border-radius: 12px !important;
+      padding-left: 14px !important;
+      padding-right: 10px !important;
+    }
+
+    &::part(highlight) {
+      display: none !important;
+      height: 0 !important;
+      opacity: 0 !important;
+    }
+
+    &::part(text) {
+      color: #f0fdf4 !important;
+      padding-left: 4px !important;
+      padding-right: 4px !important;
+    }
+
+    &::part(icon) {
+      color: #34d399 !important;
+    }
+  }
+
+  .btn-done-edit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.45);
+
+    &:active {
+      background: #059669;
+    }
+  }
+
   .widget-edit-banner {
-    background: rgba(37, 99, 235, 0.2);
-    border-color: rgba(96, 165, 250, 0.3);
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(52, 211, 153, 0.28);
 
     .edit-banner-title {
-      color: #93c5fd;
+      color: #34d399;
     }
 
     .edit-banner-hint {
-      color: #60a5fa;
+      color: #6ee7b7;
     }
 
     .btn-banner-reset {
-      background: #1e293b;
-      border-color: #334155;
-      color: #cbd5e1;
+      background: rgba(16, 185, 129, 0.14);
+      border-color: rgba(52, 211, 153, 0.28);
+      color: #ecfdf5;
+
+      ion-icon {
+        color: #34d399;
+      }
 
       &:active {
-        background: #334155;
+        background: rgba(16, 185, 129, 0.26);
       }
+    }
+  }
+
+  .widget-notif-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    color: #64748b;
+
+    &.active {
+      background: rgba(16, 185, 129, 0.22);
+      color: #34d399;
     }
   }
 
@@ -979,16 +1401,21 @@ body.dark,
   }
 
   .empty-slot-card {
-    border-color: #334155 !important;
-    background: rgba(15, 23, 42, 0.4) !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    background: rgba(16, 185, 129, 0.05) !important;
+
+    &:hover, &:active {
+      border-color: #34d399 !important;
+      background: rgba(16, 185, 129, 0.14) !important;
+    }
 
     .empty-slot-icon-frame {
-      background: #1e293b;
-      color: #60a5fa;
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
     }
 
     .empty-slot-label {
-      color: #94a3b8;
+      color: #a7f3d0;
     }
   }
 
@@ -1027,6 +1454,155 @@ body.dark,
 
     .no-available-widgets {
       color: #94a3b8;
+    }
+
+    .btn-add-item {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+
+      &:active {
+        background: #059669;
+      }
+    }
+  }
+
+  /* Pharmacy Dark Mode Overrides (Matching Stocks Design) */
+  .pharmacy-view-switcher {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .switcher-pill {
+      color: #9bb0a7;
+
+      &.active {
+        background: #10b981;
+        color: #042f2e;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .pharmacy-search-box {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .search-icon {
+      color: #9bb0a7;
+    }
+
+    .pharmacy-search-input {
+      color: #f1f5f9;
+
+      &::placeholder {
+        color: #9bb0a7;
+      }
+    }
+
+    .pharmacy-search-clear {
+      color: #9bb0a7;
+    }
+  }
+
+  .pharmacy-city-scroll {
+    .city-chip {
+      background: #1c2824;
+      border-color: rgba(52, 211, 153, 0.18);
+      color: #9bb0a7;
+
+      &.active {
+        background: #10b981;
+        color: #042f2e;
+        border-color: #10b981;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .pharmacy-card {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+
+    .pharmacy-name-block {
+      .pharmacy-name-row {
+        .pharmacy-name {
+          color: #f1f5f9;
+        }
+
+        .pharmacy-badge-open {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border-color: rgba(52, 211, 153, 0.35);
+        }
+
+        .pharmacy-badge-closed {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+          border-color: rgba(248, 113, 113, 0.35);
+        }
+      }
+
+      .pharmacy-address-row {
+        color: #9bb0a7;
+
+        .addr-icon {
+          color: #6ee7b7;
+        }
+      }
+
+      .pharmacy-hours-row {
+        color: #34d399;
+
+        .hours-icon {
+          color: #34d399;
+        }
+
+        .pharmacy-hours-lines .hours-line {
+          color: #34d399;
+        }
+      }
+    }
+
+    .pharmacy-distance-tag {
+      background: #121514;
+      border-color: rgba(52, 211, 153, 0.25);
+      color: #34d399;
+    }
+
+    .pharmacy-card-actions {
+      .pharmacy-action-btn.btn-call {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(52, 211, 153, 0.35);
+
+        ion-icon {
+          color: #34d399;
+        }
+
+        .multi-phone-col .phone-number-line {
+          color: #34d399;
+        }
+
+        .phone-dropdown-icon {
+          color: #34d399;
+        }
+      }
+
+      .pharmacy-action-btn.btn-directions {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+      }
+    }
+  }
+
+  .pharmacy-map-wrapper {
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .pharmacy-map-badge {
+      background: rgba(28, 40, 36, 0.95);
+      color: #f1f5f9;
+      border-color: rgba(52, 211, 153, 0.25);
     }
   }
 }
