@@ -12,12 +12,23 @@ export class SupabaseService {
   public supabase: SupabaseClient;
   
   public currentUser$ = new BehaviorSubject<User | null>(null);
+  public isPasswordResetFlow = false;
 
   constructor() {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
 
     // Global listener: Stream user if email is confirmed, OAuth, or valid session
     this.supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        this.isPasswordResetFlow = true;
+      }
+
+      // If user is in the middle of resetting their password, keep the app in guest mode
+      if (this.isPasswordResetFlow) {
+        this.currentUser$.next(null);
+        return;
+      }
+
       const user = session?.user ?? null;
       const isEmailVerified = this.isUserVerified(user);
 
@@ -527,18 +538,18 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
   }
 
   async resetPasswordForEmail(email: string) {
-  const isNative = (window as any).Capacitor?.isNativePlatform();
-  const redirectTo = isNative 
-    ? 'dzeble://reset-password' 
-    : `${window.location.origin}/reset-password`;
+    const isNative = Capacitor.isNativePlatform();
+    const redirectTo = isNative 
+      ? 'dzeble://reset-password' 
+      : `${window.location.origin}/reset-password`;
 
-  const { data, error } = await this.supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
-  });
+    const { data, error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
 
-  if (error) throw error;
-  return data;
-}
+    if (error) throw error;
+    return data;
+  }
 
 async updateUserPassword(newPassword: string) {
   const { data, error } = await this.supabase.auth.updateUser({

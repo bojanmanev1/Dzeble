@@ -35,6 +35,7 @@
     "CRYPTO": "Kripto",
     "STOCK": "Bursa",
     "PHARMACY": "Barnatore kujdestare",
+    "GAS_STATIONS": "Pompa benzine",
     "NOTIF_ON": "Aktivizo njoftimet",
     "NOTIF_OFF": "Çaktivizo njoftimet",
     "EDIT_MODE_TITLE": "Ndrysho mini-aplikacionet",
@@ -44,7 +45,7 @@
     "ADD_WIDGET": "Shto mini-aplikacion",
     "AVAILABLE_WIDGETS": "Mini-aplikacione të disponueshme",
     "NO_AVAILABLE_WIDGETS": "Të gjitha mini-aplikacionet janë shtuar",
-    "MAX_WIDGETS_REACHED": "Maksimumi 9 mini-aplikacione është arritur",
+    "MAX_WIDGETS_REACHED": "Maksimumi i mini-aplikacioneve është arritur",
     "REMOVE_TOOLTIP": "Hiq mini-aplikacionin"
   },
   "PHARMACY_MODAL": {
@@ -63,6 +64,29 @@
     "OPEN": "Hapur",
     "CLOSED": "Mbyllur",
     "BACK": "← Kthehu"
+  },
+  "GAS_MODAL": {
+    "TITLE": "Pompat e Benzinës",
+    "SUBTITLE": "Vendndodhjet, markat dhe shërbimet në kohë reale",
+    "LIST_VIEW": "Lista",
+    "MAP_VIEW": "Harta",
+    "SEARCH_PLACEHOLDER": "Kërko pompë, markë, qytet ose rrugë...",
+    "ALL_CITIES": "Të gjitha qytetet",
+    "ALL_BRANDS": "Të gjitha markat",
+    "ALL_SERVICES": "Të gjitha",
+    "FILTER_24_7": "24/7",
+    "FILTER_LPG": "🚗 Gaz (LPG)",
+    "FILTER_CNG": "Metan",
+    "FILTER_EV": "⚡ Karikues EV",
+    "FILTER_CAR_WASH": "🧼 Larje Makinash",
+    "FILTER_SHOP": "🏪 Dyqan",
+    "OPEN_NOW": "Hapur",
+    "CLOSED_NOW": "Mbyllur",
+    "DIRECTIONS": "Udhëzime",
+    "CALL": "Telefono",
+    "NO_RESULTS": "Nuk u gjetën pompa benzine për filtrin e zgjedhur.",
+    "YOUR_LOCATION": "Vendndodhja juaj",
+    "COUNT_LABEL": "pompa benzine"
   },
   "STOCK_MODAL": {
 
@@ -219,7 +243,24 @@
     "EFFECTIVE_DATE": "🗓️ Vendimi është në fuqi nga",
     "YEAR_SUFFIX": "",
     "PER_LITER": "MKD/lit",
-    "PER_KG": "MKD/kg"
+    "PER_KG": "MKD/kg",
+    "TAB_PRICES": "Çmimet",
+    "TAB_CALCULATOR": "Llogaritësi",
+    "CALC_MODE_AMOUNT": "Sipas shumës (MKD)",
+    "CALC_MODE_LITERS": "Sipas litrave (L)",
+    "CALC_MODE_TRIP": "Udhëtimi (km)",
+    "ENTER_AMOUNT_MKD": "Vendosni shumën në denarë",
+    "ENTER_LITERS": "Vendosni sasinë në litra",
+    "ENTER_DISTANCE": "Distanca (km)",
+    "ENTER_CONSUMPTION": "Konsumi (L/100km)",
+    "LITERS_RECEIVED": "Sasia e karburantit",
+    "TOTAL_PRICE": "Kostoja totale",
+    "TRIP_COST": "Kostoja e parashikuar e rrugës",
+    "OPEN_CALC_BANNER": "🧮 Hap llogaritësin e karburantit",
+    "DEFAULT_TAG": "Kryesore",
+    "TANK": "Rezervuar",
+    "AVERAGE": "Mesatare",
+    "CITY_DRIVE": "Qytet"
   },
   "LOYALTY_MODAL": {
     "TITLE": "Kartelat e Besnikërisë",
@@ -328,6 +369,10 @@
   "PASSWORD_RESET_SENT": "Një lidhje për rivendosjen e fjalëkalimit është dërguar në email-in tuaj!",
   "GENERIC_ERROR": "Ndodhi një gabim. Ju lutemi provoni përsëri.",
   "GOOGLE_ERROR": "Hyrja me Google dështoi. Ju lutemi provoni përsëri.",
+  "RATE_LIMIT_SECONDS": "Për arsye sigurie, mund ta kërkoni përsëri pas {{ seconds }} sekondash.",
+  "RATE_LIMIT_GENERIC": "Ju lutemi prisni pak para se të kërkoni përsëri.",
+  "RESEND_IN": "Ridërgo pas {{ seconds }}s",
+  "NETWORK_ERROR": "Gabim në lidhjen me internet. Ju lutemi kontrolloni lidhjen tuaj.",
   "ERRORS": {
     "invalid_credentials": "Email-i ose fjalëkalimi është i pasaktë. Ju lutemi provoni përsëri.",
     "email_not_confirmed": "Email-i juaj nuk është konfirmuar ende. Ju lutemi kontrolloni kutinë tuaj hyrëse.",
@@ -335,10 +380,25 @@
     "default": "Ndodhi një gabim gjatë identifikimit. Ju lutemi provoni përsëri."
   }
 },
-"SETTINGS": {
-  "GUEST_TITLE": "Mirësevisni në Dzeble",
-  "GUEST_SUBTITLE": "Llogarituni për të ruajtur kartat dhe mepërat",
-  "LANGUAGE": "Gjuha",
-  "DARK_MODE": "Mënyra e errët"
-}
+  "SETTINGS": {
+    "GUEST_TITLE": "Mirësevisni në Dzeble",
+    "GUEST_SUBTITLE": "Llogarituni për të ruajtur kartat dhe mepërat",
+    "LANGUAGE": "Gjuha",
+    "DARK_MODE": "Mënyra e errët"
+  },
+  "RESET_PASSWORD": {
+    "TITLE": "Fjalëkalim i Ri",
+    "SUBTITLE": "Vendosni fjalëkalimin tuaj të ri për t'u kyçur me siguri",
+    "NEW_PASSWORD_LABEL": "Fjalëkalimi i ri",
+    "CONFIRM_PASSWORD_LABEL": "Konfirmoni fjalëkalimin e ri",
+    "PASSWORD_PLACEHOLDER": "••••••••",
+    "SAVE_BTN": "Ruaj Fjalëkalimin",
+    "BACK_TO_LOGIN": "Kthehu te kyçja",
+    "ERR_MIN_LENGTH": "Fjalëkalimi duhet të ketë të paktën 6 karaktere.",
+    "ERR_MISMATCH": "Fjalëkalimet nuk përputhen.",
+    "ERR_SAME_PASSWORD": "Fjalëkalimi i ri duhet të jetë i ndryshëm nga ai i mëparshmi.",
+    "ERR_SESSION_EXPIRED": "Sesioni ka skaduar ose lidhja tashmë është përdorur. Ju lutemi kërkoni një lidhje të re.",
+    "ERR_GENERIC": "Gabim gjatë ndryshimit të fjalëkalimit.",
+    "SUCCESS_MSG": "Fjalëkalimi u ndryshua me sukses! Ju lutemi kyçuni me fjalëkalimin e ri."
+  }
 }

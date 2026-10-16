@@ -979,6 +979,399 @@ ion-modal {
   }
 }
 
+/* --- FUEL (ГОРИВО) MODAL STYLES --- */
+.fuel-view-switcher {
+  display: inline-flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+
+  .switcher-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+
+    &.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+  }
+}
+
+.fuel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fuel-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+
+  &.is-default {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+  }
+
+  .fuel-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+
+    .fuel-star-btn {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 1.35rem;
+      color: #f59e0b;
+      cursor: pointer;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .fuel-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+
+      .fuel-name {
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #0f172a;
+        line-height: 1.25;
+        word-break: break-word;
+      }
+
+      .fuel-price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+
+        .fuel-price {
+          font-weight: 800;
+          font-size: 1.15rem;
+          color: #0f172a;
+          line-height: 1;
+          letter-spacing: -0.3px;
+        }
+
+        .fuel-unit {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  .fuel-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+    margin-left: 8px;
+
+    .fuel-diff-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      line-height: 1;
+
+      &.diff-up {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      &.diff-down {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+
+      &.diff-neutral {
+        background: #f1f5f9;
+        color: #64748b;
+      }
+    }
+
+    .fuel-default-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #10b981;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+  }
+}
+
+.fuel-effective-card {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 14px;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+
+  .effective-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+
+  .effective-date {
+    font-size: 1.1rem;
+    color: #ef4444;
+    font-weight: 800;
+  }
+}
+
+/* --- FUEL CALCULATOR STYLES --- */
+.fuel-calc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fuel-calc-type-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  .fuel-calc-type-chip {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    .chip-name {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .chip-price {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    &.active {
+      background: #10b981;
+      border-color: #10b981;
+
+      .chip-name, .chip-price {
+        color: #ffffff;
+      }
+    }
+  }
+}
+
+.fuel-calc-mode-bar {
+  display: flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+
+  .mode-pill {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 4px;
+    border-radius: 9px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 0.9rem;
+    }
+
+    &.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+.fuel-calc-card {
+  background: #f8fafc;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+
+  .calc-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    display: block;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .calc-input-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #0f172a;
+      outline: none;
+      padding: 0;
+
+      &::placeholder {
+        color: #cbd5e1;
+      }
+    }
+
+    .calc-suffix {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+  }
+
+  .calc-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+
+    .preset-chip {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover, &.active {
+        background: #0f172a;
+        color: #ffffff;
+        border-color: #0f172a;
+      }
+    }
+  }
+}
+
+.fuel-calc-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 16px;
+  padding: 18px 16px;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.2);
+
+  .hero-tag {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .hero-val-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    margin: 2px 0 6px;
+
+    .hero-big-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      color: #34d399;
+    }
+
+    .hero-big-unit {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+  }
+
+  .hero-caption {
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    margin: 0;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+}
+
 /* --- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) STYLES --- */
 .pharmacy-view-switcher {
   display: inline-flex;
@@ -1313,6 +1706,336 @@ ion-modal {
   }
 }
 
+/* --- GAS STATIONS (БЕНЗИНСКИ ПУМПИ) STYLES --- */
+.gas-view-switcher {
+  display: inline-flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin-top: 10px;
+
+  .switcher-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+  }
+}
+
+.gas-search-box {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  gap: 8px;
+
+  .search-icon {
+    font-size: 1.1rem;
+    color: #94a3b8;
+  }
+
+  .gas-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.88rem;
+    color: #0f172a;
+    font-weight: 500;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  .gas-search-clear {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+  }
+}
+
+.gas-chip-scroll,
+.gas-services-scroll,
+.gas-city-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-chip,
+  .service-chip,
+  .city-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.active {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+  }
+}
+
+.gas-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+
+  p {
+    margin: 8px 0 0 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+}
+
+.gas-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gas-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  .gas-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .gas-name-block {
+    flex: 1;
+
+    .gas-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+
+      .gas-name {
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #0f172a;
+      }
+
+      .gas-badge-open {
+        background: #ecfdf5;
+        color: #059669;
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(5, 150, 105, 0.2);
+      }
+
+      .gas-badge-hours {
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+      }
+    }
+
+    .gas-address-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-top: 3px;
+
+      .addr-icon {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+    }
+
+    .gas-service-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+
+      .badge-pill {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 6px;
+
+        &.badge-lpg {
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+        }
+
+        &.badge-cng {
+          background: #f0fdf4;
+          color: #16a34a;
+          border: 1px solid #bbf7d0;
+        }
+
+        &.badge-ev {
+          background: #fefce8;
+          color: #ca8a04;
+          border: 1px solid #fef08a;
+        }
+
+        &.badge-wash {
+          background: #ecfeff;
+          color: #0891b2;
+          border: 1px solid #a5f3fc;
+        }
+
+        &.badge-shop {
+          background: #faf5ff;
+          color: #9333ea;
+          border: 1px solid #e9d5ff;
+        }
+      }
+    }
+  }
+
+  .gas-distance-tag {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
+
+  .gas-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+
+    .gas-action-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+
+      ion-icon {
+        font-size: 0.95rem;
+      }
+
+      &:active {
+        transform: scale(0.97);
+      }
+
+      &.btn-call {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+      }
+
+      &.btn-directions {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+      }
+    }
+  }
+}
+
+.gas-map-wrapper {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+
+  .gas-leaflet-container {
+    width: 100%;
+    height: 380px;
+    border-radius: 16px;
+    z-index: 1;
+  }
+
+  .gas-map-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(8px);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
 /* Dark Mode Overrides */
 body.dark,
 .ion-palette-dark {
@@ -1467,6 +2190,181 @@ body.dark,
     }
   }
 
+  /* Fuel Modal & Calculator Dark Mode Overrides (Matching Stocks Design) */
+  .fuel-view-switcher {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .switcher-pill {
+      color: #9bb0a7;
+
+      &.active {
+        background: #10b981;
+        color: #042f2e;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .fuel-card {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    &:hover {
+      background: #23342f;
+    }
+
+    &.is-default {
+      border-color: rgba(52, 211, 153, 0.45);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .fuel-left {
+      .fuel-info {
+        .fuel-name {
+          color: #f1f5f9;
+        }
+
+        .fuel-price-row {
+          .fuel-price {
+            color: #f1f5f9;
+          }
+          .fuel-unit {
+            color: #9bb0a7;
+          }
+        }
+      }
+    }
+
+    .fuel-right {
+      .fuel-diff-badge {
+        &.diff-up {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+        }
+        &.diff-down {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+        }
+        &.diff-neutral {
+          background: rgba(148, 163, 184, 0.15);
+          color: #94a3b8;
+        }
+      }
+
+      .fuel-default-badge {
+        color: #34d399;
+      }
+    }
+  }
+
+  .fuel-effective-card {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.2);
+
+    .effective-label {
+      color: #9bb0a7;
+    }
+    .effective-date {
+      color: #f87171;
+    }
+  }
+
+  .fuel-calc-type-selector {
+    .fuel-calc-type-chip {
+      background: #1c2824;
+      border-color: rgba(52, 211, 153, 0.18);
+
+      .chip-name {
+        color: #f1f5f9;
+      }
+      .chip-price {
+        color: #9bb0a7;
+      }
+
+      &.active {
+        background: #10b981;
+        border-color: #10b981;
+
+        .chip-name, .chip-price {
+          color: #042f2e;
+          font-weight: 800;
+        }
+      }
+    }
+  }
+
+  .fuel-calc-mode-bar {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .mode-pill {
+      color: #9bb0a7;
+
+      &.active {
+        background: #273832;
+        color: #34d399;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .fuel-calc-card {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .calc-label {
+      color: #9bb0a7;
+    }
+
+    .calc-input-wrap {
+      input {
+        color: #f1f5f9;
+        &::placeholder {
+          color: #4b6358;
+        }
+      }
+      .calc-suffix {
+        color: #9bb0a7;
+      }
+    }
+
+    .calc-presets {
+      .preset-chip {
+        background: #23342f;
+        border-color: rgba(52, 211, 153, 0.2);
+        color: #f1f5f9;
+
+        &:hover, &.active {
+          background: #10b981;
+          color: #042f2e;
+          border-color: #10b981;
+        }
+      }
+    }
+  }
+
+  .fuel-calc-hero {
+    background: linear-gradient(135deg, #172420 0%, #1c2e28 100%);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    .hero-tag {
+      color: #9bb0a7;
+    }
+    .hero-val-row {
+      .hero-big-number {
+        color: #34d399;
+      }
+      .hero-big-unit {
+        color: #f1f5f9;
+      }
+    }
+    .hero-caption {
+      color: #cbd5e1;
+    }
+  }
+
   /* Pharmacy Dark Mode Overrides (Matching Stocks Design) */
   .pharmacy-view-switcher {
     background: #1c2824;
@@ -1605,4 +2503,157 @@ body.dark,
       border-color: rgba(52, 211, 153, 0.25);
     }
   }
-}
+
+  /* Gas Stations Dark Mode Overrides (Matching Stocks & Pharmacy Design) */
+  .gas-view-switcher {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .switcher-pill {
+      color: #9bb0a7;
+
+      &.active {
+        background: #10b981;
+        color: #042f2e;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .gas-search-box {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .search-icon {
+      color: #9bb0a7;
+    }
+
+    .gas-search-input {
+      color: #f1f5f9;
+
+      &::placeholder {
+        color: #9bb0a7;
+      }
+    }
+
+    .gas-search-clear {
+      color: #9bb0a7;
+    }
+  }
+
+  .gas-chip-scroll,
+  .gas-services-scroll,
+  .gas-city-scroll {
+    .brand-chip,
+    .service-chip,
+    .city-chip {
+      background: #1c2824;
+      border-color: rgba(52, 211, 153, 0.18);
+      color: #9bb0a7;
+
+      &.active {
+        background: #10b981;
+        color: #042f2e;
+        border-color: #10b981;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .gas-card {
+    background: #1c2824;
+    border-color: rgba(52, 211, 153, 0.18);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+
+    .gas-name-block {
+      .gas-name-row {
+        .gas-name {
+          color: #f1f5f9;
+        }
+
+        .gas-badge-open {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border-color: rgba(52, 211, 153, 0.35);
+        }
+
+        .gas-badge-hours {
+          background: #23342f;
+          color: #9bb0a7;
+          border-color: rgba(52, 211, 153, 0.2);
+        }
+      }
+
+      .gas-address-row {
+        color: #9bb0a7;
+
+        .addr-icon {
+          color: #6ee7b7;
+        }
+      }
+
+      .gas-service-badges {
+        .badge-pill {
+          &.badge-lpg {
+            background: rgba(37, 99, 235, 0.2);
+            color: #93c5fd;
+            border-color: rgba(59, 130, 246, 0.3);
+          }
+          &.badge-cng {
+            background: rgba(22, 163, 74, 0.2);
+            color: #86efac;
+            border-color: rgba(34, 197, 94, 0.3);
+          }
+          &.badge-ev {
+            background: rgba(202, 138, 4, 0.2);
+            color: #fde047;
+            border-color: rgba(234, 179, 8, 0.3);
+          }
+          &.badge-wash {
+            background: rgba(8, 145, 178, 0.2);
+            color: #67e8f9;
+            border-color: rgba(6, 182, 212, 0.3);
+          }
+          &.badge-shop {
+            background: rgba(147, 51, 234, 0.2);
+            color: #d8b4fe;
+            border-color: rgba(168, 85, 247, 0.3);
+          }
+        }
+      }
+    }
+
+    .gas-distance-tag {
+      background: #121514;
+      border-color: rgba(52, 211, 153, 0.25);
+      color: #34d399;
+    }
+
+    .gas-card-actions {
+      .gas-action-btn.btn-call {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(52, 211, 153, 0.35);
+
+        ion-icon {
+          color: #34d399;
+        }
+      }
+
+      .gas-action-btn.btn-directions {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+      }
+    }
+  }
+
+  .gas-map-wrapper {
+    border-color: rgba(52, 211, 153, 0.18);
+
+    .gas-map-badge {
+      background: rgba(28, 40, 36, 0.95);
+      color: #f1f5f9;
+      border-color: rgba(52, 211, 153, 0.25);
+    }
+  }
+}

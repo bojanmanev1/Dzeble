@@ -35,6 +35,7 @@
     "CRYPTO": "Crypto",
     "STOCK": "Stocks",
     "PHARMACY": "Duty Pharmacies",
+    "GAS_STATIONS": "Gas Stations",
     "NOTIF_ON": "Enable notifications",
     "NOTIF_OFF": "Disable notifications",
     "EDIT_MODE_TITLE": "Edit Widgets",
@@ -44,7 +45,7 @@
     "ADD_WIDGET": "Add Widget",
     "AVAILABLE_WIDGETS": "Available Widgets",
     "NO_AVAILABLE_WIDGETS": "All widgets are already added",
-    "MAX_WIDGETS_REACHED": "Maximum 9 widgets reached",
+    "MAX_WIDGETS_REACHED": "Maximum widgets reached",
     "REMOVE_TOOLTIP": "Remove widget"
   },
   "PHARMACY_MODAL": {
@@ -63,6 +64,29 @@
     "OPEN": "Open",
     "CLOSED": "Closed",
     "BACK": "← Back"
+  },
+  "GAS_MODAL": {
+    "TITLE": "Gas Stations",
+    "SUBTITLE": "Live locations, brands and services",
+    "LIST_VIEW": "List",
+    "MAP_VIEW": "Map",
+    "SEARCH_PLACEHOLDER": "Search station, brand, city or street...",
+    "ALL_CITIES": "All Cities",
+    "ALL_BRANDS": "All Brands",
+    "ALL_SERVICES": "All",
+    "FILTER_24_7": "24/7",
+    "FILTER_LPG": "🚗 Autogas (LPG)",
+    "FILTER_CNG": "Methane",
+    "FILTER_EV": "⚡ EV Charger",
+    "FILTER_CAR_WASH": "🧼 Car Wash",
+    "FILTER_SHOP": "🏪 Shop",
+    "OPEN_NOW": "Open",
+    "CLOSED_NOW": "Closed",
+    "DIRECTIONS": "Directions",
+    "CALL": "Call",
+    "NO_RESULTS": "No gas stations found for the selected filter.",
+    "YOUR_LOCATION": "Your Location",
+    "COUNT_LABEL": "gas stations"
   },
   "STOCK_MODAL": {
 
@@ -219,7 +243,24 @@
     "EFFECTIVE_DATE": "🗓️ Effective from",
     "YEAR_SUFFIX": "",
     "PER_LITER": "MKD/L",
-    "PER_KG": "MKD/kg"
+    "PER_KG": "MKD/kg",
+    "TAB_PRICES": "Prices",
+    "TAB_CALCULATOR": "Calculator",
+    "CALC_MODE_AMOUNT": "By Amount (MKD)",
+    "CALC_MODE_LITERS": "By Liters (L)",
+    "CALC_MODE_TRIP": "Trip (km)",
+    "ENTER_AMOUNT_MKD": "Enter amount in MKD",
+    "ENTER_LITERS": "Enter quantity in liters",
+    "ENTER_DISTANCE": "Distance (km)",
+    "ENTER_CONSUMPTION": "Consumption (L/100km)",
+    "LITERS_RECEIVED": "Fuel Quantity",
+    "TOTAL_PRICE": "Total Cost",
+    "TRIP_COST": "Estimated Trip Cost",
+    "OPEN_CALC_BANNER": "🧮 Open Fuel Calculator",
+    "DEFAULT_TAG": "Default",
+    "TANK": "Tank",
+    "AVERAGE": "Average",
+    "CITY_DRIVE": "City"
   },
   "LOYALTY_MODAL": {
     "TITLE": "Loyalty Cards",
@@ -328,6 +369,10 @@
   "PASSWORD_RESET_SENT": "A password reset link has been sent to your email!",
   "GENERIC_ERROR": "An error occurred. Please try again.",
   "GOOGLE_ERROR": "Google sign-in failed. Please try again.",
+  "RATE_LIMIT_SECONDS": "For security purposes, you can only request this after {{ seconds }} seconds.",
+  "RATE_LIMIT_GENERIC": "Please wait a moment before requesting again.",
+  "RESEND_IN": "Resend in {{ seconds }}s",
+  "NETWORK_ERROR": "Network connection error. Please check your internet connection.",
   "ERRORS": {
     "invalid_credentials": "Invalid email or password. Please try again.",
     "email_not_confirmed": "Your email is not verified yet. Please check your inbox.",
@@ -335,11 +380,25 @@
     "default": "An authentication error occurred. Please try again."
   }
 },
-"SETTINGS": {
-  "GUEST_TITLE": "Welcome to Dzeble",
-  "GUEST_SUBTITLE": "Sign in to sync widgets & loyalty cards",
-  "LANGUAGE": "Language",
-  "DARK_MODE": "Dark Mode"
-}
-
+  "SETTINGS": {
+    "GUEST_TITLE": "Welcome to Dzeble",
+    "GUEST_SUBTITLE": "Sign in to sync widgets & loyalty cards",
+    "LANGUAGE": "Language",
+    "DARK_MODE": "Dark Mode"
+  },
+  "RESET_PASSWORD": {
+    "TITLE": "New Password",
+    "SUBTITLE": "Enter your new password to sign in securely",
+    "NEW_PASSWORD_LABEL": "New password",
+    "CONFIRM_PASSWORD_LABEL": "Confirm new password",
+    "PASSWORD_PLACEHOLDER": "••••••••",
+    "SAVE_BTN": "Save Password",
+    "BACK_TO_LOGIN": "Back to Sign In",
+    "ERR_MIN_LENGTH": "Password must be at least 6 characters.",
+    "ERR_MISMATCH": "Passwords do not match.",
+    "ERR_SAME_PASSWORD": "New password must be different from previous password.",
+    "ERR_SESSION_EXPIRED": "Session expired or link already used. Please request a new reset link.",
+    "ERR_GENERIC": "Error updating password. Please try again.",
+    "SUCCESS_MSG": "Password updated successfully! Please sign in with your new password."
+  }
 }

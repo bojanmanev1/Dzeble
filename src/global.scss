@@ -576,7 +576,8 @@ html.dark {
 
     /* Keep Loyalty Barcode Scanner Container clean white */
     div:has(svg[appBarcodeRender]),
-    div:has(svg) {
+    .loyalty-barcode-box,
+    .barcode-svg-container {
       background: #ffffff !important;
       background-color: #ffffff !important;
       border: 1px solid #cbd5e1 !important;
@@ -718,13 +719,121 @@ html.dark {
       }
     }
 
+    .modal-body {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
     .pharmacy-map-wrapper {
-      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+      border-radius: 16px !important;
+      overflow: hidden !important;
+
+      .pharmacy-leaflet-container {
+        background: #f8fafc !important;
+        border-radius: 16px !important;
+      }
 
       .pharmacy-map-badge {
-        background: rgba(28, 40, 36, 0.95) !important;
+        background: rgba(24, 36, 32, 0.95) !important;
         color: #f1f5f9 !important;
-        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+        border: 1px solid rgba(52, 211, 153, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+      }
+    }
+
+    /* Leaflet Controls & Popups in Dark Mode */
+    .leaflet-bar {
+      border: 1px solid rgba(52, 211, 153, 0.3) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+      border-radius: 10px !important;
+      overflow: hidden !important;
+
+      a {
+        background-color: #1c2824 !important;
+        color: #34d399 !important;
+        border-bottom: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+        &:hover, &:focus {
+          background-color: #24352f !important;
+          color: #10b981 !important;
+        }
+
+        &.leaflet-disabled {
+          background-color: #16201d !important;
+          color: #4b6358 !important;
+        }
+      }
+    }
+
+    .leaflet-control-attribution {
+      display: none !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #182420 !important;
+      color: #f1f5f9 !important;
+      border: 1px solid rgba(52, 211, 153, 0.3) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6) !important;
+      padding: 4px !important;
+    }
+
+    .leaflet-popup-tip {
+      background: #182420 !important;
+      border: 1px solid rgba(52, 211, 153, 0.3) !important;
+      box-shadow: none !important;
+    }
+
+    .leaflet-popup-close-button {
+      color: #9bb0a7 !important;
+      top: 8px !important;
+      right: 8px !important;
+
+      &:hover {
+        color: #34d399 !important;
+      }
+    }
+
+    .pharmacy-leaflet-popup {
+      .map-popup-title {
+        color: #f1f5f9 !important;
+      }
+
+      .map-popup-subtitle {
+        color: #9bb0a7 !important;
+      }
+
+      .map-popup-hours {
+        color: #34d399 !important;
+      }
+
+      .map-popup-badge-open {
+        background: rgba(16, 185, 129, 0.18) !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.3) !important;
+      }
+
+      .map-popup-badge-closed {
+        background: rgba(239, 68, 68, 0.18) !important;
+        color: #f87171 !important;
+        border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      }
+
+      .map-popup-dist {
+        color: #cbd5e1 !important;
+      }
+
+      .map-popup-phone {
+        color: #34d399 !important;
+      }
+
+      .map-popup-directions-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
       }
     }
 
@@ -737,6 +846,222 @@ html.dark {
 
       p {
         color: #9bb0a7 !important;
+      }
+    }
+
+    /* Fuel Modal & Calculator Dark Theme (Matching Stocks & Greenish Design) */
+    .fuel-view-switcher {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .switcher-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        ion-icon {
+          color: #9bb0a7 !important;
+        }
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+
+          ion-icon {
+            color: #042f2e !important;
+          }
+        }
+      }
+    }
+
+    .fuel-card {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      color: #f1f5f9 !important;
+
+      &:hover {
+        background: #23342f !important;
+      }
+
+      &.is-default {
+        border-color: rgba(52, 211, 153, 0.45) !important;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.15) !important;
+      }
+
+      .fuel-left {
+        .fuel-star-btn {
+          color: #f59e0b !important;
+        }
+
+        .fuel-info {
+          .fuel-name {
+            color: #f1f5f9 !important;
+          }
+
+          .fuel-price-row {
+            .fuel-price {
+              color: #f1f5f9 !important;
+            }
+            .fuel-unit {
+              color: #9bb0a7 !important;
+            }
+          }
+        }
+      }
+
+      .fuel-right {
+        .fuel-diff-badge {
+          &.diff-up {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+          }
+          &.diff-down {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+          }
+          &.diff-neutral {
+            background: rgba(148, 163, 184, 0.15) !important;
+            color: #9bb0a7 !important;
+          }
+        }
+
+        .fuel-default-badge {
+          color: #34d399 !important;
+        }
+      }
+    }
+
+    .fuel-effective-card {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px dashed rgba(52, 211, 153, 0.25) !important;
+
+      .effective-label {
+        color: #9bb0a7 !important;
+      }
+      .effective-date {
+        color: #f87171 !important;
+      }
+    }
+
+    .fuel-calc-type-selector {
+      .fuel-calc-type-chip {
+        background: #1c2824 !important;
+        background-color: #1c2824 !important;
+        border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+        .chip-name {
+          color: #f1f5f9 !important;
+        }
+        .chip-price {
+          color: #9bb0a7 !important;
+        }
+
+        &.active {
+          background: #10b981 !important;
+          background-color: #10b981 !important;
+          border-color: #10b981 !important;
+
+          .chip-name, .chip-price {
+            color: #042f2e !important;
+            font-weight: 800 !important;
+          }
+        }
+      }
+    }
+
+    .fuel-calc-mode-bar {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .mode-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        ion-icon {
+          color: #9bb0a7 !important;
+        }
+
+        &.active {
+          background: #273832 !important;
+          color: #34d399 !important;
+          font-weight: 800 !important;
+
+          ion-icon {
+            color: #34d399 !important;
+          }
+        }
+      }
+    }
+
+    .fuel-calc-card {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      color: #f1f5f9 !important;
+
+      .calc-label {
+        color: #9bb0a7 !important;
+      }
+
+      .calc-input-wrap {
+        background: transparent !important;
+        border: none !important;
+
+        input {
+          background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          outline: none !important;
+          color: #f1f5f9 !important;
+          -webkit-text-fill-color: #f1f5f9 !important;
+
+          &::placeholder {
+            color: #4b6358 !important;
+          }
+        }
+
+        .calc-suffix {
+          color: #9bb0a7 !important;
+        }
+      }
+
+      .calc-presets {
+        .preset-chip {
+          background: #23342f !important;
+          border: 1px solid rgba(52, 211, 153, 0.2) !important;
+          color: #f1f5f9 !important;
+
+          &:hover, &.active {
+            background: #10b981 !important;
+            color: #042f2e !important;
+            border-color: #10b981 !important;
+            font-weight: 800 !important;
+          }
+        }
+      }
+    }
+
+    .fuel-calc-hero {
+      background: linear-gradient(135deg, #172420 0%, #1c2e28 100%) !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+
+      .hero-tag {
+        color: #9bb0a7 !important;
+      }
+      .hero-val-row {
+        .hero-big-number {
+          color: #34d399 !important;
+        }
+        .hero-big-unit {
+          color: #f1f5f9 !important;
+        }
+      }
+      .hero-caption {
+        color: #cbd5e1 !important;
       }
     }
   }
@@ -1352,3 +1677,85 @@ body.dark,
     }
   }
 }
+
+/* Base Light Mode Leaflet Popup & Map Styles */
+.pharmacy-leaflet-popup {
+  font-family: inherit;
+  font-size: 13px;
+  min-width: 175px;
+
+  .map-popup-title {
+    font-weight: 800;
+    color: #0f172a;
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+
+  .map-popup-subtitle {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .map-popup-hours {
+    color: #0f766e;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 5px;
+  }
+
+  .map-popup-badge-open {
+    display: inline-block;
+    background: #ecfdf5;
+    color: #059669;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+
+  .map-popup-badge-closed {
+    display: inline-block;
+    background: #fef2f2;
+    color: #dc2626;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+
+  .map-popup-dist {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .map-popup-phone {
+    display: inline-block;
+    margin-top: 6px;
+    color: #10b981;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 13px;
+  }
+
+  .map-popup-directions-btn {
+    background: #10b981;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 12px;
+    display: inline-block;
+  }
+}
+
+/* Hide Leaflet bottom attribution label */
+.leaflet-control-attribution {
+  display: none !important;
+}
+

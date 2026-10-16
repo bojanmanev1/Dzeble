@@ -51,7 +51,10 @@ import {
   navigate,
   search,
   location,
-  timeOutline
+  timeOutline,
+  calculator,
+  carOutline,
+  waterOutline
 } from 'ionicons/icons';
 
 import { 
@@ -69,6 +72,7 @@ import { Capacitor } from '@capacitor/core';
 import { StockService, StockTicker } from '../services/stock';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
+import { GasStationService, GasStation } from '../services/gas-station';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
 import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
 import { App } from '@capacitor/app';
@@ -169,6 +173,22 @@ export class HomePage implements OnInit, OnDestroy {
   selectedDefaultFuel = localStorage.getItem('default_fuel_type') || 'Дизел';
   selectedDefaultCurrency = localStorage.getItem('default_currency') || 'EUR';
 
+  readonly FUEL_ITEMS = [
+    { id: 'Бензин 95', shortName: 'БС-95', titleKey: 'FUEL_MODAL.PETROL_95', unitKey: 'FUEL_MODAL.PER_LITER', isKg: false },
+    { id: 'Бензин 98+', shortName: 'БС-98', titleKey: 'FUEL_MODAL.PETROL_98', unitKey: 'FUEL_MODAL.PER_LITER', isKg: false },
+    { id: 'Дизел', shortName: 'Дизел', titleKey: 'FUEL_MODAL.DIESEL', unitKey: 'FUEL_MODAL.PER_LITER', isKg: false },
+    { id: 'Екстра Лесно', shortName: 'ЕЛ-1', titleKey: 'FUEL_MODAL.LIGHT_OIL', unitKey: 'FUEL_MODAL.PER_LITER', isKg: false },
+    { id: 'Мазут', shortName: 'Мазут', titleKey: 'FUEL_MODAL.HEATING_OIL', unitKey: 'FUEL_MODAL.PER_KG', isKg: true },
+  ];
+
+  fuelModalView: 'prices' | 'calc' = 'prices';
+  fuelCalcMode: 'amount' | 'liters' | 'trip' = 'amount';
+  fuelCalcSelectedFuel: string = 'Дизел';
+  fuelCalcMkdAmount: number = 1000;
+  fuelCalcLiters: number = 40;
+  fuelCalcDistanceKm: number = 100;
+  fuelCalcConsumptionL100: number = 6.5;
+
   // --- MULTI-FAVORITE CRYPTO STATE ---
   cryptoMap = new Map<string, CryptoTicker>();
   favoriteCryptoPairs: string[] = JSON.parse(localStorage.getItem('crypto_favorite_pairs') || '["BTCUSDT"]');
@@ -236,6 +256,32 @@ export class HomePage implements OnInit, OnDestroy {
   ];
   private leafletMap: L.Map | null = null;
   private leafletMarkers: L.Marker[] = [];
+  private leafletTileLayer: L.TileLayer | null = null;
+
+  // Gas Stations State
+  private gasStationService = inject(GasStationService);
+  gasStationsList: GasStation[] = [];
+  filteredGasStations: GasStation[] = [];
+  nearestGasStation: GasStation | null = null;
+  gasModalView: 'list' | 'map' = 'list';
+  gasSearchQuery: string = '';
+  selectedGasCity: string = '';
+  selectedGasBrand: string = 'all';
+  selectedGasService: string = 'all';
+  gasCities: string[] = [];
+  readonly gasBrands = [
+    { id: 'all', labelKey: 'GAS_MODAL.ALL_BRANDS' },
+    { id: 'Макпетрол', label: 'Макпетрол' },
+    { id: 'Лукоил', label: 'Лукоил' },
+    { id: 'ОКТА', label: 'ОКТА' },
+    { id: 'Детоил', label: 'Детоил' },
+    { id: 'Гулф', label: 'Гулф' },
+    { id: 'Шел', label: 'Шел' },
+    { id: 'other', label: 'Останати' }
+  ];
+  private gasLeafletMap: L.Map | null = null;
+  private gasLeafletMarkers: L.Marker[] = [];
+  private gasLeafletTileLayer: L.TileLayer | null = null;
 
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
@@ -247,11 +293,12 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' },
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
-    { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' }
+    { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' },
+    { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'speedometer' }
   ];
 
-  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'loyalty'];
-  readonly MAX_WIDGET_COUNT = 9;
+  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'gas_stations', 'loyalty'];
+  readonly MAX_WIDGET_COUNT = 10;
   readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
 
   currentUserCoords: { latitude: number; longitude: number } | null = null;
@@ -321,7 +368,10 @@ export class HomePage implements OnInit, OnDestroy {
       'navigate': navigate,
       'search': search,
       'location': location,
-      'time-outline': timeOutline
+      'time-outline': timeOutline,
+      'calculator': calculator,
+      'car-outline': carOutline,
+      'water-outline': waterOutline
     });
 
     this.loadSavedWidgetOrder();
@@ -331,6 +381,11 @@ export class HomePage implements OnInit, OnDestroy {
   async ngOnInit() {
     this.themeService.isDarkMode$.subscribe(isDark => {
       this.isDarkMode = isDark;
+      if (this.leafletMap && this.pharmacyModalView === 'map') {
+        this.applyLeafletTileLayer();
+        this.renderLeafletMarkers();
+      }
+      this.cdr.markForCheck();
     });
 
     const localEvents = JSON.parse(localStorage.getItem('guest_user_events') || '[]');
@@ -389,6 +444,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.initLiveStock();
     this.startMultiFavoritesSlider();
     this.loadDutyPharmacies();
+    this.loadGasStations();
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -550,6 +606,10 @@ export class HomePage implements OnInit, OnDestroy {
     const isDark = event.detail.checked;
     this.isDarkMode = isDark;
     this.themeService.toggleTheme(isDark);
+    if (this.leafletMap && this.pharmacyModalView === 'map') {
+      this.applyLeafletTileLayer();
+      this.renderLeafletMarkers();
+    }
   }
 
 async handleLogout() {
@@ -834,6 +894,70 @@ async handleLogout() {
     });
   }
 
+  getFuelPriceRaw(fuelName: string): number {
+    const match = this.findFuelRecord(fuelName);
+    if (!match || match.price_mkd === null || match.price_mkd === undefined) {
+      if (fuelName.includes('95')) return 98.50;
+      if (fuelName.includes('98')) return 100.50;
+      if (fuelName.includes('дизел')) return 97.00;
+      if (fuelName.includes('лесно')) return 108.50;
+      if (fuelName.includes('мазут')) return 51.74;
+      return 97.00;
+    }
+    return Number(match.price_mkd);
+  }
+
+  get fuelCalcLitersResult(): string {
+    const price = this.getFuelPriceRaw(this.fuelCalcSelectedFuel);
+    if (!price || price <= 0 || !this.fuelCalcMkdAmount || this.fuelCalcMkdAmount <= 0) return '0.00';
+    const liters = this.fuelCalcMkdAmount / price;
+    return liters.toFixed(2);
+  }
+
+  get fuelCalcCostResult(): string {
+    const price = this.getFuelPriceRaw(this.fuelCalcSelectedFuel);
+    if (!price || price <= 0 || !this.fuelCalcLiters || this.fuelCalcLiters <= 0) return '0.00';
+    const cost = this.fuelCalcLiters * price;
+    return cost.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  get fuelCalcTripLitersResult(): string {
+    if (!this.fuelCalcDistanceKm || !this.fuelCalcConsumptionL100) return '0.00';
+    const liters = (this.fuelCalcDistanceKm * this.fuelCalcConsumptionL100) / 100;
+    return liters.toFixed(2);
+  }
+
+  get fuelCalcTripCostResult(): string {
+    const price = this.getFuelPriceRaw(this.fuelCalcSelectedFuel);
+    if (!price || price <= 0 || !this.fuelCalcDistanceKm || !this.fuelCalcConsumptionL100) return '0';
+    const liters = (this.fuelCalcDistanceKm * this.fuelCalcConsumptionL100) / 100;
+    const cost = liters * price;
+    return Math.round(cost).toLocaleString('mk-MK');
+  }
+
+  setFuelCalcAmountPreset(amount: number) {
+    this.fuelCalcMkdAmount = amount;
+  }
+
+  setFuelCalcLitersPreset(liters: number) {
+    this.fuelCalcLiters = liters;
+  }
+
+  setFuelCalcDistancePreset(distance: number) {
+    this.fuelCalcDistanceKm = distance;
+  }
+
+  setFuelCalcConsumptionPreset(consumption: number) {
+    this.fuelCalcConsumptionL100 = consumption;
+  }
+
+  switchFuelModalView(view: 'prices' | 'calc') {
+    this.fuelModalView = view;
+    if (view === 'calc' && !this.fuelCalcSelectedFuel) {
+      this.fuelCalcSelectedFuel = this.selectedDefaultFuel || 'Дизел';
+    }
+  }
+
   getCalculatedRateDynamic(targetRate: number): string {
     if (!this.inputMkdAmount || this.inputMkdAmount <= 0) return '0.00';
     const mkdRecord = this.rawDatabaseRates.find((r: any) => r.target_currency === 'MKD');
@@ -851,6 +975,9 @@ async handleLogout() {
         this.updateNearestPharmacy();
         this.updateFilteredPharmacies();
         this.updatePharmacyWidgetDisplay();
+        this.updateNearestGasStation();
+        this.updateFilteredGasStations();
+        this.updateGasWidgetDisplay();
 
         // 1. Instantly determine nearest city locally in memory (0ms)
         const resolvedCity = this.weatherService.resolveCityName(coords.latitude, coords.longitude);
@@ -1615,6 +1742,7 @@ async handleLogout() {
       this.activeDetailWidgetId = null;
       this.closeLoyaltySubView();
       this.destroyLeafletMap();
+      this.destroyGasLeafletMap();
     }
   }
 
@@ -1659,6 +1787,8 @@ async handleLogout() {
       try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
     }
     if (widgetId === 'fuel') {
+      this.fuelModalView = 'prices';
+      this.fuelCalcSelectedFuel = this.selectedDefaultFuel || 'Дизел';
       try { await this.fetchDatabaseFuelPrices(); } catch (e) {}
     }
     if (widgetId === 'pharmacy') {
@@ -1673,6 +1803,19 @@ async handleLogout() {
         });
       }
       this.loadDutyPharmacies();
+    }
+    if (widgetId === 'gas_stations') {
+      this.gasModalView = 'list';
+      if (!this.currentUserCoords) {
+        this.weatherService.getDeviceCoordinates().subscribe(coords => {
+          this.currentUserCoords = coords;
+          this.updateNearestGasStation();
+          this.updateFilteredGasStations();
+          this.updateGasWidgetDisplay();
+          this.cdr.markForCheck();
+        });
+      }
+      this.loadGasStations();
     }
     this.isDetailModalOpen = true;
   }
@@ -1763,6 +1906,7 @@ async handleLogout() {
 
   setDefaultFuel(fuelType: string) {
     this.selectedDefaultFuel = fuelType;
+    this.fuelCalcSelectedFuel = fuelType;
     localStorage.setItem('default_fuel_type', fuelType);
     this.updateFuelWidgetDisplay();
   }
@@ -2254,6 +2398,19 @@ isNotificationActive(widgetId: string): boolean {
     this.cdr.markForCheck();
   }
 
+  private applyLeafletTileLayer() {
+    if (!this.leafletMap) return;
+    if (this.leafletTileLayer) {
+      this.leafletMap.removeLayer(this.leafletTileLayer);
+      this.leafletTileLayer = null;
+    }
+
+    this.leafletTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.leafletMap);
+  }
+
   initLeafletMap() {
     const container = document.getElementById('pharmacy-leaflet-map');
     if (!container) return;
@@ -2262,6 +2419,7 @@ isNotificationActive(widgetId: string): boolean {
       this.leafletMap.remove();
       this.leafletMap = null;
       this.leafletMarkers = [];
+      this.leafletTileLayer = null;
     }
 
     const initialLat = this.currentUserCoords?.latitude ?? 41.9981;
@@ -2270,18 +2428,16 @@ isNotificationActive(widgetId: string): boolean {
     this.leafletMap = L.map('pharmacy-leaflet-map', {
       center: [initialLat, initialLng],
       zoom: 13,
-      zoomControl: true
+      zoomControl: true,
+      attributionControl: false
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(this.leafletMap);
+    this.applyLeafletTileLayer();
 
     if (this.currentUserCoords) {
       const userIcon = L.divIcon({
         className: 'user-location-marker',
-        html: `<div style="background: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(37,99,235,0.6);"></div>`,
+        html: `<div style="background: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(37,99,235,0.85);"></div>`,
         iconSize: [20, 20],
         iconAnchor: [10, 10]
       });
@@ -2308,9 +2464,10 @@ isNotificationActive(widgetId: string): boolean {
     }
     this.leafletMarkers = [];
 
+    const pinBorderColor = '#ffffff';
     const pharmacyIcon = L.divIcon({
       className: 'pharmacy-leaflet-pin',
-      html: `<div style="background: #10b981; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 16px;">✚</div>`,
+      html: `<div style="background: #10b981; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid ${pinBorderColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 16px;">✚</div>`,
       iconSize: [30, 30],
       iconAnchor: [15, 15],
       popupAnchor: [0, -15]
@@ -2321,8 +2478,8 @@ isNotificationActive(widgetId: string): boolean {
 
       const marker = L.marker([p.latitude, p.longitude], { icon: pharmacyIcon });
       
-      const phoneHtml = p.phone ? `<a href="tel:${p.phone}" style="display:inline-block; margin-top:6px; color:#10b981; font-weight:bold; text-decoration:none; font-size:13px;">📞 ${p.phone}</a>` : '';
-      const distHtml = p.distanceKm != null ? `<div style="color:#64748b; font-size:12px; margin-top:2px;">📍 ${this.pharmacyService.formatDistance(p.distanceKm)}</div>` : '';
+      const phoneHtml = p.phone ? `<a href="tel:${p.phone}" class="map-popup-phone">📞 ${p.phone}</a>` : '';
+      const distHtml = p.distanceKm != null ? `<div class="map-popup-dist">📍 ${this.pharmacyService.formatDistance(p.distanceKm)}</div>` : '';
       const directionsUrl = p.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
       
       const isOpen = this.isPharmacyOpenNow(p);
@@ -2331,26 +2488,26 @@ isNotificationActive(widgetId: string): boolean {
       const directionsLabel = this.translate.instant('PHARMACY_MODAL.DIRECTIONS') || 'Насоки';
 
       const badgeHtml = p.is_24_7
-        ? `<div style="display:inline-block; background:#ecfdf5; color:#059669; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">24/7 ${openLabel}</div>`
+        ? `<div class="map-popup-badge-open">24/7 ${openLabel}</div>`
         : (isOpen
-            ? `<div style="display:inline-block; background:#ecfdf5; color:#059669; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">🟢 ${openLabel}</div>`
-            : `<div style="display:inline-block; background:#fef2f2; color:#dc2626; font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px; margin-top:4px;">🔴 ${closedLabel}</div>`
+            ? `<div class="map-popup-badge-open">🟢 ${openLabel}</div>`
+            : `<div class="map-popup-badge-closed">🔴 ${closedLabel}</div>`
           );
 
       const hoursHtml = p.working_hours 
-        ? `<div style="color:#0f766e; font-size:11px; font-weight:700; margin-top:4px;">🕒 ${p.working_hours}</div>` 
+        ? `<div class="map-popup-hours">🕒 ${p.working_hours}</div>` 
         : '';
 
       const popupContent = `
-        <div style="font-family: inherit; font-size: 13px; min-width: 170px; color: #1e293b;">
-          <div style="font-weight: 800; color: #0f172a; font-size: 14px; margin-bottom: 2px;">${p.name}</div>
-          <div style="color: #64748b; font-size: 12px;">${p.address}, ${p.city}</div>
+        <div class="pharmacy-leaflet-popup">
+          <div class="map-popup-title">${p.name}</div>
+          <div class="map-popup-subtitle">${p.address}, ${p.city}</div>
           ${hoursHtml}
           ${badgeHtml}
           ${distHtml}
           ${phoneHtml}
-          <div style="margin-top: 8px;">
-            <a href="${directionsUrl}" target="_blank" style="background:#10b981; color:white; padding:5px 12px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px; display:inline-block;">${directionsLabel} 🧭</a>
+          <div style="margin-top: 10px;">
+            <a href="${directionsUrl}" target="_blank" class="map-popup-directions-btn">${directionsLabel} 🧭</a>
           </div>
         </div>
       `;
@@ -2398,10 +2555,22 @@ isNotificationActive(widgetId: string): boolean {
 
   getPharmacyPhoneList(phoneStr?: string | null): string[] {
     if (!phoneStr) return [];
-    return phoneStr
-      .split(/[,;\n]|\s+или\s+|\s+or\s+/i)
-      .map(p => p.trim().replace(/^[,;.\s]+|[,;.\s]+$/g, ''))
-      .filter(p => p.length >= 5);
+    const candidates = phoneStr.split(/[,;\n]|\s+или\s+|\s+or\s+/i);
+    const result: string[] = [];
+    for (const c of candidates) {
+      const trimmed = c.trim().replace(/^[,;.\s]+|[,;.\s]+$/g, '');
+      const digitsCount = (trimmed.match(/\d/g) || []).length;
+      if (digitsCount >= 5) {
+        // Extract the pure phone sequence if pharmacist name was prefixed
+        const match = trimmed.match(/(?:[+0-9][0-9\s\/\-]{4,}[0-9])/);
+        if (match) {
+          result.push(match[0].trim());
+        } else {
+          result.push(trimmed);
+        }
+      }
+    }
+    return result;
   }
 
   getFormattedWorkingHoursLines(hours?: string | null): string[] {
@@ -2458,5 +2627,303 @@ isNotificationActive(widgetId: string): boolean {
 
   formatPharmacyDistance(distanceKm?: number): string {
     return this.pharmacyService.formatDistance(distanceKm);
+  }
+
+  // --- GAS STATIONS (БЕНЗИНСКИ ПУМПИ) METHODS ---
+
+  async loadGasStations() {
+    try {
+      const data = await this.gasStationService.fetchGasStations();
+      this.gasStationsList = data || [];
+      this.gasCities = Array.from(new Set(this.gasStationsList.map(s => s.city).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      this.updateNearestGasStation();
+      this.updateFilteredGasStations();
+      this.updateGasWidgetDisplay();
+      this.cdr.markForCheck();
+    } catch (err) {
+      console.warn('Error loading gas stations in home page:', err);
+    }
+  }
+
+  updateNearestGasStation() {
+    if (!this.gasStationsList || this.gasStationsList.length === 0) return;
+
+    if (this.currentUserCoords) {
+      for (const s of this.gasStationsList) {
+        if (s.latitude && s.longitude) {
+          s.distanceKm = this.gasStationService.calculateDistanceKm(
+            this.currentUserCoords.latitude,
+            this.currentUserCoords.longitude,
+            s.latitude,
+            s.longitude
+          );
+        }
+      }
+
+      const sorted = [...this.gasStationsList]
+        .filter(s => s.distanceKm != null)
+        .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+
+      this.nearestGasStation = sorted.length > 0 ? sorted[0] : null;
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      const cityMatch = this.gasStationsList.find(s => s.city.toLowerCase().includes(userCity));
+      this.nearestGasStation = cityMatch || this.gasStationsList[0] || null;
+    } else {
+      this.nearestGasStation = this.gasStationsList[0] || null;
+    }
+  }
+
+  updateGasWidgetDisplay() {
+    const w = this.allWidgets.find(item => item.id === 'gas_stations');
+    if (w) {
+      if (this.nearestGasStation && this.nearestGasStation.distanceKm != null) {
+        w.value = this.gasStationService.formatDistance(this.nearestGasStation.distanceKm);
+        w.unit = this.nearestGasStation.brand || 'Пумпа';
+      } else {
+        w.value = '⛽';
+        w.unit = 'Пумпи';
+      }
+      w.customColor = undefined;
+    }
+    this.filterWidgets();
+  }
+
+  updateFilteredGasStations() {
+    let list = [...this.gasStationsList];
+
+    // City Filter
+    if (this.selectedGasCity) {
+      const cityFilter = this.selectedGasCity.toLowerCase().trim();
+      list = list.filter(s => s.city.toLowerCase().includes(cityFilter));
+    }
+
+    // Brand Filter
+    if (this.selectedGasBrand && this.selectedGasBrand !== 'all') {
+      if (this.selectedGasBrand === 'other') {
+        const topBrands = ['макпетрол', 'лукоил', 'окта', 'детоил', 'гулф', 'шел'];
+        list = list.filter(s => !topBrands.some(tb => s.brand.toLowerCase().includes(tb)));
+      } else {
+        const b = this.selectedGasBrand.toLowerCase();
+        list = list.filter(s => s.brand.toLowerCase().includes(b));
+      }
+    }
+
+    // Service Filter
+    if (this.selectedGasService && this.selectedGasService !== 'all') {
+      if (this.selectedGasService === '24_7') {
+        list = list.filter(s => s.is_24_7);
+      } else if (this.selectedGasService === 'lpg') {
+        list = list.filter(s => s.has_lpg);
+      } else if (this.selectedGasService === 'ev') {
+        list = list.filter(s => s.has_ev);
+      } else if (this.selectedGasService === 'car_wash') {
+        list = list.filter(s => s.has_car_wash);
+      } else if (this.selectedGasService === 'shop') {
+        list = list.filter(s => s.has_shop);
+      }
+    }
+
+    // Search Query
+    if (this.gasSearchQuery && this.gasSearchQuery.trim()) {
+      const q = this.gasSearchQuery.toLowerCase().trim();
+      list = list.filter(s => 
+        s.name.toLowerCase().includes(q) ||
+        s.brand.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        s.city.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by proximity
+    if (this.currentUserCoords) {
+      list.sort((a, b) => (a.distanceKm ?? 999999) - (b.distanceKm ?? 999999));
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      list.sort((a, b) => {
+        const aMatch = a.city.toLowerCase().includes(userCity) ? 0 : 1;
+        const bMatch = b.city.toLowerCase().includes(userCity) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    this.filteredGasStations = list;
+
+    if (this.gasModalView === 'map' && this.gasLeafletMap) {
+      this.renderGasLeafletMarkers();
+    }
+  }
+
+  selectGasCity(city: string) {
+    this.selectedGasCity = this.selectedGasCity === city ? '' : city;
+    this.updateFilteredGasStations();
+    if (this.gasModalView === 'map' && this.gasLeafletMap) {
+      this.centerGasLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  selectGasBrand(brandId: string) {
+    this.selectedGasBrand = brandId;
+    this.updateFilteredGasStations();
+    if (this.gasModalView === 'map' && this.gasLeafletMap) {
+      this.centerGasLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  selectGasService(serviceId: string) {
+    this.selectedGasService = serviceId;
+    this.updateFilteredGasStations();
+    if (this.gasModalView === 'map' && this.gasLeafletMap) {
+      this.centerGasLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onGasSearchChange() {
+    this.updateFilteredGasStations();
+    this.cdr.markForCheck();
+  }
+
+  setGasModalView(view: 'list' | 'map') {
+    this.gasModalView = view;
+    if (view === 'map') {
+      setTimeout(() => {
+        this.initGasLeafletMap();
+      }, 100);
+    }
+    this.cdr.markForCheck();
+  }
+
+  initGasLeafletMap() {
+    const container = document.getElementById('gas-leaflet-map');
+    if (!container) return;
+
+    if (this.gasLeafletMap) {
+      this.gasLeafletMap.remove();
+      this.gasLeafletMap = null;
+      this.gasLeafletMarkers = [];
+      this.gasLeafletTileLayer = null;
+    }
+
+    const initialLat = this.currentUserCoords?.latitude ?? 41.9981;
+    const initialLng = this.currentUserCoords?.longitude ?? 21.4254;
+
+    this.gasLeafletMap = L.map('gas-leaflet-map', {
+      center: [initialLat, initialLng],
+      zoom: 13,
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    this.gasLeafletTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.gasLeafletMap);
+
+    if (this.currentUserCoords) {
+      const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `<div style="background: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(37,99,235,0.85);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([this.currentUserCoords.latitude, this.currentUserCoords.longitude], { icon: userIcon })
+        .addTo(this.gasLeafletMap)
+        .bindPopup(`<b>${this.translate.instant('GAS_MODAL.YOUR_LOCATION') || 'Ваша локација'}</b>`);
+    }
+
+    this.renderGasLeafletMarkers();
+  }
+
+  renderGasLeafletMarkers() {
+    if (!this.gasLeafletMap) return;
+
+    this.gasLeafletMarkers.forEach(m => m.remove());
+    this.gasLeafletMarkers = [];
+
+    const directionsLabel = this.translate.instant('GAS_MODAL.DIRECTIONS') || 'Насоки';
+
+    for (const s of this.filteredGasStations) {
+      if (!s.latitude || !s.longitude) continue;
+
+      const style = this.gasStationService.getBrandBadgeStyle(s.chain);
+      const icon = L.divIcon({
+        className: 'gas-map-pin',
+        html: `
+          <div style="background: #0f172a; border: 2px solid ${style.color}; border-radius: 20px; padding: 2px 7px; color: ${style.color}; font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.45); white-space: nowrap;">
+            <span>⛽</span>
+            <span>${s.brand}</span>
+          </div>
+        `,
+        iconSize: [80, 26],
+        iconAnchor: [40, 13]
+      });
+
+      const distHtml = s.distanceKm != null ? `<div class="map-popup-dist" style="color: #10b981; font-weight: 700; margin: 4px 0;">📍 ${this.gasStationService.formatDistance(s.distanceKm)}</div>` : '';
+      const encodedName = encodeURIComponent(s.name);
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}&destination_place_id=${encodedName}`;
+
+      const popupHtml = `
+        <div class="map-popup-card" style="font-family: inherit; font-size: 13px; line-height: 1.4; color: #0f172a;">
+          <div style="font-weight: 800; font-size: 14px; margin-bottom: 2px;">${s.name}</div>
+          <div style="color: #64748b; font-size: 12px; margin-bottom: 3px;">${s.address} (${s.city})</div>
+          ${distHtml}
+          <div style="margin: 4px 0; font-size: 11px;">
+            <span style="background: rgba(16,185,129,0.15); color: #047857; padding: 2px 6px; border-radius: 6px; font-weight: 700;">${s.is_24_7 ? '24/7' : s.working_hours}</span>
+            ${s.has_lpg ? '<span style="background: rgba(59,130,246,0.15); color: #1d4ed8; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">LPG</span>' : ''}
+            ${s.has_ev ? '<span style="background: rgba(245,158,11,0.15); color: #b45309; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">EV</span>' : ''}
+          </div>
+          <a href="${mapsUrl}" target="_blank" style="display: block; margin-top: 8px; text-align: center; background: #10b981; color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 12px;">
+            🚗 ${directionsLabel}
+          </a>
+        </div>
+      `;
+
+      const marker = L.marker([s.latitude, s.longitude], { icon })
+        .addTo(this.gasLeafletMap)
+        .bindPopup(popupHtml, { maxWidth: 260 });
+
+      this.gasLeafletMarkers.push(marker);
+    }
+  }
+
+  centerGasLeafletMap() {
+    if (!this.gasLeafletMap) return;
+    if (this.filteredGasStations.length > 0) {
+      const group = L.featureGroup(this.gasLeafletMarkers);
+      if (this.gasLeafletMarkers.length > 0) {
+        this.gasLeafletMap.fitBounds(group.getBounds().pad(0.15));
+      }
+    }
+  }
+
+  destroyGasLeafletMap() {
+    if (this.gasLeafletMap) {
+      this.gasLeafletMap.remove();
+      this.gasLeafletMap = null;
+      this.gasLeafletMarkers = [];
+      this.gasLeafletTileLayer = null;
+    }
+  }
+
+  openGasDirections(station: GasStation) {
+    this.gasStationService.openDirections(station.latitude, station.longitude, station.name);
+  }
+
+  dialGasPhone(phone?: string | null) {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    if (!cleanPhone) return;
+    window.location.href = `tel:${cleanPhone}`;
+  }
+
+  formatGasDistance(km?: number): string {
+    return this.gasStationService.formatDistance(km);
+  }
+
+  getGasBrandBadgeStyle(chain: string) {
+    return this.gasStationService.getBrandBadgeStyle(chain);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, inject, NgZone, OnInit } from '@angular/core';
+import { Component, inject, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
@@ -14,7 +14,8 @@ import {
   mailUnreadOutline, 
   checkmarkCircleOutline, 
   closeOutline, 
-  refreshOutline 
+  refreshOutline,
+  timerOutline
 } from 'ionicons/icons';
 
 @Component({
@@ -31,7 +32,7 @@ import {
     IonIcon
   ]
 })
-export class LoginPage implements OnInit {
+export class LoginPage implements OnInit, OnDestroy {
   constructor() {
     addIcons({ 
       'arrow-back-outline': arrowBackOutline,
@@ -39,7 +40,8 @@ export class LoginPage implements OnInit {
       'mail-unread-outline': mailUnreadOutline,
       'checkmark-circle-outline': checkmarkCircleOutline,
       'close-outline': closeOutline,
-      'refresh-outline': refreshOutline
+      'refresh-outline': refreshOutline,
+      'timer-outline': timerOutline
     });
   }
   private supabaseService = inject(SupabaseService);
@@ -67,6 +69,8 @@ export class LoginPage implements OnInit {
   isVerificationModal = true;
   isResending = false;
   resendFeedbackMessage = '';
+  resendCountdown = 0;
+  private resendTimer: any = null;
 
   ngOnInit() {
     // 1. Immediately check if user is already authenticated (returning from Google OAuth or deep link)
@@ -86,6 +90,10 @@ export class LoginPage implements OnInit {
         });
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.clearResendTimer();
   }
 
   async checkExistingSession() {
@@ -116,12 +124,14 @@ export class LoginPage implements OnInit {
     this.popupEmail = email;
     this.isVerificationModal = true;
     this.resendFeedbackMessage = '';
+    this.clearResendTimer();
     this.isSuccessModalOpen = true;
   }
 
   closeSuccessModal() {
     this.isSuccessModalOpen = false;
     this.resendFeedbackMessage = '';
+    this.clearResendTimer();
   }
 
   onPopupPrimaryAction() {
@@ -130,17 +140,63 @@ export class LoginPage implements OnInit {
   }
 
   async onPopupResendEmail() {
-    if (!this.popupEmail || this.isResending) return;
+    if (!this.popupEmail || this.isResending || this.resendCountdown > 0) return;
     this.isResending = true;
     this.resendFeedbackMessage = '';
 
     try {
       await this.supabaseService.resendConfirmationEmail(this.popupEmail);
       this.resendFeedbackMessage = this.translate.instant('AUTH.EMAIL_RESENT_SUCCESS');
+      this.startResendCountdown(60);
     } catch (err: any) {
-      this.resendFeedbackMessage = err?.message || 'Error resending email.';
+      this.handleResendRateLimitOrError(err);
     } finally {
       this.isResending = false;
+    }
+  }
+
+  private handleResendRateLimitOrError(err: any) {
+    const rawMsg = (err?.message || '').toLowerCase();
+    const code = (err?.code || '').toLowerCase();
+
+    if (
+      rawMsg.includes('for security purposes') || 
+      rawMsg.includes('only request this after') || 
+      code === 'over_email_send_rate_limit' || 
+      rawMsg.includes('rate limit')
+    ) {
+      const match = (err?.message || '').match(/(\d+)\s*second/i);
+      const seconds = match ? parseInt(match[1], 10) : 60;
+      this.startResendCountdown(seconds);
+    } else {
+      this.resendFeedbackMessage = this.getTranslatedAuthError(err);
+    }
+  }
+
+  private startResendCountdown(seconds: number) {
+    this.clearResendTimer();
+    this.resendCountdown = seconds;
+    this.updateResendFeedback();
+
+    this.resendTimer = setInterval(() => {
+      this.resendCountdown--;
+      if (this.resendCountdown <= 0) {
+        this.clearResendTimer();
+        this.resendFeedbackMessage = '';
+      } else {
+        this.updateResendFeedback();
+      }
+    }, 1000);
+  }
+
+  private updateResendFeedback() {
+    this.resendFeedbackMessage = this.translate.instant('AUTH.RATE_LIMIT_SECONDS', { seconds: this.resendCountdown });
+  }
+
+  private clearResendTimer() {
+    if (this.resendTimer) {
+      clearInterval(this.resendTimer);
+      this.resendTimer = null;
     }
   }
 
@@ -200,15 +256,16 @@ export class LoginPage implements OnInit {
         this.popupEmail = this.email.trim();
         this.isVerificationModal = true;
         this.resendFeedbackMessage = '';
+        this.clearResendTimer();
         this.isSuccessModalOpen = true;
       } 
       // 3. Email not confirmed
       else if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
         this.errorMessage = this.translate.instant('AUTH.EMAIL_NOT_CONFIRMED');
       } 
-      // 4. Fallback generic error
+      // 4. Rate limit or fallback translated error
       else {
-        this.errorMessage = this.translate.instant('AUTH.GENERIC_ERROR');
+        this.errorMessage = this.getTranslatedAuthError(err);
       }
     } finally {
       this.isLoading = false;
@@ -222,7 +279,7 @@ export class LoginPage implements OnInit {
       await this.supabaseService.signInWithGoogle();
     } catch (err: any) {
       console.error('Google Auth Error:', err);
-      this.errorMessage = err.message || this.translate.instant('AUTH.GOOGLE_ERROR');
+      this.errorMessage = this.translate.instant('AUTH.GOOGLE_ERROR');
     } finally {
       this.isLoading = false;
     }
@@ -249,11 +306,49 @@ export class LoginPage implements OnInit {
       this.popupEmail = this.email.trim();
       this.isVerificationModal = false;
       this.resendFeedbackMessage = '';
+      this.clearResendTimer();
       this.isSuccessModalOpen = true;
     } catch (err: any) {
-      this.errorMessage = err?.message || this.translate.instant('AUTH.GENERIC_ERROR');
+      this.errorMessage = this.getTranslatedAuthError(err);
     } finally {
       this.isLoading = false;
     }
+  }
+
+  public getTranslatedAuthError(err: any): string {
+    if (!err) return this.translate.instant('AUTH.GENERIC_ERROR');
+    const rawMsg = (err?.message || '').toLowerCase();
+    const code = (err?.code || '').toLowerCase();
+
+    if (
+      rawMsg.includes('for security purposes') || 
+      rawMsg.includes('only request this after') || 
+      code === 'over_email_send_rate_limit' || 
+      rawMsg.includes('rate limit')
+    ) {
+      const match = (err?.message || '').match(/(\d+)\s*second/i);
+      if (match) {
+        return this.translate.instant('AUTH.RATE_LIMIT_SECONDS', { seconds: match[1] });
+      }
+      return this.translate.instant('AUTH.RATE_LIMIT_GENERIC');
+    }
+
+    if (code === 'invalid_credentials' || rawMsg.includes('invalid login credentials') || rawMsg.includes('invalid_credentials')) {
+      return this.translate.instant('AUTH.ERRORS.invalid_credentials');
+    }
+
+    if (rawMsg.includes('already registered') || rawMsg.includes('user already exists') || code === 'user_already_exists') {
+      return this.translate.instant('AUTH.ERRORS.user_already_exists');
+    }
+
+    if (rawMsg.includes('email not confirmed') || code === 'email_not_confirmed') {
+      return this.translate.instant('AUTH.EMAIL_NOT_CONFIRMED');
+    }
+
+    if (rawMsg.includes('network') || rawMsg.includes('fetch')) {
+      return this.translate.instant('AUTH.NETWORK_ERROR');
+    }
+
+    return this.translate.instant('AUTH.GENERIC_ERROR');
   }
 }

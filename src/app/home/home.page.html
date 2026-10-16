@@ -1324,233 +1324,278 @@
       }
 
       <!-- FUEL DETAILS -->
-@if (activeDetailWidgetId === 'fuel') {
-  <div class="modal-hero" style="padding-bottom: 10px; text-align: center;">
-    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-      <ion-icon name="speedometer" style="font-size: 1.3rem; color: #ef4444;"></ion-icon>
-      <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: #0f172a;">
-        {{ 'WIDGETS.FUEL' | translate }}
-      </h2>
-    </div>
-    <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'FUEL_MODAL.SUBTITLE' | translate }}</p>
-  </div>
-  
-  <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
-    <div style="display: flex; flex-direction: column; gap: 8px;">
-      
-      <!-- Бензин 95 -->
-      <div 
-        (click)="setDefaultFuel('Бензин 95')" 
-        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
-            {{ selectedDefaultFuel === 'Бензин 95' ? '★' : '☆' }}
-          </span>
-          <div>
-            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
-              {{ 'FUEL_MODAL.PETROL_95' | translate }}
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-              {{ 'FUEL_MODAL.PER_LITER' | translate }}
-            </span>
+      @if (activeDetailWidgetId === 'fuel') {
+        <div class="modal-hero" style="padding-bottom: 4px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="speedometer" style="font-size: 1.3rem; color: #ef4444;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ 'WIDGETS.FUEL' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">
+            {{ 'FUEL_MODAL.SUBTITLE' | translate }}
+          </p>
+
+          <!-- View Mode Switcher: Prices vs Calculator -->
+          <div class="fuel-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="fuelModalView === 'prices'"
+              (click)="switchFuelModalView('prices')">
+              <ion-icon name="speedometer"></ion-icon>
+              <span>{{ 'FUEL_MODAL.TAB_PRICES' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="fuelModalView === 'calc'"
+              (click)="switchFuelModalView('calc')">
+              <ion-icon name="calculator"></ion-icon>
+              <span>{{ 'FUEL_MODAL.TAB_CALCULATOR' | translate }}</span>
+            </button>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
-          @if (getFuelPriceDiff('Бензин 95') !== 0) {
-            <span [style.background-color]="getFuelPriceDiff('Бензин 95') > 0 ? '#ffe3e3' : '#d3f9d8'"
-                  [style.color]="getFuelPriceDiff('Бензин 95') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
-              {{ getFuelPriceDiff('Бензин 95') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 95') }}
-            </span>
-          }
-          <div style="text-align: right;">
-            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
-              {{ getDynamicFuelPrice('Бензин 95') }} ден.
-            </span>
-            @if (selectedDefaultFuel === 'Бензин 95') {
-              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          
+          <!-- VIEW 1: FUEL PRICES LIST (RESPONSIVE) -->
+          @if (fuelModalView === 'prices') {
+            <div class="fuel-list">
+              @for (fuel of FUEL_ITEMS; track fuel.id) {
+                <div 
+                  class="fuel-card"
+                  [class.is-default]="selectedDefaultFuel === fuel.id"
+                  (click)="setDefaultFuel(fuel.id)">
+                  
+                  <!-- Left: Star + Label + Price under Label -->
+                  <div class="fuel-left">
+                    <button 
+                      type="button"
+                      class="fuel-star-btn"
+                      (click)="$event.stopPropagation(); setDefaultFuel(fuel.id)">
+                      {{ selectedDefaultFuel === fuel.id ? '★' : '☆' }}
+                    </button>
+                    <div class="fuel-info">
+                      <span class="fuel-name">
+                        {{ fuel.titleKey | translate }}
+                      </span>
+                      <div class="fuel-price-row">
+                        <span class="fuel-price">
+                          {{ getDynamicFuelPrice(fuel.id) }} ден.
+                        </span>
+                        <span class="fuel-unit">
+                          / {{ fuel.isKg ? ('FUEL_MODAL.PER_KG' | translate) : ('FUEL_MODAL.PER_LITER' | translate) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right: Arrow Diff Badge + Default Tag -->
+                  <div class="fuel-right">
+                    @if (getFuelPriceDiff(fuel.id) !== 0) {
+                      <span class="fuel-diff-badge"
+                            [class.diff-up]="getFuelPriceDiff(fuel.id) > 0"
+                            [class.diff-down]="getFuelPriceDiff(fuel.id) < 0">
+                        {{ getFuelPriceDiff(fuel.id) > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText(fuel.id) }}
+                      </span>
+                    } @else {
+                      <span class="fuel-diff-badge diff-neutral">
+                        0.00
+                      </span>
+                    }
+
+                    @if (selectedDefaultFuel === fuel.id) {
+                      <span class="fuel-default-badge">
+                        ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Effective Date Card -->
+            <div class="fuel-effective-card">
+              <span class="effective-label">
+                📅 {{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}
               </span>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- Бензин 98+ -->
-      <div 
-        (click)="setDefaultFuel('Бензин 98+')" 
-        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
-            {{ selectedDefaultFuel === 'Бензин 98+' ? '★' : '☆' }}
-          </span>
-          <div>
-            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
-              {{ 'FUEL_MODAL.PETROL_98' | translate }}
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-              {{ 'FUEL_MODAL.PER_LITER' | translate }}
-            </span>
-          </div>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          @if (getFuelPriceDiff('Бензин 98+') !== 0) {
-            <span [style.background-color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#ffe3e3' : '#d3f9d8'"
-                  [style.color]="getFuelPriceDiff('Бензин 98+') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
-              {{ getFuelPriceDiff('Бензин 98+') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Бензин 98+') }}
-            </span>
-          }
-          <div style="text-align: right;">
-            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
-              {{ getDynamicFuelPrice('Бензин 98+') }} ден.
-            </span>
-            @if (selectedDefaultFuel === 'Бензин 98+') {
-              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
+              <span class="effective-date">
+                {{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}
               </span>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- Дизел -->
-      <div 
-        (click)="setDefaultFuel('Дизел')" 
-        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
-            {{ selectedDefaultFuel === 'Дизел' ? '★' : '☆' }}
-          </span>
-          <div>
-            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
-              {{ 'FUEL_MODAL.DIESEL' | translate }}
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-              {{ 'FUEL_MODAL.PER_LITER' | translate }}
-            </span>
-          </div>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          @if (getFuelPriceDiff('Дизел') !== 0) {
-            <span [style.background-color]="getFuelPriceDiff('Дизел') > 0 ? '#ffe3e3' : '#d3f9d8'"
-                  [style.color]="getFuelPriceDiff('Дизел') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
-              {{ getFuelPriceDiff('Дизел') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Дизел') }}
-            </span>
+            </div>
           }
-          <div style="text-align: right;">
-            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
-              {{ getDynamicFuelPrice('Дизел') }} ден.
-            </span>
-            @if (selectedDefaultFuel === 'Дизел') {
-              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
-              </span>
-            }
-          </div>
-        </div>
-      </div>
 
-      <!-- Екстра Лесно -->
-      <div 
-        (click)="setDefaultFuel('Екстра Лесно')" 
-        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
-            {{ selectedDefaultFuel === 'Екстра Лесно' ? '★' : '☆' }}
-          </span>
-          <div>
-            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
-              {{ 'FUEL_MODAL.LIGHT_OIL' | translate }}
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-              {{ 'FUEL_MODAL.PER_LITER' | translate }}
-            </span>
-          </div>
-        </div>
+          <!-- VIEW 2: FUEL CALCULATOR -->
+          @if (fuelModalView === 'calc') {
+            <div class="fuel-calc-container">
+              
+              <!-- 1. Fuel Type Selector -->
+              <div class="fuel-calc-type-selector">
+                @for (f of FUEL_ITEMS; track f.id) {
+                  <button 
+                    type="button"
+                    class="fuel-calc-type-chip"
+                    [class.active]="fuelCalcSelectedFuel === f.id"
+                    (click)="fuelCalcSelectedFuel = f.id">
+                    <span class="chip-name">{{ f.shortName }}</span>
+                    <span class="chip-price">{{ getDynamicFuelPrice(f.id) }} ден.</span>
+                  </button>
+                }
+              </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
-          @if (getFuelPriceDiff('Екстра Лесно') !== 0) {
-            <span [style.background-color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#ffe3e3' : '#d3f9d8'"
-                  [style.color]="getFuelPriceDiff('Екстра Лесно') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
-              {{ getFuelPriceDiff('Екстра Лесно') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Екстра Лесно') }}
-            </span>
+              <!-- 2. Calculation Mode Switcher -->
+              <div class="fuel-calc-mode-bar">
+                <button 
+                  type="button"
+                  class="mode-pill"
+                  [class.active]="fuelCalcMode === 'amount'"
+                  (click)="fuelCalcMode = 'amount'">
+                  <ion-icon name="cash-outline"></ion-icon>
+                  <span>{{ 'FUEL_MODAL.CALC_MODE_AMOUNT' | translate }}</span>
+                </button>
+                <button 
+                  type="button"
+                  class="mode-pill"
+                  [class.active]="fuelCalcMode === 'liters'"
+                  (click)="fuelCalcMode = 'liters'">
+                  <ion-icon name="water-outline"></ion-icon>
+                  <span>{{ 'FUEL_MODAL.CALC_MODE_LITERS' | translate }}</span>
+                </button>
+                <button 
+                  type="button"
+                  class="mode-pill"
+                  [class.active]="fuelCalcMode === 'trip'"
+                  (click)="fuelCalcMode = 'trip'">
+                  <ion-icon name="car-outline"></ion-icon>
+                  <span>{{ 'FUEL_MODAL.CALC_MODE_TRIP' | translate }}</span>
+                </button>
+              </div>
+
+              <!-- 3A. MODE 1: AMOUNT (MKD -> Liters) -->
+              @if (fuelCalcMode === 'amount') {
+                <div class="fuel-calc-card">
+                  <label class="calc-label">{{ 'FUEL_MODAL.ENTER_AMOUNT_MKD' | translate }}</label>
+                  <div class="calc-input-wrap">
+                    <input 
+                      type="number" 
+                      [(ngModel)]="fuelCalcMkdAmount" 
+                      placeholder="1000" 
+                      min="1" 
+                      step="100" />
+                    <span class="calc-suffix">ден.</span>
+                  </div>
+                  <div class="calc-presets">
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcMkdAmount === 500" (click)="setFuelCalcAmountPreset(500)">500 ден.</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcMkdAmount === 1000" (click)="setFuelCalcAmountPreset(1000)">1.000 ден.</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcMkdAmount === 2000" (click)="setFuelCalcAmountPreset(2000)">2.000 ден.</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcMkdAmount === 3000" (click)="setFuelCalcAmountPreset(3000)">3.000 ден.</button>
+                  </div>
+                </div>
+
+                <!-- Hero Result -->
+                <div class="fuel-calc-hero">
+                  <span class="hero-tag">{{ 'FUEL_MODAL.LITERS_RECEIVED' | translate }}</span>
+                  <div class="hero-val-row">
+                    <span class="hero-big-number">{{ fuelCalcLitersResult }}</span>
+                    <span class="hero-big-unit">{{ fuelCalcSelectedFuel === 'Мазут' ? 'кг' : 'L' }}</span>
+                  </div>
+                  <p class="hero-caption">
+                    За {{ (fuelCalcMkdAmount || 0) | number }} ден. по цена од {{ getDynamicFuelPrice(fuelCalcSelectedFuel) }} ден./{{ fuelCalcSelectedFuel === 'Мазут' ? 'кг' : 'л' }} ({{ fuelCalcSelectedFuel }})
+                  </p>
+                </div>
+              }
+
+              <!-- 3B. MODE 2: LITERS (Liters -> MKD) -->
+              @if (fuelCalcMode === 'liters') {
+                <div class="fuel-calc-card">
+                  <label class="calc-label">{{ 'FUEL_MODAL.ENTER_LITERS' | translate }}</label>
+                  <div class="calc-input-wrap">
+                    <input 
+                      type="number" 
+                      [(ngModel)]="fuelCalcLiters" 
+                      placeholder="40" 
+                      min="1" 
+                      step="5" />
+                    <span class="calc-suffix">{{ fuelCalcSelectedFuel === 'Мазут' ? 'кг' : 'L' }}</span>
+                  </div>
+                  <div class="calc-presets">
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcLiters === 10" (click)="setFuelCalcLitersPreset(10)">10 L</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcLiters === 20" (click)="setFuelCalcLitersPreset(20)">20 L</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcLiters === 40" (click)="setFuelCalcLitersPreset(40)">40 L</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcLiters === 50" (click)="setFuelCalcLitersPreset(50)">50 L ({{ 'FUEL_MODAL.TANK' | translate }})</button>
+                  </div>
+                </div>
+
+                <!-- Hero Result -->
+                <div class="fuel-calc-hero">
+                  <span class="hero-tag">{{ 'FUEL_MODAL.TOTAL_PRICE' | translate }}</span>
+                  <div class="hero-val-row">
+                    <span class="hero-big-number">{{ fuelCalcCostResult }}</span>
+                    <span class="hero-big-unit">ден.</span>
+                  </div>
+                  <p class="hero-caption">
+                    За {{ (fuelCalcLiters || 0) | number }} {{ fuelCalcSelectedFuel === 'Мазут' ? 'кг' : 'литри' }} {{ fuelCalcSelectedFuel }} по {{ getDynamicFuelPrice(fuelCalcSelectedFuel) }} ден./{{ fuelCalcSelectedFuel === 'Мазут' ? 'кг' : 'л' }}
+                  </p>
+                </div>
+              }
+
+              <!-- 3C. MODE 3: TRIP (Distance + Consumption -> Total Cost) -->
+              @if (fuelCalcMode === 'trip') {
+                <div class="fuel-calc-card">
+                  <label class="calc-label">{{ 'FUEL_MODAL.ENTER_DISTANCE' | translate }}</label>
+                  <div class="calc-input-wrap">
+                    <input 
+                      type="number" 
+                      [(ngModel)]="fuelCalcDistanceKm" 
+                      placeholder="100" 
+                      min="1" 
+                      step="10" />
+                    <span class="calc-suffix">km</span>
+                  </div>
+                  <div class="calc-presets">
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcDistanceKm === 50" (click)="setFuelCalcDistancePreset(50)">50 km</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcDistanceKm === 100" (click)="setFuelCalcDistancePreset(100)">100 km</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcDistanceKm === 200" (click)="setFuelCalcDistancePreset(200)">200 km</button>
+                  </div>
+                </div>
+
+                <div class="fuel-calc-card" style="margin-top: -4px;">
+                  <label class="calc-label">{{ 'FUEL_MODAL.ENTER_CONSUMPTION' | translate }}</label>
+                  <div class="calc-input-wrap">
+                    <input 
+                      type="number" 
+                      [(ngModel)]="fuelCalcConsumptionL100" 
+                      placeholder="6.5" 
+                      min="1" 
+                      step="0.5" />
+                    <span class="calc-suffix">L/100km</span>
+                  </div>
+                  <div class="calc-presets">
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcConsumptionL100 === 5.0" (click)="setFuelCalcConsumptionPreset(5.0)">5.0 L</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcConsumptionL100 === 6.5" (click)="setFuelCalcConsumptionPreset(6.5)">6.5 L ({{ 'FUEL_MODAL.AVERAGE' | translate }})</button>
+                    <button type="button" class="preset-chip" [class.active]="fuelCalcConsumptionL100 === 8.0" (click)="setFuelCalcConsumptionPreset(8.0)">8.0 L ({{ 'FUEL_MODAL.CITY_DRIVE' | translate }})</button>
+                  </div>
+                </div>
+
+                <!-- Hero Result -->
+                <div class="fuel-calc-hero">
+                  <span class="hero-tag">{{ 'FUEL_MODAL.TRIP_COST' | translate }}</span>
+                  <div class="hero-val-row">
+                    <span class="hero-big-number">{{ fuelCalcTripCostResult }}</span>
+                    <span class="hero-big-unit">ден.</span>
+                  </div>
+                  <p class="hero-caption">
+                    Потребни ≈ {{ fuelCalcTripLitersResult }} L гориво ({{ fuelCalcSelectedFuel }}) за {{ fuelCalcDistanceKm }} km
+                  </p>
+                </div>
+              }
+
+            </div>
           }
-          <div style="text-align: right;">
-            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
-              {{ getDynamicFuelPrice('Екстра Лесно') }} ден.
-            </span>
-            @if (selectedDefaultFuel === 'Екстра Лесно') {
-              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
-              </span>
-            }
-          </div>
+
         </div>
-      </div>
-
-      <!-- Мазут -->
-      <div 
-        (click)="setDefaultFuel('Мазут')" 
-        style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 14px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer;">
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.25rem; color: #f59e0b; cursor: pointer;">
-            {{ selectedDefaultFuel === 'Мазут' ? '★' : '☆' }}
-          </span>
-          <div>
-            <span style="font-weight: 800; font-size: 1rem; color: #0f172a; display: block;">
-              {{ 'FUEL_MODAL.HEATING_OIL' | translate }}
-            </span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-              {{ 'FUEL_MODAL.PER_KG' | translate }}
-            </span>
-          </div>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          @if (getFuelPriceDiff('Мазут') !== 0) {
-            <span [style.background-color]="getFuelPriceDiff('Мазут') > 0 ? '#ffe3e3' : '#d3f9d8'"
-                  [style.color]="getFuelPriceDiff('Мазут') > 0 ? '#e63946' : '#2b8a3e'"
-                  style="font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;">
-              {{ getFuelPriceDiff('Мазут') > 0 ? '▲' : '▼' }} {{ getFuelPriceDiffText('Мазут') }}
-            </span>
-          }
-          <div style="text-align: right;">
-            <span style="font-weight: 800; font-size: 1.1rem; color: #0f172a; display: block;">
-              {{ getDynamicFuelPrice('Мазут') }} ден.
-            </span>
-            @if (selectedDefaultFuel === 'Мазут') {
-              <span style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                ● {{ currentLang === 'en' ? 'Default' : (currentLang === 'al' ? 'Kryesore' : 'Основно') }}
-              </span>
-            }
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Effective Date Card -->
-    <div style="margin-top: 14px; padding: 12px 14px; background: #f8fafc; border-radius: 14px; text-align: center; border: 1px dashed #cbd5e1;">
-      <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; display: block; margin-bottom: 2px; text-transform: uppercase;">
-        📅 {{ 'FUEL_MODAL.EFFECTIVE_DATE' | translate }}
-      </span>
-      <span style="font-size: 1.1rem; color: #ef4444; font-weight: 800;">
-        {{ getFuelEffectiveDate() }} {{ 'FUEL_MODAL.YEAR_SUFFIX' | translate }}
-      </span>
-    </div>
-  </div>
-}
+      }
 
       <!-- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) DETAILS -->
       @if (activeDetailWidgetId === 'pharmacy') {
@@ -1700,6 +1745,217 @@
               <div id="pharmacy-leaflet-map" class="pharmacy-leaflet-container"></div>
               <div class="pharmacy-map-badge">
                 <span>🟢 {{ filteredPharmacies.length }} {{ 'PHARMACY_MODAL.TITLE' | translate }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- GAS STATIONS (БЕНЗИНСКИ ПУМПИ) DETAILS -->
+      @if (activeDetailWidgetId === 'gas_stations') {
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="speedometer" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ 'GAS_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'GAS_MODAL.SUBTITLE' | translate }}</p>
+
+          <!-- View Mode Switcher: List vs Leaflet Map -->
+          <div class="gas-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="gasModalView === 'list'"
+              (click)="setGasModalView('list')">
+              <ion-icon name="list"></ion-icon>
+              <span>{{ 'GAS_MODAL.LIST_VIEW' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="gasModalView === 'map'"
+              (click)="setGasModalView('map')">
+              <ion-icon name="map"></ion-icon>
+              <span>{{ 'GAS_MODAL.MAP_VIEW' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <!-- Filter Bar: Search Input -->
+          <div class="gas-search-box">
+            <ion-icon name="search" class="search-icon"></ion-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="gasSearchQuery" 
+              (input)="onGasSearchChange()"
+              [placeholder]="'GAS_MODAL.SEARCH_PLACEHOLDER' | translate" 
+              class="gas-search-input" />
+            @if (gasSearchQuery) {
+              <button class="gas-search-clear" (click)="gasSearchQuery = ''; onGasSearchChange()">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            }
+          </div>
+
+          <!-- Brand Filter Chips Row -->
+          <div class="gas-chip-scroll">
+            @for (b of gasBrands; track b.id) {
+              <button 
+                type="button"
+                class="brand-chip" 
+                [class.active]="selectedGasBrand === b.id" 
+                (click)="selectGasBrand(b.id)">
+                {{ b.labelKey ? (b.labelKey | translate) : b.label }}
+              </button>
+            }
+          </div>
+
+          <!-- Services Filter Row -->
+          <div class="gas-services-scroll">
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === 'all'"
+              (click)="selectGasService('all')">
+              {{ 'GAS_MODAL.ALL_SERVICES' | translate }}
+            </button>
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === '24_7'"
+              (click)="selectGasService('24_7')">
+              {{ 'GAS_MODAL.FILTER_24_7' | translate }}
+            </button>
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === 'lpg'"
+              (click)="selectGasService('lpg')">
+              {{ 'GAS_MODAL.FILTER_LPG' | translate }}
+            </button>
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === 'ev'"
+              (click)="selectGasService('ev')">
+              {{ 'GAS_MODAL.FILTER_EV' | translate }}
+            </button>
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === 'car_wash'"
+              (click)="selectGasService('car_wash')">
+              {{ 'GAS_MODAL.FILTER_CAR_WASH' | translate }}
+            </button>
+            <button 
+              type="button"
+              class="service-chip"
+              [class.active]="selectedGasService === 'shop'"
+              (click)="selectGasService('shop')">
+              {{ 'GAS_MODAL.FILTER_SHOP' | translate }}
+            </button>
+          </div>
+
+          <!-- City Filter Scrollable Row -->
+          <div class="gas-city-scroll">
+            <button 
+              type="button"
+              class="city-chip" 
+              [class.active]="selectedGasCity === ''" 
+              (click)="selectGasCity('')">
+              {{ 'GAS_MODAL.ALL_CITIES' | translate }}
+            </button>
+            @for (city of gasCities; track city) {
+              <button 
+                type="button"
+                class="city-chip" 
+                [class.active]="selectedGasCity === city" 
+                (click)="selectGasCity(city)">
+                {{ city }}
+              </button>
+            }
+          </div>
+
+          <!-- VIEW 1: LIST VIEW -->
+          @if (gasModalView === 'list') {
+            @if (filteredGasStations.length === 0) {
+              <div class="gas-empty-state">
+                <ion-icon name="speedometer" style="font-size: 2.2rem; color: #94a3b8;"></ion-icon>
+                <p>{{ 'GAS_MODAL.NO_RESULTS' | translate }}</p>
+              </div>
+            } @else {
+              <div class="gas-cards-container">
+                @for (s of filteredGasStations; track s.id) {
+                  <div class="gas-card">
+                    <div class="gas-card-top">
+                      <div class="gas-name-block">
+                        <div class="gas-name-row">
+                          <span class="gas-name">{{ s.name }}</span>
+                          @if (s.is_24_7) {
+                            <span class="gas-badge-open">24/7</span>
+                          } @else {
+                            <span class="gas-badge-hours">{{ s.working_hours }}</span>
+                          }
+                        </div>
+                        <div class="gas-address-row">
+                          <ion-icon name="location" class="addr-icon"></ion-icon>
+                          <span>{{ s.address }} ({{ s.city }})</span>
+                        </div>
+                        
+                        <!-- Badges for special services -->
+                        <div class="gas-service-badges">
+                          @if (s.has_lpg) {
+                            <span class="badge-pill badge-lpg">LPG</span>
+                          }
+                          @if (s.has_cng) {
+                            <span class="badge-pill badge-cng">CNG</span>
+                          }
+                          @if (s.has_ev) {
+                            <span class="badge-pill badge-ev">⚡ EV</span>
+                          }
+                          @if (s.has_car_wash) {
+                            <span class="badge-pill badge-wash">🧼 Перална</span>
+                          }
+                          @if (s.has_shop) {
+                            <span class="badge-pill badge-shop">🏪 Маркет</span>
+                          }
+                        </div>
+                      </div>
+
+                      @if (s.distanceKm != null) {
+                        <div class="gas-distance-tag">
+                          <span>📍 {{ formatGasDistance(s.distanceKm) }}</span>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="gas-card-actions">
+                      @if (s.phone) {
+                        <button class="gas-action-btn btn-call" (click)="dialGasPhone(s.phone)">
+                          <ion-icon name="call" class="call-btn-icon"></ion-icon>
+                          <span>{{ s.phone }}</span>
+                        </button>
+                      }
+                      <button class="gas-action-btn btn-directions" (click)="openGasDirections(s)">
+                        <ion-icon name="navigate"></ion-icon>
+                        <span>{{ 'GAS_MODAL.DIRECTIONS' | translate }}</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- VIEW 2: LEAFLET MAP VIEW -->
+          @if (gasModalView === 'map') {
+            <div class="gas-map-wrapper">
+              <div id="gas-leaflet-map" class="gas-leaflet-container"></div>
+              <div class="gas-map-badge">
+                <span>⛽ {{ filteredGasStations.length }} {{ 'GAS_MODAL.COUNT_LABEL' | translate }}</span>
               </div>
             </div>
           }
