@@ -398,10 +398,11 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       payload.notify_utility = false;
     }
 
-    const cachedCity = localStorage.getItem('user_current_city');
-    if (cachedCity) {
-      payload.city_preference = cachedCity;
-    }
+    const cachedCity = localStorage.getItem('user_current_city') || 'Скопје';
+    payload.city_preference = cachedCity;
+
+    const cachedMuni = localStorage.getItem('user_current_municipality') || (cachedCity === 'Скопје' ? 'Центар' : cachedCity);
+    payload.municipality_preference = cachedMuni;
 
     const cachedLat = localStorage.getItem('user_current_lat');
     const cachedLng = localStorage.getItem('user_current_lng');
@@ -429,11 +430,12 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
   }
 }
 
-async updateDeviceLocation(lat: number, lng: number, cityName?: string) {
+async updateDeviceLocation(lat: number, lng: number, cityName?: string, muniName?: string) {
   try {
     localStorage.setItem('user_current_lat', lat.toString());
     localStorage.setItem('user_current_lng', lng.toString());
     if (cityName) localStorage.setItem('user_current_city', cityName);
+    if (muniName) localStorage.setItem('user_current_municipality', muniName);
 
     const deviceId = await this.getDeviceId();
     const updatePayload: any = {
@@ -442,6 +444,7 @@ async updateDeviceLocation(lat: number, lng: number, cityName?: string) {
       last_active: new Date().toISOString()
     };
     if (cityName) updatePayload.city_preference = cityName;
+    if (muniName) updatePayload.municipality_preference = muniName;
 
     await this.supabase
       .from('user_devices')

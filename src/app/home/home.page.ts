@@ -1036,10 +1036,11 @@ async handleLogout() {
 
         // 1. Instantly determine nearest city locally in memory (0ms)
         const resolvedCity = this.weatherService.resolveCityName(coords.latitude, coords.longitude);
+        let resolvedMuni: string | null = null;
         if (resolvedCity) {
           this.currentCityName = resolvedCity;
           localStorage.setItem('user_current_city', resolvedCity);
-          const resolvedMuni = this.weatherService.resolveMunicipalityName(coords.latitude, coords.longitude);
+          resolvedMuni = this.weatherService.resolveMunicipalityName(coords.latitude, coords.longitude);
           if (resolvedMuni) {
             localStorage.setItem('user_current_municipality', resolvedMuni);
           }
@@ -1061,7 +1062,7 @@ async handleLogout() {
           localStorage.setItem('cached_weather_metrics', JSON.stringify(metrics));
         } catch {}
 
-        this.supabaseService.updateDeviceLocation(coords.latitude, coords.longitude, metrics.city_name);
+        this.supabaseService.updateDeviceLocation(coords.latitude, coords.longitude, metrics.city_name, resolvedMuni || undefined);
 
         if (this.currentUser) {
           try {

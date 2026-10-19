@@ -76,3 +76,16 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/sync-duty-pharmacies/deno.json"
 entrypoint = "./functions/sync-duty-pharmacies/index.ts"
+
+[functions.dispatch-utility-alerts]
+enabled = true
+verify_jwt = false
+import_map = "./functions/dispatch-utility-alerts/deno.json"
+entrypoint = "./functions/dispatch-utility-alerts/index.ts"
+
+[functions.sync-utility-alerts]
+enabled = true
+verify_jwt = false
+import_map = "./functions/sync-utility-alerts/deno.json"
+entrypoint = "./functions/sync-utility-alerts/index.ts"
+
