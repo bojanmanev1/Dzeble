@@ -2,12 +2,14 @@ import { Injectable } from '@angular/core';
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { SupabaseService } from './supabase';
+import { Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PushNotificationService {
   private currentToken: string | null = null;
+  public notificationAction$ = new Subject<{ widgetId: string; data?: any }>();
 
   constructor(private supabaseService: SupabaseService) {}
 
@@ -44,6 +46,7 @@ export class PushNotificationService {
           const data = action.notification.data;
           if (data?.widgetId) {
             console.log(`Opening widget: ${data.widgetId}`);
+            this.notificationAction$.next({ widgetId: data.widgetId, data });
           }
         });
 

@@ -54,7 +54,12 @@ import {
   timeOutline,
   calculator,
   carOutline,
-  waterOutline
+  car,
+  pulse,
+  waterOutline,
+  warning,
+  flash,
+  water
 } from 'ionicons/icons';
 
 import { 
@@ -73,10 +78,12 @@ import { StockService, StockTicker } from '../services/stock';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
 import { GasStationService, GasStation } from '../services/gas-station';
+import { UtilityAlertService, UtilityAlert } from '../services/utility-alert';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
 import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
 import { App } from '@capacitor/app';
 import { PushNotificationService } from '../services/push-notification';
+import { AnalyticsService } from '../services/analytics';
 import * as L from 'leaflet';
 
 interface Widget {
@@ -132,6 +139,7 @@ export class HomePage implements OnInit, OnDestroy {
   private alertCtrl = inject(AlertController);
   public networkService = inject(NetworkService);
   private pushService = inject(PushNotificationService);
+  public analyticsService = inject(AnalyticsService);
   private zone = inject(NgZone);
   private stockService = inject(StockService);
   private cdr = inject(ChangeDetectorRef);
@@ -283,6 +291,15 @@ export class HomePage implements OnInit, OnDestroy {
   private gasLeafletMarkers: L.Marker[] = [];
   private gasLeafletTileLayer: L.TileLayer | null = null;
 
+  // Utility Alerts State
+  public utilityAlertService = inject(UtilityAlertService);
+  alertsList: UtilityAlert[] = [];
+  filteredAlerts: UtilityAlert[] = [];
+  selectedAlertType: 'all' | 'power' | 'water' | 'other' = 'all';
+  selectedAlertCity: string = '';
+  alertSearchQuery: string = '';
+  alertCities: string[] = [];
+
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
@@ -294,11 +311,12 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
     { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' },
-    { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'speedometer' }
+    { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'speedometer' },
+    { id: 'alerts', translationKey: 'WIDGETS.ALERTS', value: '0', unit: 'Прекини', icon: 'warning' }
   ];
 
-  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'gas_stations', 'loyalty'];
-  readonly MAX_WIDGET_COUNT = 10;
+  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'gas_stations'];
+  readonly MAX_WIDGET_COUNT = 9;
   readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
 
   currentUserCoords: { latitude: number; longitude: number } | null = null;
@@ -371,7 +389,12 @@ export class HomePage implements OnInit, OnDestroy {
       'time-outline': timeOutline,
       'calculator': calculator,
       'car-outline': carOutline,
-      'water-outline': waterOutline
+      'water-outline': waterOutline,
+      'warning': warning,
+      'flash': flash,
+      'water': water,
+      'car': car,
+      'pulse': pulse
     });
 
     this.loadSavedWidgetOrder();
@@ -384,6 +407,10 @@ export class HomePage implements OnInit, OnDestroy {
       if (this.leafletMap && this.pharmacyModalView === 'map') {
         this.applyLeafletTileLayer();
         this.renderLeafletMarkers();
+      }
+      if (this.gasLeafletMap && this.gasModalView === 'map') {
+        this.applyGasLeafletTileLayer();
+        this.renderGasLeafletMarkers();
       }
       this.cdr.markForCheck();
     });
@@ -436,6 +463,14 @@ export class HomePage implements OnInit, OnDestroy {
       });
     }
 
+    this.pushService.notificationAction$.subscribe(action => {
+      if (action?.widgetId) {
+        this.zone.run(() => {
+          this.onWidgetClick(action.widgetId);
+        });
+      }
+    });
+
     this.fetchHolidays();
     this.fetchLiveMetrics();
     this.fetchDatabaseCurrencyRates();
@@ -445,6 +480,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.startMultiFavoritesSlider();
     this.loadDutyPharmacies();
     this.loadGasStations();
+    this.loadUtilityAlerts();
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -610,6 +646,10 @@ export class HomePage implements OnInit, OnDestroy {
       this.applyLeafletTileLayer();
       this.renderLeafletMarkers();
     }
+    if (this.gasLeafletMap && this.gasModalView === 'map') {
+      this.applyGasLeafletTileLayer();
+      this.renderGasLeafletMarkers();
+    }
   }
 
 async handleLogout() {
@@ -638,6 +678,7 @@ async handleLogout() {
     this.selectedLoyaltyCard = card;
     this.loyaltyModalView = 'view';
     this.loyaltyService.setMaxBrightness();
+    this.analyticsService.track('loyalty', 'card_scanned', card.store_name);
   }
 
   openAddLoyaltyCardView() {
@@ -656,6 +697,7 @@ async handleLogout() {
   openCoinDetail(coin: CryptoTicker) {
     this.selectedCoinDetail = coin;
     this.cryptoModalView = 'detail';
+    this.analyticsService.track('crypto', 'coin_detail_viewed', coin.pair || coin.symbol, { price: coin.price, change24h: coin.change24h });
   }
 
   closeCoinDetail() {
@@ -667,9 +709,11 @@ async handleLogout() {
     if (!this.cryptoSearchQuery.trim()) return;
     this.isSearchingCrypto = true;
     this.cryptoSearchError = '';
-    const added = await this.cryptoService.addCryptoPair(this.cryptoSearchQuery);
+    const query = this.cryptoSearchQuery.trim();
+    const added = await this.cryptoService.addCryptoPair(query);
     this.isSearchingCrypto = false;
     if (added) {
+      this.analyticsService.track('crypto', 'coin_added', query);
       this.cryptoSearchQuery = '';
     } else {
       this.cryptoSearchError = this.translate.instant('CRYPTO_MODAL.SEARCH_ERROR');
@@ -779,14 +823,16 @@ async handleLogout() {
 
   async saveLoyaltyCard() {
     if (!this.currentUser || !this.newBarcodeData.trim() || !this.newCustomStoreName.trim()) return;
+    const storeName = this.newCustomStoreName.trim();
     const saved = await this.loyaltyService.addCard({
       user_id: this.currentUser.id,
-      store_name: this.newCustomStoreName.trim(),
+      store_name: storeName,
       barcode_data: this.newBarcodeData.trim(),
       barcode_format: this.newBarcodeFormat,
       card_color: this.newCardColor
     });
     if (saved) {
+      this.analyticsService.track('loyalty', 'card_added', storeName);
       await this.loadLoyaltyCards(this.currentUser.id);
       this.closeLoyaltySubView();
     }
@@ -794,8 +840,10 @@ async handleLogout() {
 
   async deleteLoyaltyCard(cardId?: string) {
     if (!cardId || !this.currentUser) return;
+    const targetCard = this.loyaltyCards.find(c => c.id === cardId);
     const success = await this.loyaltyService.deleteCard(cardId);
     if (success) {
+      this.analyticsService.track('loyalty', 'card_deleted', targetCard?.store_name);
       await this.loadLoyaltyCards(this.currentUser.id);
       this.closeLoyaltySubView();
     }
@@ -953,8 +1001,11 @@ async handleLogout() {
 
   switchFuelModalView(view: 'prices' | 'calc') {
     this.fuelModalView = view;
-    if (view === 'calc' && !this.fuelCalcSelectedFuel) {
-      this.fuelCalcSelectedFuel = this.selectedDefaultFuel || 'Дизел';
+    if (view === 'calc') {
+      if (!this.fuelCalcSelectedFuel) {
+        this.fuelCalcSelectedFuel = this.selectedDefaultFuel || 'Дизел';
+      }
+      this.analyticsService.track('fuel', 'calculator_opened', this.fuelCalcSelectedFuel);
     }
   }
 
@@ -972,18 +1023,26 @@ async handleLogout() {
     this.weatherSub = this.weatherService.getDeviceCoordinates().subscribe({
       next: async (coords: { latitude: number; longitude: number }) => {
         this.currentUserCoords = coords;
+        localStorage.setItem('user_current_lat', coords.latitude.toString());
+        localStorage.setItem('user_current_lng', coords.longitude.toString());
         this.updateNearestPharmacy();
         this.updateFilteredPharmacies();
         this.updatePharmacyWidgetDisplay();
         this.updateNearestGasStation();
         this.updateFilteredGasStations();
         this.updateGasWidgetDisplay();
+        this.updateFilteredAlerts();
+        this.updateAlertsWidgetDisplay();
 
         // 1. Instantly determine nearest city locally in memory (0ms)
         const resolvedCity = this.weatherService.resolveCityName(coords.latitude, coords.longitude);
         if (resolvedCity) {
           this.currentCityName = resolvedCity;
           localStorage.setItem('user_current_city', resolvedCity);
+          const resolvedMuni = this.weatherService.resolveMunicipalityName(coords.latitude, coords.longitude);
+          if (resolvedMuni) {
+            localStorage.setItem('user_current_municipality', resolvedMuni);
+          }
         }
 
         // 2. Fetch fresh cached metrics from Supabase for this city
@@ -1002,7 +1061,7 @@ async handleLogout() {
           localStorage.setItem('cached_weather_metrics', JSON.stringify(metrics));
         } catch {}
 
-        this.supabaseService.updateDeviceCityPreference(metrics.city_name);
+        this.supabaseService.updateDeviceLocation(coords.latitude, coords.longitude, metrics.city_name);
 
         if (this.currentUser) {
           try {
@@ -1235,10 +1294,22 @@ async handleLogout() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const validIds = parsed.filter(id => this.allWidgets.some(w => w.id === id));
-          const uniqueIds = Array.from(new Set(validIds)).slice(0, this.MAX_WIDGET_COUNT);
+          let uniqueIds = Array.from(new Set(validIds));
+          // Migrate: extract 'loyalty' and replace with 'gas_stations' or add 'gas_stations'
+          const loyaltyIdx = uniqueIds.indexOf('loyalty');
+          if (loyaltyIdx !== -1) {
+            if (!uniqueIds.includes('gas_stations')) {
+              uniqueIds[loyaltyIdx] = 'gas_stations';
+            } else {
+              uniqueIds.splice(loyaltyIdx, 1);
+            }
+          }
           const uvIdx = uniqueIds.indexOf('uv');
           if (uvIdx !== -1 && !uniqueIds.includes('pharmacy')) {
             uniqueIds[uvIdx] = 'pharmacy';
+          }
+          if (!uniqueIds.includes('gas_stations')) {
+            uniqueIds.push('gas_stations');
           }
           for (const defaultId of this.DEFAULT_WIDGET_IDS) {
             if (uniqueIds.length >= this.MAX_WIDGET_COUNT) break;
@@ -1246,6 +1317,7 @@ async handleLogout() {
               uniqueIds.push(defaultId);
             }
           }
+          uniqueIds = uniqueIds.slice(0, this.MAX_WIDGET_COUNT);
           if (uniqueIds.length > 0) {
             this.activeWidgetIds = uniqueIds;
             this.saveWidgetOrder();
@@ -1782,6 +1854,7 @@ async handleLogout() {
     }
 
     this.activeDetailWidgetId = widgetId;
+    this.analyticsService.track(widgetId, 'widget_open', this.currentCityName);
     if (widgetId === 'loyalty') this.loyaltyModalView = 'list';
     if (widgetId === 'currency') {
       try { this.rawDatabaseRates = await this.supabaseService.getLatestCurrencyRates(); } catch (e) {}
@@ -1799,6 +1872,9 @@ async handleLogout() {
           this.updateNearestPharmacy();
           this.updateFilteredPharmacies();
           this.updatePharmacyWidgetDisplay();
+          if (this.leafletMap && this.pharmacyModalView === 'map') {
+            this.centerLeafletMap();
+          }
           this.cdr.markForCheck();
         });
       }
@@ -1812,10 +1888,28 @@ async handleLogout() {
           this.updateNearestGasStation();
           this.updateFilteredGasStations();
           this.updateGasWidgetDisplay();
+          if (this.gasLeafletMap && this.gasModalView === 'map') {
+            this.centerGasLeafletMap();
+          }
           this.cdr.markForCheck();
         });
       }
       this.loadGasStations();
+    }
+    if (widgetId === 'alerts') {
+      if (!this.selectedAlertCity && this.currentCityName) {
+        const norm = this.currentCityName.toLowerCase();
+        const match = this.alertCities.find(c => c.toLowerCase().includes(norm));
+        if (match) this.selectedAlertCity = match;
+      }
+      if (!this.currentUserCoords) {
+        this.weatherService.getDeviceCoordinates().subscribe(coords => {
+          this.currentUserCoords = coords;
+          this.updateFilteredAlerts();
+          this.cdr.markForCheck();
+        });
+      }
+      this.loadUtilityAlerts();
     }
     this.isDetailModalOpen = true;
   }
@@ -1829,6 +1923,7 @@ async handleLogout() {
   openStockDetail(stock: StockTicker) {
     this.selectedStockDetail = stock;
     this.stockModalView = 'detail';
+    this.analyticsService.track('stock', 'stock_detail_viewed', stock.symbol, { price: stock.price, change24h: stock.change24h });
   }
 
   closeStockDetail() {
@@ -1908,12 +2003,14 @@ async handleLogout() {
     this.selectedDefaultFuel = fuelType;
     this.fuelCalcSelectedFuel = fuelType;
     localStorage.setItem('default_fuel_type', fuelType);
+    this.analyticsService.track('fuel', 'default_fuel_selected', fuelType);
     this.updateFuelWidgetDisplay();
   }
 
   setDefaultCurrency(currencyCode: string) {
     this.selectedDefaultCurrency = currencyCode;
     localStorage.setItem('default_currency', currencyCode);
+    this.analyticsService.track('currency', 'default_currency_selected', currencyCode);
     this.updateCurrencyWidgetDisplay();
   }
 
@@ -2007,6 +2104,9 @@ async handleLogout() {
     this.selectedCalendarDate = selectedDateStr;
     this.selectedHolidayDetail = this.holidaysList.find(h => h.holiday_date === selectedDateStr) || null;
     this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === selectedDateStr);
+    if (this.selectedHolidayDetail) {
+      this.analyticsService.track('holidays', 'holiday_viewed', this.selectedHolidayDetail.name, { date: selectedDateStr });
+    }
   }
 
   async loadUserEvents(userId: string) {
@@ -2207,7 +2307,7 @@ notificationPreferences: Record<string, boolean> = JSON.parse(
 
 // 2. Check if a widget supports notification toggles
 supportsNotification(widgetId: string): boolean {
-  return ['weather', 'fuel', 'stock', 'crypto', 'holidays', 'aqi'].includes(widgetId);
+  return ['weather', 'fuel', 'stock', 'crypto', 'holidays', 'aqi', 'alerts'].includes(widgetId);
 }
 
 // 3. Toggle handler (stops click propagation so it doesn't open the detail modal)
@@ -2531,7 +2631,7 @@ isNotificationActive(widgetId: string): boolean {
     }
 
     if (this.currentUserCoords) {
-      this.leafletMap.setView([this.currentUserCoords.latitude, this.currentUserCoords.longitude], 13);
+      this.leafletMap.setView([this.currentUserCoords.latitude, this.currentUserCoords.longitude], 14);
     } else {
       const first = this.filteredPharmacies.find(p => p.latitude && p.longitude);
       if (first) {
@@ -2549,6 +2649,18 @@ isNotificationActive(widgetId: string): boolean {
   }
 
   openDirections(pharmacy: DutyPharmacy) {
+    const muni = pharmacy.municipality || 
+      (pharmacy.city === 'Скопје' && pharmacy.latitude && pharmacy.longitude 
+        ? this.weatherService.resolveMunicipalityName(pharmacy.latitude, pharmacy.longitude) || undefined 
+        : undefined);
+
+    this.analyticsService.track(
+      'pharmacy', 
+      'route_clicked', 
+      pharmacy.name, 
+      { address: pharmacy.address }, 
+      muni
+    );
     const url = pharmacy.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`;
     window.open(url, '_blank');
   }
@@ -2590,6 +2702,18 @@ isNotificationActive(widgetId: string): boolean {
   }
 
   async onCallPharmacyClick(pharmacy: DutyPharmacy) {
+    const muni = pharmacy.municipality || 
+      (pharmacy.city === 'Скопје' && pharmacy.latitude && pharmacy.longitude 
+        ? this.weatherService.resolveMunicipalityName(pharmacy.latitude, pharmacy.longitude) || undefined 
+        : undefined);
+
+    this.analyticsService.track(
+      'pharmacy', 
+      'call_clicked', 
+      pharmacy.name, 
+      { phone: pharmacy.phone }, 
+      muni
+    );
     const phones = this.getPharmacyPhoneList(pharmacy.phone);
     if (phones.length === 0) return;
     if (phones.length === 1) {
@@ -2634,7 +2758,30 @@ isNotificationActive(widgetId: string): boolean {
   async loadGasStations() {
     try {
       const data = await this.gasStationService.fetchGasStations();
-      this.gasStationsList = data || [];
+      const rawStations = data || [];
+      const cityMap: Record<string, string> = {
+        'skopje': 'Скопје',
+        'bitola': 'Битола',
+        'ohrid': 'Охрид',
+        'prilep': 'Прилеп',
+        'tetovo': 'Тетово',
+        'gostivar': 'Гостивар',
+        'strumica': 'Струмица',
+        'veles': 'Велес',
+        'stip': 'Штип',
+        'kumanovo': 'Куманово',
+        'kavadarci': 'Кавадарци',
+        'gevgelija': 'Гевгелија',
+        'berovo': 'Берово'
+      };
+      this.gasStationsList = rawStations.map(s => {
+        const clean = (s.city || '').trim();
+        const norm = clean.toLowerCase();
+        return {
+          ...s,
+          city: cityMap[norm] || clean
+        };
+      });
       this.gasCities = Array.from(new Set(this.gasStationsList.map(s => s.city).filter(Boolean))).sort((a, b) => a.localeCompare(b));
       this.updateNearestGasStation();
       this.updateFilteredGasStations();
@@ -2765,10 +2912,21 @@ isNotificationActive(widgetId: string): boolean {
 
   selectGasBrand(brandId: string) {
     this.selectedGasBrand = brandId;
+    if (brandId && brandId !== 'all') {
+      this.analyticsService.track('gas_stations', 'brand_filtered', brandId);
+    }
     this.updateFilteredGasStations();
     if (this.gasModalView === 'map' && this.gasLeafletMap) {
       this.centerGasLeafletMap();
     }
+    setTimeout(() => {
+      const modalBodies = document.querySelectorAll('.modal-body');
+      modalBodies.forEach(mb => { mb.scrollLeft = 0; });
+      if (brandId === 'all') {
+        const brandScroll = document.querySelector('.gas-chip-scroll');
+        if (brandScroll) brandScroll.scrollLeft = 0;
+      }
+    }, 40);
     this.cdr.markForCheck();
   }
 
@@ -2796,6 +2954,19 @@ isNotificationActive(widgetId: string): boolean {
     this.cdr.markForCheck();
   }
 
+  private applyGasLeafletTileLayer() {
+    if (!this.gasLeafletMap) return;
+    if (this.gasLeafletTileLayer) {
+      this.gasLeafletMap.removeLayer(this.gasLeafletTileLayer);
+      this.gasLeafletTileLayer = null;
+    }
+
+    this.gasLeafletTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.gasLeafletMap);
+  }
+
   initGasLeafletMap() {
     const container = document.getElementById('gas-leaflet-map');
     if (!container) return;
@@ -2817,10 +2988,7 @@ isNotificationActive(widgetId: string): boolean {
       attributionControl: false
     });
 
-    this.gasLeafletTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(this.gasLeafletMap);
+    this.applyGasLeafletTileLayer();
 
     if (this.currentUserCoords) {
       const userIcon = L.divIcon({
@@ -2835,6 +3003,13 @@ isNotificationActive(widgetId: string): boolean {
     }
 
     this.renderGasLeafletMarkers();
+
+    setTimeout(() => {
+      if (this.gasLeafletMap) {
+        this.gasLeafletMap.invalidateSize();
+        this.centerGasLeafletMap();
+      }
+    }, 250);
   }
 
   renderGasLeafletMarkers() {
@@ -2850,34 +3025,36 @@ isNotificationActive(widgetId: string): boolean {
 
       const style = this.gasStationService.getBrandBadgeStyle(s.chain);
       const icon = L.divIcon({
-        className: 'gas-map-pin',
+        className: 'gas-leaflet-pin',
         html: `
-          <div style="background: #0f172a; border: 2px solid ${style.color}; border-radius: 20px; padding: 2px 7px; color: ${style.color}; font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.45); white-space: nowrap;">
-            <span>⛽</span>
-            <span>${s.brand}</span>
+          <div style="background: #0f172a; border: 2.5px solid ${style.color}; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1;">
+            ⛽
           </div>
         `,
-        iconSize: [80, 26],
-        iconAnchor: [40, 13]
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
       });
 
-      const distHtml = s.distanceKm != null ? `<div class="map-popup-dist" style="color: #10b981; font-weight: 700; margin: 4px 0;">📍 ${this.gasStationService.formatDistance(s.distanceKm)}</div>` : '';
+      const distHtml = s.distanceKm != null ? `<div class="map-popup-dist" style="font-weight: 700; margin: 4px 0;">📍 ${this.gasStationService.formatDistance(s.distanceKm)}</div>` : '';
       const encodedName = encodeURIComponent(s.name);
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}&destination_place_id=${encodedName}`;
 
       const popupHtml = `
-        <div class="map-popup-card" style="font-family: inherit; font-size: 13px; line-height: 1.4; color: #0f172a;">
-          <div style="font-weight: 800; font-size: 14px; margin-bottom: 2px;">${s.name}</div>
-          <div style="color: #64748b; font-size: 12px; margin-bottom: 3px;">${s.address} (${s.city})</div>
-          ${distHtml}
-          <div style="margin: 4px 0; font-size: 11px;">
-            <span style="background: rgba(16,185,129,0.15); color: #047857; padding: 2px 6px; border-radius: 6px; font-weight: 700;">${s.is_24_7 ? '24/7' : s.working_hours}</span>
-            ${s.has_lpg ? '<span style="background: rgba(59,130,246,0.15); color: #1d4ed8; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">LPG</span>' : ''}
-            ${s.has_ev ? '<span style="background: rgba(245,158,11,0.15); color: #b45309; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">EV</span>' : ''}
+        <div class="gas-leaflet-popup">
+          <div class="map-popup-card" style="font-family: inherit; font-size: 13px; line-height: 1.4;">
+            <div class="map-popup-title" style="font-weight: 800; font-size: 14px; margin-bottom: 2px;">${s.name}</div>
+            <div class="map-popup-subtitle" style="font-size: 12px; margin-bottom: 3px;">${s.address} (${s.city})</div>
+            ${distHtml}
+            <div style="margin: 4px 0; font-size: 11px;">
+              <span style="background: rgba(16,185,129,0.15); color: #047857; padding: 2px 6px; border-radius: 6px; font-weight: 700;">${s.is_24_7 ? '24/7' : s.working_hours}</span>
+              ${s.has_lpg ? '<span style="background: rgba(59,130,246,0.15); color: #1d4ed8; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">LPG</span>' : ''}
+              ${s.has_ev ? '<span style="background: rgba(245,158,11,0.15); color: #b45309; padding: 2px 6px; border-radius: 6px; margin-left: 4px; font-weight: 700;">EV</span>' : ''}
+            </div>
+            <a href="${mapsUrl}" target="_blank" class="gas-popup-directions-btn" style="display: block; margin-top: 8px; text-align: center; color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 12px;">
+              🚗 ${directionsLabel}
+            </a>
           </div>
-          <a href="${mapsUrl}" target="_blank" style="display: block; margin-top: 8px; text-align: center; background: #10b981; color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 12px;">
-            🚗 ${directionsLabel}
-          </a>
         </div>
       `;
 
@@ -2891,11 +3068,34 @@ isNotificationActive(widgetId: string): boolean {
 
   centerGasLeafletMap() {
     if (!this.gasLeafletMap) return;
-    if (this.filteredGasStations.length > 0) {
-      const group = L.featureGroup(this.gasLeafletMarkers);
-      if (this.gasLeafletMarkers.length > 0) {
-        this.gasLeafletMap.fitBounds(group.getBounds().pad(0.15));
+
+    // 1. If filtered by specific city, zoom in to that city
+    if (this.selectedGasCity) {
+      const firstInCity = this.filteredGasStations.find(s => s.latitude && s.longitude);
+      if (firstInCity) {
+        this.gasLeafletMap.setView([firstInCity.latitude, firstInCity.longitude], 13);
+        return;
       }
+    }
+
+    // 2. Center and zoom towards user's GPS location (neighborhood street level)
+    if (this.currentUserCoords) {
+      this.gasLeafletMap.setView([this.currentUserCoords.latitude, this.currentUserCoords.longitude], 14);
+      return;
+    }
+
+    // 3. Fallback to nearest gas station if available
+    if (this.nearestGasStation && this.nearestGasStation.latitude && this.nearestGasStation.longitude) {
+      this.gasLeafletMap.setView([this.nearestGasStation.latitude, this.nearestGasStation.longitude], 14);
+      return;
+    }
+
+    // 4. Default fallback: first station or center of city
+    const first = this.filteredGasStations.find(s => s.latitude && s.longitude);
+    if (first) {
+      this.gasLeafletMap.setView([first.latitude, first.longitude], 13);
+    } else {
+      this.gasLeafletMap.setView([41.9981, 21.4254], 13);
     }
   }
 
@@ -2909,6 +3109,17 @@ isNotificationActive(widgetId: string): boolean {
   }
 
   openGasDirections(station: GasStation) {
+    const stationMuni = (station.city === 'Скопје' && station.latitude && station.longitude)
+      ? (this.weatherService.resolveMunicipalityName(station.latitude, station.longitude) || undefined)
+      : undefined;
+
+    this.analyticsService.track(
+      'gas_stations', 
+      'route_clicked', 
+      station.brand || station.name, 
+      { name: station.name, address: station.address }, 
+      stationMuni
+    );
     this.gasStationService.openDirections(station.latitude, station.longitude, station.name);
   }
 
@@ -2925,5 +3136,160 @@ isNotificationActive(widgetId: string): boolean {
 
   getGasBrandBadgeStyle(chain: string) {
     return this.gasStationService.getBrandBadgeStyle(chain);
+  }
+
+  // --- UTILITY ALERTS (ПРЕКИНИ ЗА СТРУЈА & ВОДА) METHODS ---
+
+  async loadUtilityAlerts() {
+    try {
+      const data = await this.utilityAlertService.fetchAlerts();
+      const nonMacedonian = ['албанија', 'грција', 'србија', 'косово', 'бугарија'];
+      this.alertsList = (data || []).filter(a => {
+        const c = (a.city || '').toLowerCase();
+        const m = (a.municipality || '').toLowerCase();
+        return !nonMacedonian.some(nm => c.includes(nm) || m.includes(nm));
+      });
+      this.alertCities = Array.from(new Set(this.alertsList.map(a => a.city).filter(c => {
+        if (!c) return false;
+        const norm = c.toLowerCase().trim();
+        return !nonMacedonian.some(nm => norm.includes(nm));
+      }))).sort((a, b) => a.localeCompare(b));
+      this.updateFilteredAlerts();
+      this.updateAlertsWidgetDisplay();
+      this.cdr.markForCheck();
+    } catch (err) {
+      console.warn('Error loading utility alerts in home page:', err);
+    }
+  }
+
+  updateAlertsWidgetDisplay() {
+    const w = this.allWidgets.find(item => item.id === 'alerts');
+    if (w) {
+      const city = this.currentCityName || 'Скопје';
+      const count = this.utilityAlertService.getActiveAlertsCount(city, this.alertsList);
+      w.value = count > 0 ? `${count}` : '0';
+      w.unit = count === 1 ? 'Прекин' : 'Прекини';
+      w.customColor = count > 0 ? '#f59e0b' : '#10b981';
+    }
+    this.filterWidgets();
+  }
+
+  updateFilteredAlerts() {
+    let list = [...this.alertsList];
+
+    // 1. Type Filter ('all', 'power', 'water', 'other')
+    if (this.selectedAlertType && this.selectedAlertType !== 'all') {
+      if (this.selectedAlertType === 'other') {
+        list = list.filter(a => a.type === 'other' || a.type === 'earthquake' || a.type === 'road');
+      } else {
+        list = list.filter(a => a.type === this.selectedAlertType);
+      }
+    }
+
+    // 2. City Filter
+    if (this.selectedAlertCity) {
+      const cityFilter = this.selectedAlertCity.toLowerCase().trim();
+      list = list.filter(a => 
+        a.city.toLowerCase().includes(cityFilter) || 
+        (a.municipality && a.municipality.toLowerCase().includes(cityFilter))
+      );
+    }
+
+    // 3. Search Query Filter
+    if (this.alertSearchQuery) {
+      const q = this.alertSearchQuery.toLowerCase().trim();
+      list = list.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        (a.address && a.address.toLowerCase().includes(q)) ||
+        (a.municipality && a.municipality.toLowerCase().includes(q)) ||
+        a.city.toLowerCase().includes(q) ||
+        (a.description && a.description.toLowerCase().includes(q))
+      );
+    }
+
+    // 4. Annotate distances from user coordinates if available
+    if (this.currentUserCoords) {
+      list = this.utilityAlertService.annotateDistances(list, this.currentUserCoords);
+    }
+
+    // 5. Sort: active first, then upcoming, then resolved; and by start_time
+    const statusWeight: Record<string, number> = {
+      'active': 1,
+      'upcoming': 2,
+      'resolved': 3
+    };
+
+    list.sort((a, b) => {
+      const wA = statusWeight[a.status] || 99;
+      const wB = statusWeight[b.status] || 99;
+      if (wA !== wB) return wA - wB;
+      const tA = new Date(a.start_time).getTime();
+      const tB = new Date(b.start_time).getTime();
+      return tB - tA;
+    });
+
+    this.filteredAlerts = list;
+    this.cdr.markForCheck();
+  }
+
+  shouldShowDescription(alert: UtilityAlert): boolean {
+    if (!alert.description) return false;
+    if (!alert.address) return true;
+    const cleanA = this.utilityAlertService.cleanAlertText(alert.address).toLowerCase().trim();
+    const cleanD = this.utilityAlertService.cleanAlertText(alert.description).toLowerCase().trim();
+    if (cleanA === cleanD) return false;
+    if (cleanD.includes(cleanA) || cleanA.includes(cleanD)) return false;
+    return alert.description !== alert.address && alert.description !== alert.title;
+  }
+
+  selectAlertType(type: 'all' | 'power' | 'water' | 'other') {
+    this.selectedAlertType = type;
+    this.analyticsService.track('alerts', 'category_filtered', type);
+    this.updateFilteredAlerts();
+    this.triggerHaptic(20);
+  }
+
+  selectAlertCity(city: string) {
+    this.selectedAlertCity = city;
+    this.analyticsService.track('alerts', 'city_filtered', city);
+    this.updateFilteredAlerts();
+    this.triggerHaptic(20);
+  }
+
+  onAlertSearchChange() {
+    this.updateFilteredAlerts();
+  }
+
+  getAlertIcon(type: string): string {
+    switch (type) {
+      case 'power': return 'flash';
+      case 'water': return 'water';
+      case 'earthquake': return 'pulse';
+      case 'road': return 'car';
+      default: return 'warning';
+    }
+  }
+
+  getAlertSourceBadge(alert: UtilityAlert): string {
+    switch (alert.type) {
+      case 'power': return this.translate.instant('ALERTS_MODAL.SOURCE_EVN') || 'ЕВН Македонија';
+      case 'water': return this.translate.instant('ALERTS_MODAL.SOURCE_VODOVOD') || 'ЈП Водовод';
+      case 'earthquake': return this.translate.instant('ALERTS_MODAL.SOURCE_EMSC') || 'Сеизмолошки сервис · EMSC';
+      case 'road': return this.translate.instant('ALERTS_MODAL.SOURCE_AMSM') || 'АМСМ · Сообраќај';
+      default: return alert.source_title || this.translate.instant('ALERTS_MODAL.SOURCE_OTHER') || 'Соопштение';
+    }
+  }
+
+  getAlertStatusLabel(alert: UtilityAlert): string {
+    if (alert.type === 'earthquake' && alert.status === 'active') {
+      return this.translate.instant('ALERTS_MODAL.STATUS_RECENT') || 'Неодамна';
+    }
+    if (alert.status === 'active') {
+      return this.translate.instant('ALERTS_MODAL.STATUS_ACTIVE') || 'Во тек';
+    }
+    if (alert.status === 'upcoming') {
+      return this.translate.instant('ALERTS_MODAL.STATUS_UPCOMING') || 'Најавено';
+    }
+    return this.translate.instant('ALERTS_MODAL.STATUS_RESOLVED') || 'Завршено';
   }
 }

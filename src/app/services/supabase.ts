@@ -384,6 +384,7 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       payload.notify_stock = notifPrefs.stock ?? true;
       payload.notify_crypto = notifPrefs.crypto ?? true;
       payload.notify_calendar = notifPrefs.holidays ?? true;
+      payload.notify_utility = notifPrefs.utility ?? true;
     } else {
       payload.user_id = null;
       payload.email = null;
@@ -394,11 +395,19 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       payload.notify_stock = false;
       payload.notify_crypto = false;
       payload.notify_calendar = false;
+      payload.notify_utility = false;
     }
 
     const cachedCity = localStorage.getItem('user_current_city');
     if (cachedCity) {
       payload.city_preference = cachedCity;
+    }
+
+    const cachedLat = localStorage.getItem('user_current_lat');
+    const cachedLng = localStorage.getItem('user_current_lng');
+    if (cachedLat && cachedLng) {
+      payload.latitude = parseFloat(cachedLat);
+      payload.longitude = parseFloat(cachedLng);
     }
 
     const savedLanguage = localStorage.getItem('app_language') || 'mk';
@@ -417,6 +426,29 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     }
   } catch (err) {
     console.error('❌ Device resolution failed:', err);
+  }
+}
+
+async updateDeviceLocation(lat: number, lng: number, cityName?: string) {
+  try {
+    localStorage.setItem('user_current_lat', lat.toString());
+    localStorage.setItem('user_current_lng', lng.toString());
+    if (cityName) localStorage.setItem('user_current_city', cityName);
+
+    const deviceId = await this.getDeviceId();
+    const updatePayload: any = {
+      latitude: lat,
+      longitude: lng,
+      last_active: new Date().toISOString()
+    };
+    if (cityName) updatePayload.city_preference = cityName;
+
+    await this.supabase
+      .from('user_devices')
+      .update(updatePayload)
+      .eq('device_id', deviceId);
+  } catch (err) {
+    console.warn('Failed to update device location:', err);
   }
 }
 
@@ -467,7 +499,8 @@ async updateNotificationPreference(widgetId: string, enabled: boolean) {
       fuel: 'notify_fuel',
       stock: 'notify_stock',
       crypto: 'notify_crypto',
-      holidays: 'notify_calendar'
+      holidays: 'notify_calendar',
+      alerts: 'notify_utility'
     };
 
     const targetColumn = columnMap[widgetId];

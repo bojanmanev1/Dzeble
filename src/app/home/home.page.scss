@@ -761,6 +761,9 @@ ion-toggle {
   height: 100%;
   padding: 30px 16px 24px;
   box-sizing: border-box;
+  overflow-x: hidden !important;
+  max-width: 100%;
+  width: 100%;
 }
 
 .modal-hero {
@@ -772,8 +775,21 @@ ion-toggle {
 .modal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden !important;
   padding: 10px 0;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 
   .benefits-list {
     list-style: none;
@@ -1751,6 +1767,9 @@ ion-modal {
   padding: 8px 12px;
   margin-bottom: 8px;
   gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   .search-icon {
     font-size: 1.1rem;
@@ -1792,13 +1811,20 @@ ion-modal {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 6px;
   margin-bottom: 8px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overscroll-behavior-x: contain;
 
   &::-webkit-scrollbar {
     display: none;
+    width: 0;
+    height: 0;
   }
 
   .brand-chip,
@@ -1840,6 +1866,9 @@ ion-modal {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gas-card {
@@ -1849,6 +1878,10 @@ ion-modal {
   padding: 12px 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 
   .gas-card-top {
     display: flex;
@@ -2033,6 +2066,378 @@ ion-modal {
     color: #0f172a;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* ==========================================
+   UTILITY ALERTS (ПРЕКИНИ ЗА СТРУЈА & ВОДА)
+   ========================================== */
+.alert-view-switcher {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  margin-top: 10px;
+
+  .switcher-pill {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 0.95rem;
+    }
+
+    &.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+  }
+}
+
+.alert-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 0 12px;
+  height: 42px;
+  margin-bottom: 10px;
+
+  .search-icon {
+    font-size: 1.1rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .alert-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 0.88rem;
+    outline: none;
+    color: #0f172a;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  .alert-search-clear {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+.alert-city-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .city-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.active {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+  }
+}
+
+.alert-results-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 2px;
+
+  .count-pill {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.1);
+    padding: 3px 9px;
+    border-radius: 10px;
+  }
+}
+
+.no-alerts-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: #94a3b8;
+
+  .empty-icon-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #ecfdf5;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 1.8rem;
+  }
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+    color: #475569;
+  }
+}
+
+.alerts-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alert-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &.type-power {
+    border-left: 4px solid #f59e0b;
+  }
+
+  &.type-water {
+    border-left: 4px solid #0284c7;
+  }
+
+  .alert-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .alert-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+
+      ion-icon {
+        font-size: 0.85rem;
+      }
+
+      &.power-badge {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+      }
+
+      &.water-badge {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+      }
+
+      &.earthquake-badge {
+        background: #ffe4e6;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
+      }
+
+      &.road-badge {
+        background: #f3e8ff;
+        color: #7c3aed;
+        border: 1px solid #e9d5ff;
+      }
+
+      &.other-badge {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+    }
+
+    .alert-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      &.status-active {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        .status-dot { background: #dc2626; }
+      }
+
+      &.status-upcoming {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+        .status-dot { background: #d97706; }
+      }
+
+      &.status-resolved {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+        .status-dot { background: #059669; }
+      }
+    }
+  }
+
+  .alert-card-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+  }
+
+  .alert-location-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.84rem;
+    color: #475569;
+
+    .loc-icon {
+      color: #10b981;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+  }
+
+  .alert-time-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+
+    .time-icon {
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      color: #94a3b8;
+    }
+
+    .alert-distance-tag {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .voltage-chip {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-left: 4px;
+
+      &.chip-earthquake {
+        background: #ffe4e6;
+        color: #e11d48;
+      }
+
+      &.chip-road {
+        background: #f3e8ff;
+        color: #7c3aed;
+      }
+    }
+  }
+
+  .alert-address-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-top: 2px;
+
+    .address-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+
+    .address-content {
+      font-size: 0.84rem;
+      color: #1e293b;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+  }
+
+  .alert-desc-box {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.35;
+    font-style: italic;
   }
 }
 
@@ -2504,10 +2909,10 @@ body.dark,
     }
   }
 
-  /* Gas Stations Dark Mode Overrides (Matching Stocks & Pharmacy Design) */
-  .gas-view-switcher {
+  /* Utility Alerts Dark Mode Overrides */
+  .alert-view-switcher {
     background: #1c2824;
-    border-color: rgba(52, 211, 153, 0.18);
+    border: 1px solid rgba(52, 211, 153, 0.18);
 
     .switcher-pill {
       color: #9bb0a7;
@@ -2520,15 +2925,15 @@ body.dark,
     }
   }
 
-  .gas-search-box {
+  .alert-search-box {
     background: #1c2824;
-    border-color: rgba(52, 211, 153, 0.18);
+    border: 1px solid rgba(52, 211, 153, 0.18);
 
     .search-icon {
       color: #9bb0a7;
     }
 
-    .gas-search-input {
+    .alert-search-input {
       color: #f1f5f9;
 
       &::placeholder {
@@ -2536,16 +2941,12 @@ body.dark,
       }
     }
 
-    .gas-search-clear {
+    .alert-search-clear {
       color: #9bb0a7;
     }
   }
 
-  .gas-chip-scroll,
-  .gas-services-scroll,
-  .gas-city-scroll {
-    .brand-chip,
-    .service-chip,
+  .alert-city-scroll {
     .city-chip {
       background: #1c2824;
       border-color: rgba(52, 211, 153, 0.18);
@@ -2560,100 +2961,145 @@ body.dark,
     }
   }
 
-  .gas-card {
+  .alert-results-header {
+    .count-pill {
+      background: rgba(52, 211, 153, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.2);
+    }
+  }
+
+  .no-alerts-state {
+    .empty-icon-circle {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    h4 {
+      color: #cbd5e1;
+    }
+  }
+
+  .alert-card {
     background: #1c2824;
     border-color: rgba(52, 211, 153, 0.18);
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
 
-    .gas-name-block {
-      .gas-name-row {
-        .gas-name {
-          color: #f1f5f9;
+    &.type-power {
+      border-left: 4px solid #f59e0b;
+    }
+
+    &.type-water {
+      border-left: 4px solid #06b6d4;
+    }
+
+    .alert-card-header {
+      .alert-type-badge {
+        &.power-badge {
+          background: rgba(245, 158, 11, 0.18);
+          color: #fbbf24;
+          border-color: rgba(245, 158, 11, 0.35);
+        }
+        &.water-badge {
+          background: rgba(6, 182, 212, 0.18);
+          color: #38bdf8;
+          border-color: rgba(6, 182, 212, 0.35);
         }
 
-        .gas-badge-open {
+        &.earthquake-badge {
+          background: rgba(244, 63, 94, 0.18);
+          color: #fb7185;
+          border-color: rgba(244, 63, 94, 0.35);
+        }
+
+        &.road-badge {
+          background: rgba(139, 92, 246, 0.18);
+          color: #c4b5fd;
+          border-color: rgba(139, 92, 246, 0.35);
+        }
+
+        &.other-badge {
+          background: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+      }
+
+      .alert-status-badge {
+        &.status-active {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+          border-color: rgba(248, 113, 113, 0.35);
+          .status-dot { background: #f87171; }
+        }
+        &.status-upcoming {
+          background: rgba(245, 158, 11, 0.2);
+          color: #fbbf24;
+          border-color: rgba(251, 191, 36, 0.35);
+          .status-dot { background: #fbbf24; }
+        }
+        &.status-resolved {
           background: rgba(16, 185, 129, 0.2);
           color: #34d399;
           border-color: rgba(52, 211, 153, 0.35);
-        }
-
-        .gas-badge-hours {
-          background: #23342f;
-          color: #9bb0a7;
-          border-color: rgba(52, 211, 153, 0.2);
-        }
-      }
-
-      .gas-address-row {
-        color: #9bb0a7;
-
-        .addr-icon {
-          color: #6ee7b7;
-        }
-      }
-
-      .gas-service-badges {
-        .badge-pill {
-          &.badge-lpg {
-            background: rgba(37, 99, 235, 0.2);
-            color: #93c5fd;
-            border-color: rgba(59, 130, 246, 0.3);
-          }
-          &.badge-cng {
-            background: rgba(22, 163, 74, 0.2);
-            color: #86efac;
-            border-color: rgba(34, 197, 94, 0.3);
-          }
-          &.badge-ev {
-            background: rgba(202, 138, 4, 0.2);
-            color: #fde047;
-            border-color: rgba(234, 179, 8, 0.3);
-          }
-          &.badge-wash {
-            background: rgba(8, 145, 178, 0.2);
-            color: #67e8f9;
-            border-color: rgba(6, 182, 212, 0.3);
-          }
-          &.badge-shop {
-            background: rgba(147, 51, 234, 0.2);
-            color: #d8b4fe;
-            border-color: rgba(168, 85, 247, 0.3);
-          }
+          .status-dot { background: #34d399; }
         }
       }
     }
 
-    .gas-distance-tag {
-      background: #121514;
-      border-color: rgba(52, 211, 153, 0.25);
-      color: #34d399;
-    }
-
-    .gas-card-actions {
-      .gas-action-btn.btn-call {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-        border-color: rgba(52, 211, 153, 0.35);
-
-        ion-icon {
-          color: #34d399;
-        }
-      }
-
-      .gas-action-btn.btn-directions {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: #ffffff;
-      }
-    }
-  }
-
-  .gas-map-wrapper {
-    border-color: rgba(52, 211, 153, 0.18);
-
-    .gas-map-badge {
-      background: rgba(28, 40, 36, 0.95);
+    .alert-card-title {
       color: #f1f5f9;
-      border-color: rgba(52, 211, 153, 0.25);
+    }
+
+    .alert-location-row {
+      color: #cbd5e1;
+
+      .loc-icon {
+        color: #34d399;
+      }
+    }
+
+    .alert-time-row {
+      color: #9bb0a7;
+
+      .alert-distance-tag {
+        background: rgba(16, 185, 129, 0.16);
+        color: #34d399;
+        border-color: rgba(52, 211, 153, 0.3);
+      }
+
+      .voltage-chip {
+        background: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+
+        &.chip-earthquake {
+          background: rgba(244, 63, 94, 0.2);
+          color: #fb7185;
+        }
+
+        &.chip-road {
+          background: rgba(139, 92, 246, 0.2);
+          color: #c4b5fd;
+        }
+      }
+    }
+
+    .alert-address-box {
+      background: #141c19;
+      border-color: rgba(52, 211, 153, 0.15);
+
+      .address-label {
+        color: #9bb0a7;
+      }
+
+      .address-content {
+        color: #f1f5f9;
+      }
+    }
+
+    .alert-desc-box {
+      color: #9bb0a7;
     }
   }
-}
+}
+

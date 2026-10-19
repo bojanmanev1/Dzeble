@@ -240,7 +240,7 @@
   [breakpoints]="[0, 1.0]"
   [handle]="true">
   <ng-template>
-    <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; max-height: 85vh; padding: 30px 16px max(16px, env(safe-area-inset-bottom)) 16px; box-sizing: border-box;">
+    <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; max-height: 85vh; padding: 30px 16px max(16px, env(safe-area-inset-bottom)) 16px; box-sizing: border-box; overflow-x: hidden; width: 100%; max-width: 100%;">
       
       <!-- WEATHER DETAILS -->
       @if (activeDetailWidgetId === 'weather') {
@@ -1629,7 +1629,7 @@
           </div>
         </div>
 
-        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+        <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; max-width: 100%; box-sizing: border-box; padding: 4px 0;">
           <!-- Filter Bar: Search Input -->
           <div class="pharmacy-search-box">
             <ion-icon name="search" class="search-icon"></ion-icon>
@@ -1783,7 +1783,7 @@
           </div>
         </div>
 
-        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+        <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; max-width: 100%; box-sizing: border-box; padding: 4px 0;">
           <!-- Filter Bar: Search Input -->
           <div class="gas-search-box">
             <ion-icon name="search" class="search-icon"></ion-icon>
@@ -1957,6 +1957,171 @@
               <div class="gas-map-badge">
                 <span>⛽ {{ filteredGasStations.length }} {{ 'GAS_MODAL.COUNT_LABEL' | translate }}</span>
               </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- UTILITY ALERTS (ПРЕКИНИ ЗА СТРУЈА & ВОДА) DETAILS -->
+      @if (activeDetailWidgetId === 'alerts') {
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="warning" style="font-size: 1.4rem; color: #f59e0b;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;">
+              {{ 'ALERTS_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; font-size: 0.85rem;">
+            {{ 'ALERTS_MODAL.SUBTITLE' | translate }}
+          </p>
+
+          <!-- Type Switcher Pills: All, Power, Water, Other -->
+          <div class="alert-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="selectedAlertType === 'all'"
+              (click)="selectAlertType('all')">
+              <span>{{ 'ALERTS_MODAL.FILTER_ALL' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="selectedAlertType === 'power'"
+              (click)="selectAlertType('power')">
+              <span>{{ 'ALERTS_MODAL.FILTER_POWER' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="selectedAlertType === 'water'"
+              (click)="selectAlertType('water')">
+              <span>{{ 'ALERTS_MODAL.FILTER_WATER' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="selectedAlertType === 'other'"
+              (click)="selectAlertType('other')">
+              <span>{{ 'ALERTS_MODAL.FILTER_OTHER' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; max-width: 100%; box-sizing: border-box; padding: 4px 0;">
+          <!-- Search input -->
+          <div class="alert-search-box">
+            <ion-icon name="search" class="search-icon"></ion-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="alertSearchQuery" 
+              (input)="onAlertSearchChange()"
+              [placeholder]="'ALERTS_MODAL.SEARCH_PLACEHOLDER' | translate" 
+              class="alert-search-input" />
+            @if (alertSearchQuery) {
+              <button class="alert-search-clear" (click)="alertSearchQuery = ''; onAlertSearchChange()">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            }
+          </div>
+
+          <!-- City Filter Chips Row -->
+          <div class="alert-city-scroll">
+            <button 
+              type="button" 
+              class="city-chip" 
+              [class.active]="selectedAlertCity === ''" 
+              (click)="selectAlertCity('')">
+              {{ 'ALERTS_MODAL.ALL_CITIES' | translate }}
+            </button>
+            @for (city of alertCities; track city) {
+              <button 
+                type="button" 
+                class="city-chip" 
+                [class.active]="selectedAlertCity === city" 
+                (click)="selectAlertCity(city)">
+                {{ getLocalizedCityName(city) }}
+              </button>
+            }
+          </div>
+
+          <!-- Total Count Badge -->
+          <div class="alert-results-header">
+            <span class="count-pill">
+              {{ filteredAlerts.length }} {{ 'ALERTS_MODAL.TOTAL_COUNT' | translate }}
+            </span>
+          </div>
+
+          <!-- Alert Cards List -->
+          @if (filteredAlerts.length === 0) {
+            <div class="no-alerts-state">
+              <div class="empty-icon-circle">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+              </div>
+              <h4>{{ 'ALERTS_MODAL.NO_RESULTS' | translate }}</h4>
+            </div>
+          } @else {
+            <div class="alerts-list-wrapper">
+              @for (alert of filteredAlerts; track alert.id) {
+                <div class="alert-card" 
+                     [class.type-power]="alert.type === 'power'" 
+                     [class.type-water]="alert.type === 'water'"
+                     [class.type-earthquake]="alert.type === 'earthquake'"
+                     [class.type-road]="alert.type === 'road'"
+                     [class.type-other]="alert.type === 'other'">
+                  <div class="alert-card-header">
+                    <div class="alert-type-badge" 
+                         [class.power-badge]="alert.type === 'power'" 
+                         [class.water-badge]="alert.type === 'water'"
+                         [class.earthquake-badge]="alert.type === 'earthquake'"
+                         [class.road-badge]="alert.type === 'road'"
+                         [class.other-badge]="alert.type === 'other'">
+                      <ion-icon [name]="getAlertIcon(alert.type)"></ion-icon>
+                      <span>{{ getAlertSourceBadge(alert) }}</span>
+                    </div>
+
+                    <div class="alert-status-badge" [class.status-active]="alert.status === 'active'" [class.status-upcoming]="alert.status === 'upcoming'" [class.status-resolved]="alert.status === 'resolved'">
+                      <span class="status-dot"></span>
+                      <span>{{ getAlertStatusLabel(alert) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="alert-card-title">
+                    {{ alert.title }}
+                  </div>
+
+                  <div class="alert-location-row">
+                    <ion-icon name="location" class="loc-icon"></ion-icon>
+                    <span class="loc-text">
+                      <strong>{{ alert.city }}</strong>@if (alert.municipality && alert.municipality !== alert.city) {<span> • {{ alert.municipality }}</span>}
+                    </span>
+                  </div>
+
+                  <div class="alert-time-row">
+                    <ion-icon name="time-outline" class="time-icon"></ion-icon>
+                    <span class="time-text">{{ alert.type === 'earthquake' ? utilityAlertService.formatAlertTime(alert.start_time) : utilityAlertService.formatTimeWindow(alert.start_time, alert.end_time) }}</span>
+                    @if (alert.distanceKm != null) {
+                      <span class="alert-distance-tag">📍 {{ utilityAlertService.formatDistance(alert.distanceKm) }}</span>
+                    }
+                    @if (alert.voltage) {
+                      <span class="voltage-chip" [class.chip-earthquake]="alert.type === 'earthquake'" [class.chip-road]="alert.type === 'road'">{{ alert.voltage }}</span>
+                    }
+                  </div>
+
+                  @if (alert.address) {
+                    <div class="alert-address-box">
+                      <div class="address-label">{{ 'ALERTS_MODAL.AFFECTED_LOCATIONS' | translate }}:</div>
+                      <div class="address-content">{{ utilityAlertService.cleanAlertText(alert.address) }}</div>
+                    </div>
+                  }
+
+                  @if (shouldShowDescription(alert)) {
+                    <div class="alert-desc-box">
+                      {{ utilityAlertService.cleanAlertText(alert.description) }}
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
         </div>

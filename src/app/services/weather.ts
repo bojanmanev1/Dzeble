@@ -115,6 +115,19 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
     { name: 'Штип', lat: 41.7458, lng: 22.1994 }
   ];
 
+  public skopjeMunicipalities = [
+    { name: 'Центар', lat: 41.9961, lng: 21.4314 },
+    { name: 'Карпош', lat: 42.0035, lng: 21.3905 },
+    { name: 'Аеродром', lat: 41.9835, lng: 21.4670 },
+    { name: 'Кисела Вода', lat: 41.9702, lng: 21.4350 },
+    { name: 'Ѓорче Петров', lat: 42.0080, lng: 21.3550 },
+    { name: 'Гази Баба', lat: 42.0120, lng: 21.4600 },
+    { name: 'Чаир', lat: 42.0150, lng: 21.4380 },
+    { name: 'Бутел', lat: 42.0350, lng: 21.4450 },
+    { name: 'Шуто Оризари', lat: 42.0400, lng: 21.4250 },
+    { name: 'Сарај', lat: 42.0000, lng: 21.3250 }
+  ];
+
   public resolveCityName(userLat: number, userLng: number): string {
     let nearestCity = 'Скопје';
     let shortestDistance = Number.MAX_VALUE;
@@ -131,6 +144,23 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
     }
 
     return nearestCity;
+  }
+
+  public resolveMunicipalityName(userLat: number, userLng: number): string | null {
+    let nearestMuni: string | null = null;
+    let shortestDistance = Number.MAX_VALUE;
+
+    for (const muni of this.skopjeMunicipalities) {
+      const distance = Math.sqrt(
+        Math.pow(userLat - muni.lat, 2) + Math.pow(userLng - muni.lng, 2)
+      );
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        nearestMuni = muni.name;
+      }
+    }
+    // Only return municipality if within ~15km radius of Skopje
+    return shortestDistance < 0.2 ? nearestMuni : null;
   }
 
   /**
