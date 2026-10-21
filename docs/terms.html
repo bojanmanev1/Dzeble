@@ -7,6 +7,7 @@
   <style>
     :root {
       --primary: #10b981;
+      --primary-dark: #059669;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
@@ -73,6 +74,36 @@
       color: var(--text-muted);
       font-weight: 500;
     }
+    .lang-switcher {
+      display: inline-flex;
+      background: var(--border);
+      padding: 4px;
+      border-radius: 12px;
+      margin-top: 16px;
+      gap: 4px;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .lang-btn.active {
+      background: var(--card-bg);
+      color: var(--text);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .content-section {
+      display: none;
+    }
+    .content-section.active {
+      display: block;
+    }
     h2 {
       font-size: 1.15rem;
       font-weight: 700;
@@ -106,30 +137,98 @@
       <div class="effective-date">Последно ажурирање: 21 Октомври 2026</div>
 
       <div style="display: flex; gap: 8px; margin-top: 14px;">
-        <a href="privacy-policy.html" style="font-size: 0.84rem; font-weight: 700; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: 8px;">🛡️ Политика за приватност</a>
-        <a href="terms.html" style="font-size: 0.84rem; font-weight: 700; color: #10b981; text-decoration: none; padding: 6px 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.12);">📜 Услови за користење</a>
+        <a href="privacy-policy.html" style="font-size: 0.84rem; font-weight: 700; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: 8px;">Политика за приватност</a>
+        <a href="terms.html" style="font-size: 0.84rem; font-weight: 700; color: #10b981; text-decoration: none; padding: 6px 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.12);">Услови за користење</a>
+      </div>
+
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="switchLang('mk')">🇲🇰 Македонски</button>
+        <button class="lang-btn" onclick="switchLang('en')">🇬🇧 English</button>
+        <button class="lang-btn" onclick="switchLang('al')">🇦🇱 Shqip</button>
       </div>
     </div>
 
-    <h2>1. Прифаќање на условите</h2>
-    <p>Со преземање, инсталирање или користење на мобилната апликација <strong>Dzeble</strong>, се согласувате со овие Услови за користење. Доколку не се согласувате со овие услови, не ја користете апликацијата.</p>
+    <!-- ================= MK SECTION ================= -->
+    <div id="lang-mk" class="content-section active">
+      <h2>1. Прифаќање на условите</h2>
+      <p>Со преземање, инсталирање или користење на мобилната апликација <strong>Dzeble</strong>, се согласувате со овие Услови за користење. Доколку не се согласувате со овие услови, не ја користете апликацијата.</p>
 
-    <h2>2. Опис на услугата</h2>
-    <p>Dzeble е информативна апликација која им обезбедува на корисниците податоци од јавен интерес, вклучувајќи: квалитет на воздухот (AQI), временска прогноза, најавени прекини на електрична енергија и водоснабдување, состојба на патишта, дежурни аптеки, цени на горива и чување лојални картички за сопствена употреба.</p>
+      <h2>2. Опис на услугата</h2>
+      <p>Dzeble е информативна апликација која им обезбедува на корисниците податоци од јавен интерес, вклучувајќи: квалитет на воздухот (AQI), временска прогноза, најавени прекини на електрична енергија и водоснабдување, состојба на патишта, дежурни аптеки, цени на горива и чување лојални картички за сопствена употреба.</p>
 
-    <h2>3. Одговорност за податоците</h2>
-    <p>Информациите прикажани во апликацијата се преземаат од официјални јавни извори (ЕВН Електродистрибуција, ЈП Водовод и Канализација, АМСМ, Државен завод за статистика, Фонд за здравствено осигурување). Dzeble вложува максимални напори за точност и навременост, но не сноси директна одговорност за евентуални непредвидени промени од страна на јавните претпријатија.</p>
+      <h2>3. Одговорност за податоците</h2>
+      <p>Информациите прикажани во апликацијата се преземаат од официјални јавни извори (ЕВН Електродистрибуција, ЈП Водовод и Канализација, АМСМ, Државен завод за статистика, Фонд за здравствено осигурување). Dzeble вложува максимални напори за точност и навременост, но не сноси директна одговорност за евентуални непредвидени промени од страна на јавните претпријатија.</p>
 
-    <h2>4. Корисничка сметка</h2>
-    <p>Корисникот е одговорен за чување на тајноста на својата сметка и лозинка. Забрането е злоупотребување на сервисите или обид за неовластен пристап.</p>
+      <h2>4. Корисничка сметка</h2>
+      <p>Корисникот е одговорен за чување на тајноста на својата сметка и лозинка. Забрането е злоупотребување на сервисите или обид за неовластен пристап.</p>
 
-    <h2>5. Прекин на услугата</h2>
-    <p>Имате право во секое време да престанете да ја користите апликацијата и да побарате бришење на вашата корисничка сметка.</p>
+      <h2>5. Прекин на услугата</h2>
+      <p>Имате право во секое време да престанете да ја користите апликацијата и да побарате бришење на вашата корисничка сметка.</p>
 
-    <div class="contact-box">
-      За сите прашања обратете се на: <a href="mailto:support@dzeble.com">support@dzeble.com</a>
+      <div class="contact-box">
+        За сите прашања обратете се на: <a href="mailto:support@dzeble.com">support@dzeble.com</a>
+      </div>
     </div>
+
+    <!-- ================= EN SECTION ================= -->
+    <div id="lang-en" class="content-section">
+      <h2>1. Acceptance of Terms</h2>
+      <p>By downloading, installing, or using the mobile application <strong>Dzeble</strong>, you agree to these Terms of Service. If you do not agree to these terms, please do not use the application.</p>
+
+      <h2>2. Description of Service</h2>
+      <p>Dzeble is an informational application providing public interest data, including: air quality (AQI), weather forecasts, scheduled electricity and water supply outages, road conditions, duty pharmacies, fuel prices, and storing loyalty cards for personal use.</p>
+
+      <h2>3. Data Reliability & Disclaimer</h2>
+      <p>Information displayed in the app is obtained from official public sources (EVN Elektrodistribucija, JP Vodovod i Kanalizacija, AMSM, State Statistical Office, Health Insurance Fund). Dzeble makes every effort to ensure accuracy and timeliness, but is not directly liable for unforeseen changes made by public utility companies.</p>
+
+      <h2>4. User Account</h2>
+      <p>The user is responsible for maintaining the confidentiality of their account credentials and password. Unauthorized access or misuse of the services is strictly prohibited.</p>
+
+      <h2>5. Termination of Service</h2>
+      <p>You have the right to discontinue using the application at any time and to request complete deletion of your user account.</p>
+
+      <div class="contact-box">
+        For all inquiries, please contact: <a href="mailto:support@dzeble.com">support@dzeble.com</a>
+      </div>
+    </div>
+
+    <!-- ================= AL SECTION ================= -->
+    <div id="lang-al" class="content-section">
+      <h2>1. Pranimi i kushteve</h2>
+      <p>Duke shkarkuar, instaluar ose përdorur aplikacionin celular <strong>Dzeble</strong>, ju pajtoheni me këto Kushte të përdorimit. Nëse nuk pajtoheni me këto kushte, mos e përdorni aplikacionin.</p>
+
+      <h2>2. Përshkrimi i shërbimit</h2>
+      <p>Dzeble është një aplikacion informativ që u ofron përdoruesve të dhëna me interes publik, duke përfshirë: cilësinë e ajrit (AQI), parashikimin e motit, ndërprerjet e paralajmëruara të energjisë elektrike dhe ujit, gjendjen e rrugëve, barnatoret kujdestare, çmimet e karburanteve dhe ruajtjen e kartelave të besnikërisë për përdorim personal.</p>
+
+      <h2>3. Përgjegjësia për të dhënat</h2>
+      <p>Informatat e shfaqura në aplikacion merren nga burime zyrtare publike (EVN Elektrodistribucija, NP Vodovod dhe Kanalizacija, AMSM, Enti Shtetëror i Statistikës, Fondi i Sigurimit Shëndetësor). Dzeble bën përpjekje maksimale për saktësi dhe përditësim me kohë, por nuk mban përgjegjësi të drejtpërdrejtë për ndryshime të paparashikuara nga ndërmarrjet publike.</p>
+
+      <h2>4. Llogaria e përdoruesit</h2>
+      <p>Përdoruesi është përgjegjës për ruajtjen e konfidencialitetit të llogarisë dhe fjalëkalimit të tij. Ndalohet keqpërdorimi i shërbimeve ose përpjekja për qasje të paautorizuar.</p>
+
+      <h2>5. Ndërprerja e shërbimit</h2>
+      <p>Ju keni të drejtë të ndaloni përdorimin e aplikacionit në çdo kohë dhe të kërkoni fshirjen e llogarisë suaj të përdoruesit.</p>
+
+      <div class="contact-box">
+        Për të gjitha pyetjet drejtohuni në: <a href="mailto:support@dzeble.com">support@dzeble.com</a>
+      </div>
+    </div>
+
   </div>
 
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.lang-btn').forEach(el => el.classList.remove('active'));
+      
+      const target = document.getElementById('lang-' + lang);
+      if (target) target.classList.add('active');
+      
+      const btns = document.querySelectorAll('.lang-btn');
+      if (lang === 'mk') btns[0].classList.add('active');
+      if (lang === 'en') btns[1].classList.add('active');
+      if (lang === 'al') btns[2].classList.add('active');
+    }
+  </script>
 </body>
 </html>

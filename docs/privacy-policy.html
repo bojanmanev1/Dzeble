@@ -142,7 +142,7 @@
       color: var(--text-muted);
     }
     .contact-box a {
-      color: var(--primary);
+      color: #10b981;
       text-decoration: none;
       font-weight: 700;
     }
@@ -154,11 +154,11 @@
     <div class="header">
       <div class="logo-badge">📱</div>
       <h1>Dzeble • Политика за приватност</h1>
-      <div class="effective-date">Последно ажурирање: 21 Октомври 2026 / Last updated: Oct 21, 2026</div>
+      <div class="effective-date">Последно ажурирање: 21 Октомври 2026</div>
 
       <div style="display: flex; gap: 8px; margin-top: 14px;">
-        <a href="privacy-policy.html" style="font-size: 0.84rem; font-weight: 700; color: #10b981; text-decoration: none; padding: 6px 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.12);">🛡️ Политика за приватност</a>
-        <a href="terms.html" style="font-size: 0.84rem; font-weight: 700; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: 8px;">📜 Услови за користење</a>
+        <a href="privacy-policy.html" style="font-size: 0.84rem; font-weight: 700; color: #10b981; text-decoration: none; padding: 6px 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.12);">Политика за приватност</a>
+        <a href="terms.html" style="font-size: 0.84rem; font-weight: 700; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: 8px;">Услови за користење</a>
       </div>
 
       <div class="lang-switcher">
@@ -171,7 +171,7 @@
     <!-- ================= MK SECTION ================= -->
     <div id="lang-mk" class="content-section active">
       <div class="highlight-card">
-        🛡️ <strong>Вашата приватност е наш главен приоритет:</strong> Мобилната апликација <strong>Dzeble</strong> не продава, не изнајмува и не споделува лични податоци со рекламни агенции. Податоците се користат исклучиво за обезбедување на корисните сервиси (локални прекини на струја и вода, сообраќај, време, аптеки и бензински).
+        <strong>Вашата приватност е наш главен приоритет:</strong> Мобилната апликација <strong>Dzeble</strong> не продава, не изнајмува и не споделува лични податоци со рекламни агенции. Податоците се користат исклучиво за обезбедување на корисните сервиси (локални прекини на струја и вода, сообраќај, време, аптеки и бензински).
       </div>
 
       <h2>1. Кои податоци ги собираме?</h2>
@@ -179,7 +179,7 @@
       <ul>
         <li><strong>Корисничка сметка:</strong> Име и презиме, e-mail адреса и безбедносно криптирана лозинка (управувани преку Supabase Auth или Google Sign-In).</li>
         <li><strong>Податоци за локација (GPS):</strong> Вашата географска ширина и должина. Локацијата се користи за пресметка на оддалеченост до дежурни аптеки, бензински пумпи и филтрирање на локални комунални прекини во вашиот реон.</li>
-        <li><strong>Пуш нотификациски токен (FCM Token):</strong> Уникатен код на уредот издаден од Google Firebase за да можеме да ви испратиме навремено предупредување за прекин на струја, вода или земјотрес во ваша близина.</li>
+        <li><strong>Пуш нотификациски токен (FCM Token):</strong> Уникатен код на уредот издаден од Google Firebase за да можеме да ви испратиме информација.</li>
         <li><strong>Лојални картички:</strong> Броеви и баркодови на картички што самите ќе ги зачувате, исклучиво за ваш личен приказ и скенирање на каса.</li>
         <li><strong>Анонимна дијагностика:</strong> Тип на уред, верзија на оперативен систем и верзија на апликацијата со цел спречување грешки и падови.</li>
       </ul>
@@ -211,7 +211,6 @@
         <li>Имате право да побарате целосно <strong>бришење на вашиот кориснички профил и сите поврзани податоци</strong> директно во апликацијата или со испраќање порака на <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a>. Податоците се бришат трајно во рок од 48 часа.</li>
       </ul>
 
-      <h2>6. Контакт</h2>
       <div class="contact-box">
         За сите прашања поврзани со приватноста или бришење податоци, контактирајте нè на:<br>
         📧 <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a> (или за општа поддршка: <a href="mailto:support@dzeble.com">support@dzeble.com</a>)
@@ -221,36 +220,48 @@
     <!-- ================= EN SECTION ================= -->
     <div id="lang-en" class="content-section">
       <div class="highlight-card">
-        🛡️ <strong>Your privacy is our core priority:</strong> The mobile application <strong>Dzeble</strong> does not sell, rent, or trade your personal data with third-party advertisers. Data is used exclusively to provide essential utility and daily services (power and water outage alerts, road status, weather, pharmacies, and gas stations).
+        <strong>Your privacy is our core priority:</strong> The mobile application <strong>Dzeble</strong> does not sell, rent, or share personal data with advertising agencies. Data is used exclusively to provide essential utility and daily services (local power and water outage alerts, traffic, weather, pharmacies, and gas stations).
       </div>
 
-      <h2>1. Information We Collect</h2>
+      <h2>1. What Data Do We Collect?</h2>
+      <p>Dzeble collects the minimum amount of data required for the normal operation of the application:</p>
       <ul>
-        <li><strong>Account Information:</strong> Name, email address, and encrypted credentials managed securely via Supabase Auth or Google Sign-In.</li>
-        <li><strong>Location Data (GPS):</strong> Latitude and longitude used strictly to determine proximity to utility outages, nearest 24/7 pharmacies, and gas stations.</li>
-        <li><strong>Push Notification Token (FCM Token):</strong> Device token used by Google Firebase to deliver urgent alerts about nearby outages or earthquakes.</li>
-        <li><strong>Loyalty Cards:</strong> Barcodes and card titles stored locally and securely in your account for scanning at retail checkout counters.</li>
-        <li><strong>Diagnostics:</strong> Non-personally identifiable technical telemetry (app version, OS version) to fix crashes.</li>
+        <li><strong>User Account:</strong> Full name, email address, and securely encrypted password (managed via Supabase Auth or Google Sign-In).</li>
+        <li><strong>Location Data (GPS):</strong> Your latitude and longitude. Location is used to calculate proximity to duty pharmacies, gas stations, and to filter local utility outages in your area.</li>
+        <li><strong>Push Notification Token (FCM Token):</strong> A unique device token issued by Google Firebase so we can deliver timely information to you.</li>
+        <li><strong>Loyalty Cards:</strong> Numbers and barcodes of cards that you choose to save, strictly for your personal display and scanning at checkout counters.</li>
+        <li><strong>Anonymous Diagnostics:</strong> Device model, operating system version, and app version to prevent bugs and crashes.</li>
       </ul>
 
-      <h2>2. Location Data Usage</h2>
-      <p>Location is used strictly to power proximity features:</p>
+      <h2>2. How Do We Use Location Data?</h2>
+      <p>Location is essential to the informative nature of Dzeble, but is used strictly responsibly:</p>
       <ul>
-        <li>Hyper-local utility outage notifications (within a 2.5 km radius of your location).</li>
-        <li>Accurate local air quality (AQI) and weather forecasts.</li>
-        <li>Finding nearest open pharmacies and fuel stations.</li>
+        <li>To display air quality (AQI) and weather forecasts for the city where you are located.</li>
+        <li>To send geolocation push notifications for power (EVN) and water (Vodovod) outages within a 2.5 km radius of you.</li>
+        <li>For navigation and displaying the nearest 24/7 pharmacies and gas stations with accurate fuel prices.</li>
       </ul>
-      <p><strong>Dzeble does not perform continuous background tracking</strong> for advertising and does not store movement history.</p>
+      <p><strong>Dzeble does not perform continuous background tracking</strong> for commercial purposes and does not track your movement history.</p>
 
       <h2>3. Data Security & Storage</h2>
-      <p>All data is transmitted using encrypted TLS/HTTPS protocols and stored in secure cloud infrastructure provided by Supabase Inc. located within the European Union.</p>
+      <p>All data is transmitted over a secure encrypted protocol (HTTPS/TLS) and stored in secure databases managed by <strong>Supabase Inc.</strong> in data centers located within the European Union. Passwords are protected using modern cryptographic hash functions.</p>
 
-      <h2>4. User Rights & Account Deletion</h2>
-      <p>You have the right to request full erasure of your account and all associated personal data. You can initiate account deletion inside the app settings or by contacting <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a>. All personal records are permanently erased within 48 hours.</p>
+      <h2>4. Third Parties & Services</h2>
+      <p>To provide these functionalities, we only partner with trusted platforms:</p>
+      <ul>
+        <li><strong>Google Firebase Cloud Messaging (FCM):</strong> For delivery of system notifications.</li>
+        <li><strong>Supabase:</strong> For secure authentication and database infrastructure.</li>
+        <li><strong>Open Weather Services:</strong> For temperature and air quality data.</li>
+      </ul>
 
-      <h2>5. Contact Information</h2>
+      <h2>5. Your Rights & Account Deletion (GDPR)</h2>
+      <p>You have full control over your data at all times:</p>
+      <ul>
+        <li>You can disable push notifications or location permissions at any time in your phone's system settings.</li>
+        <li>You have the right to request complete <strong>deletion of your user profile and all associated data</strong> directly within the application or by sending an email to <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a>. Data is permanently erased within 48 hours.</li>
+      </ul>
+
       <div class="contact-box">
-        For privacy inquiries or data requests, please contact us at:<br>
+        For all inquiries regarding privacy or data deletion, please contact us at:<br>
         📧 <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a> (or for general support: <a href="mailto:support@dzeble.com">support@dzeble.com</a>)
       </div>
     </div>
@@ -258,21 +269,49 @@
     <!-- ================= AL SECTION ================= -->
     <div id="lang-al" class="content-section">
       <div class="highlight-card">
-        🛡️ <strong>Privatësia juaj është prioriteti ynë kryesor:</strong> Aplikacioni mobil <strong>Dzeble</strong> nuk i shet dhe nuk i ndan të dhënat tuaja personale me palë të treta. Të dhënat përdoren ekskluzivisht për shërbimet e dobishme komunale dhe ditore.
+        <strong>Privatësia juaj është prioriteti ynë kryesor:</strong> Aplikacioni celular <strong>Dzeble</strong> nuk shet, nuk jep me qira dhe nuk ndan të dhëna personale me agjenci reklamuese. Të dhënat përdoren ekskluzivisht për ofrimin e shërbimeve të dobishme (ndërprerje lokale të rrymës dhe ujit, komunikacion, mot, barnatore dhe pompa benzine).
       </div>
 
-      <h2>1. Të dhënat që mbledhim</h2>
+      <h2>1. Çfarë të dhënash mbledhim?</h2>
+      <p>Dzeble mbledh një vëllim minimal të dhënash të nevojshme për funksionimin e rregullt të aplikacionit:</p>
       <ul>
-        <li><strong>Llogaria e përdoruesit:</strong> Emri, adresa e emailit dhe fjalëkalimi i sigurt i menaxhuar përmes Supabase Auth ose Google Sign-In.</li>
-        <li><strong>Vendndodhja (GPS):</strong> Përdoret vetëm për llogaritjen e distancës nga ndërprerjet e rrymës/ujit, barnatoret kujdestare dhe pompat e benzinës.</li>
-        <li><strong>Tokeni i njoftimeve (FCM):</strong> Për të dërguar njoftime emergjente në telefonin tuaj.</li>
+        <li><strong>Llogaria e përdoruesit:</strong> Emri dhe mbiemri, adresa e postës elektronike (e-mail) dhe fjalëkalimi i enkriptuar në mënyrë të sigurt (menaxhuar përmes Supabase Auth ose Google Sign-In).</li>
+        <li><strong>Të dhënat e vendndodhjes (GPS):</strong> Gjerësia dhe gjatësia juaj gjeografike. Vendndodhja përdoret për të llogaritur distancën deri te barnatoret kujdestare, pompat e benzinës dhe për të filtruar ndërprerjet lokale komunale në rajonin tuaj.</li>
+        <li><strong>Tokeni i njoftimeve push (FCM Token):</strong> Një kod unik i pajisjes i lëshuar nga Google Firebase në mënyrë që të mund t'ju dërgojmë informata.</li>
+        <li><strong>Kartelat e besnikërisë:</strong> Numrat dhe barkodet e kartelave që i ruani vetë, ekskluzivisht për shfaqjen tuaj personale dhe skanim në arkë.</li>
+        <li><strong>Diagnostifikim anonim:</strong> Lloji i pajisjes, versioni i sistemit operativ dhe versioni i aplikacionit me qëllim parandalimin e gabimeve dhe rënieve të sistemit.</li>
       </ul>
 
-      <h2>2. Fshirja e llogarisë dhe të dhënave</h2>
-      <p>Ju keni të drejtë të kërkoni fshirjen e plotë të llogarisë tuaj në çdo kohë përmes aplikacionit ose me email në <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a>.</p>
+      <h2>2. Si i përdorim të dhënat e vendndodhjes?</h2>
+      <p>Vendndodhja është thelbësore për natyrën informative të Dzeble, por përdoret ekskluzivisht me përgjegjësi:</p>
+      <ul>
+        <li>Për shfaqjen e cilësisë së ajrit (AQI) dhe parashikimit të motit për qytetin ku ndodheni.</li>
+        <li>Për dërgimin e njoftimeve gjeolokative push për ndërprerjet e energjisë elektrike (EVN) dhe ujit (Vodovod) brenda një rrezeje prej 2.5 kilometrash nga ju.</li>
+        <li>Për navigim dhe shfaqjen e barnatoreve kujdestare 24/7 dhe pompave të benzinës më të afërta me çmime të sakta të karburanteve.</li>
+      </ul>
+      <p><strong>Dzeble nuk kryen gjurmim të vazhdueshëm në prapavijë</strong> për qëllime komerciale dhe nuk mban histori të lëvizjes tuaj.</p>
+
+      <h2>3. Siguria dhe ruajtja e të dhënave</h2>
+      <p>Të gjitha të dhënat transmetohen përmes një protokolli të sigurt të enkriptuar (HTTPS/TLS) dhe ruhen në baza të sigurta të të dhënave të menaxhuara nga <strong>Supabase Inc.</strong> në qendra të të dhënave brenda Bashkimit Evropian. Fjalëkalimet mbrohen me funksione bashkëkohore kriptografike hash.</p>
+
+      <h2>4. Palët e treta dhe shërbimet</h2>
+      <p>Për ofrimin e funksionaliteteve, ne bashkëpunojmë vetëm me platforma të dëshmuara:</p>
+      <ul>
+        <li><strong>Google Firebase Cloud Messaging (FCM):</strong> Për dërgimin e njoftimeve të sistemit.</li>
+        <li><strong>Supabase:</strong> Për autentifikim të sigurt dhe infrastrukturë të bazës së të dhënave.</li>
+        <li><strong>Shërbime të hapura meteorologjike:</strong> Për të dhënat e temperaturës dhe ndotjes së ajrit.</li>
+      </ul>
+
+      <h2>5. Të drejtat tuaja dhe fshirja e llogarisë (GDPR)</h2>
+      <p>Në çdo moment keni kontroll të plotë mbi të dhënat tuaja:</p>
+      <ul>
+        <li>Mund t'i çaktivizoni njoftimet ose lejen për vendndodhje në çdo kohë në cilësimet e telefonit tuaj.</li>
+        <li>Keni të drejtë të kërkoni <strong>fshirjen e plotë të profilit tuaj të përdoruesit dhe të të gjitha të dhënave të ndërlidhura</strong> drejtpërdrejt në aplikacion ose duke dërguar mesazh në <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a>. Të dhënat fshihen përgjithmonë brenda 48 orëve.</li>
+      </ul>
 
       <div class="contact-box">
-        📧 <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a> (ose për mbështetje: <a href="mailto:support@dzeble.com">support@dzeble.com</a>)
+        Për të gjitha pyetjet lidhur me privatësinë ose fshirjen e të dhënave, na kontaktoni në:<br>
+        📧 <a href="mailto:privacy@dzeble.com">privacy@dzeble.com</a> (ose për mbështetje të përgjithshme: <a href="mailto:support@dzeble.com">support@dzeble.com</a>)
       </div>
     </div>
 
