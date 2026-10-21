@@ -30,6 +30,23 @@ export class UtilityAlertService {
   private supabaseService = inject(SupabaseService);
   private http = inject(HttpClient);
   private cacheKey = 'cached_utility_alerts_v5';
+  private bundledAlertsCache: UtilityAlert[] | null = null;
+
+  private async getBundledAlerts(): Promise<UtilityAlert[]> {
+    if (this.bundledAlertsCache && this.bundledAlertsCache.length > 0) {
+      return this.bundledAlertsCache;
+    }
+    try {
+      const localData = await firstValueFrom(
+        this.http.get<UtilityAlert[]>('assets/data/utility_alerts.json')
+      );
+      this.bundledAlertsCache = localData || [];
+      return this.bundledAlertsCache;
+    } catch (err) {
+      console.warn('UtilityAlertService: Local JSON fetch error:', err);
+      return [];
+    }
+  }
 
   public async fetchAlerts(city?: string): Promise<UtilityAlert[]> {
     // 1. Try Supabase first
@@ -51,9 +68,7 @@ export class UtilityAlertService {
         // If Supabase currently has 0 water alerts, blend in bundled water alerts so users never see an empty screen
         if (!merged.some(a => a.type === 'water')) {
           try {
-            const localData = await firstValueFrom(
-              this.http.get<UtilityAlert[]>('assets/data/utility_alerts.json')
-            );
+            const localData = await this.getBundledAlerts();
             if (localData && localData.length > 0) {
               const localWater = localData.filter(a => a.type === 'water');
               merged = [...merged, ...localWater].sort(
@@ -80,9 +95,7 @@ export class UtilityAlertService {
 
     // 3. Fallback to bundled assets/data/utility_alerts.json
     try {
-      const localData = await firstValueFrom(
-        this.http.get<UtilityAlert[]>('assets/data/utility_alerts.json')
-      );
+      const localData = await this.getBundledAlerts();
       if (localData && localData.length > 0) {
         localStorage.setItem(this.cacheKey, JSON.stringify(localData));
         if (city && city !== 'all') {

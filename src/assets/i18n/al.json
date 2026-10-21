@@ -39,6 +39,7 @@
     "ALERTS": "Ndërprerjet",
     "NOTIF_ON": "Aktivizo njoftimet",
     "NOTIF_OFF": "Çaktivizo njoftimet",
+    "EDIT": "Ndrysho",
     "EDIT_MODE_TITLE": "Ndrysho mini-aplikacionet",
     "EDIT_MODE_HINT": "Tërhiq për të rirregulluar ose hiq",
     "DONE": "Kryer",
@@ -373,6 +374,10 @@
   "PASSWORD": "Fjalëkalimi",
   "SIGN_IN": "Kyçu",
   "SIGN_UP": "Regjistrohu",
+  "CONSENT_PRE": "Duke u regjistruar, ju pranoni",
+  "TERMS_LINK": "Kushtet e përdorimit",
+  "CONSENT_AND": "dhe",
+  "PRIVACY_LINK": "Politikën e privatësisë",
   "NEED_ACCOUNT": "Nuk keni llogari? Regjistrohu",
   "HAVE_ACCOUNT": "Keni tashmë llogari? Kyçu",
   "OR": "ose",
@@ -411,7 +416,8 @@
     "GUEST_TITLE": "Mirësevisni në Dzeble",
     "GUEST_SUBTITLE": "Llogarituni për të ruajtur kartat dhe mepërat",
     "LANGUAGE": "Gjuha",
-    "DARK_MODE": "Mënyra e errët"
+    "DARK_MODE": "Mënyra e errët",
+    "PRIVACY_TERMS": "Politika e privatësisë & Kushtet"
   },
   "RESET_PASSWORD": {
     "TITLE": "Fjalëkalim i Ri",

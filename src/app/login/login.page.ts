@@ -72,6 +72,10 @@ export class LoginPage implements OnInit, OnDestroy {
   resendCountdown = 0;
   private resendTimer: any = null;
 
+  // In-app Legal Modal state
+  isLegalModalOpen = false;
+  activeLegalTab: 'privacy' | 'terms' = 'privacy';
+
   ngOnInit() {
     // 1. Immediately check if user is already authenticated (returning from Google OAuth or deep link)
     this.checkExistingSession();
@@ -350,5 +354,14 @@ export class LoginPage implements OnInit, OnDestroy {
     }
 
     return this.translate.instant('AUTH.GENERIC_ERROR');
+  }
+
+  openLegalModal(tab: 'privacy' | 'terms' = 'privacy') {
+    this.activeLegalTab = tab;
+    this.isLegalModalOpen = true;
+  }
+
+  closeLegalModal() {
+    this.isLegalModalOpen = false;
   }
 }

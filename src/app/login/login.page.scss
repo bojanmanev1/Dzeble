@@ -527,3 +527,122 @@
     }
   }
 }
+
+/* ============================================================
+   LEGAL CONSENT & IN-APP PRIVACY MODAL
+   ============================================================ */
+.auth-consent-container {
+  margin: 4px 0 6px 0;
+  text-align: center;
+}
+
+.auth-consent-text {
+  font-size: 0.74rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+
+  a {
+    color: #059669;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+.legal-popup-card {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px 20px !important;
+}
+
+.legal-tabs-header {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 16px;
+  margin-top: 8px;
+  flex-shrink: 0;
+
+  .legal-tab-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+  }
+}
+
+.legal-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  margin-bottom: 16px;
+  text-align: left;
+
+  .legal-content {
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+    }
+
+    .legal-date {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .legal-highlight {
+      background: #ecfdf5;
+      border-left: 3px solid #10b981;
+      padding: 10px 12px;
+      border-radius: 0 10px 10px 0;
+      font-size: 0.80rem;
+      color: #065f46;
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #059669;
+      margin: 14px 0 4px 0;
+    }
+
+    p {
+      font-size: 0.82rem;
+      color: #334155;
+      line-height: 1.5;
+      margin: 0 0 10px 0;
+    }
+  }
+}
+
+.legal-footer-actions {
+  flex-shrink: 0;
+}

@@ -33,6 +33,11 @@
             <ion-icon name="checkmark"></ion-icon>
             {{ 'WIDGETS.DONE' | translate }}
           </button>
+        } @else {
+          <button class="btn-edit-widgets" (click)="enterWidgetEditMode()">
+            <ion-icon name="create-outline"></ion-icon>
+            <span>{{ 'WIDGETS.EDIT' | translate }}</span>
+          </button>
         }
       </div>
     </div>
@@ -42,7 +47,7 @@
         <div class="edit-banner-left">
           <span class="edit-banner-title">✨ {{ 'WIDGETS.EDIT_MODE_TITLE' | translate }}</span>
           <span class="edit-banner-hint">
-            {{ visibleWidgets.length }}/9 • {{ 'WIDGETS.EDIT_MODE_HINT' | translate }}
+            {{ visibleWidgets.length }}/{{ MAX_WIDGET_COUNT }} • {{ 'WIDGETS.EDIT_MODE_HINT' | translate }}
           </span>
         </div>
         <div class="edit-banner-right">
@@ -207,6 +212,16 @@
             </div>
             <div class="row-right">
               <ion-toggle [checked]="isDarkMode" (ionChange)="toggleDarkMode($event)"></ion-toggle>
+            </div>
+          </div>
+
+          <div class="settings-row clickable" (click)="openLegalModal('privacy')">
+            <div class="row-left">
+              <span class="row-icon">🛡️</span>
+              <span class="row-label">{{ 'SETTINGS.PRIVACY_TERMS' | translate }}</span>
+            </div>
+            <div class="row-right">
+              <ion-icon name="chevron-forward-outline" class="row-arrow"></ion-icon>
             </div>
           </div>
         </div>
@@ -1755,7 +1770,7 @@
       @if (activeDetailWidgetId === 'gas_stations') {
         <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-            <ion-icon name="speedometer" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+            <ion-icon name="gas-pump" style="font-size: 1.4rem; color: #ef4444;"></ion-icon>
             <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
               {{ 'GAS_MODAL.TITLE' | translate }}
             </h2>
@@ -2091,21 +2106,25 @@
                   </div>
 
                   <div class="alert-location-row">
-                    <ion-icon name="location" class="loc-icon"></ion-icon>
-                    <span class="loc-text">
-                      <strong>{{ alert.city }}</strong>@if (alert.municipality && alert.municipality !== alert.city) {<span> • {{ alert.municipality }}</span>}
-                    </span>
+                    <div class="alert-loc-left">
+                      <ion-icon name="location" class="loc-icon"></ion-icon>
+                      <span class="loc-text">
+                        <strong>{{ alert.city }}</strong>@if (alert.municipality && alert.municipality !== alert.city) {<span> • {{ alert.municipality }}</span>}
+                      </span>
+                    </div>
+                    <div class="alert-chips-group">
+                      @if (alert.distanceKm != null) {
+                        <span class="alert-distance-tag">📍 {{ utilityAlertService.formatDistance(alert.distanceKm) }}</span>
+                      }
+                      @if (alert.voltage) {
+                        <span class="voltage-chip" [class.chip-earthquake]="alert.type === 'earthquake'" [class.chip-road]="alert.type === 'road'">{{ alert.voltage }}</span>
+                      }
+                    </div>
                   </div>
 
                   <div class="alert-time-row">
                     <ion-icon name="time-outline" class="time-icon"></ion-icon>
                     <span class="time-text">{{ alert.type === 'earthquake' ? utilityAlertService.formatAlertTime(alert.start_time) : utilityAlertService.formatTimeWindow(alert.start_time, alert.end_time) }}</span>
-                    @if (alert.distanceKm != null) {
-                      <span class="alert-distance-tag">📍 {{ utilityAlertService.formatDistance(alert.distanceKm) }}</span>
-                    }
-                    @if (alert.voltage) {
-                      <span class="voltage-chip" [class.chip-earthquake]="alert.type === 'earthquake'" [class.chip-road]="alert.type === 'road'">{{ alert.voltage }}</span>
-                    }
                   </div>
 
                   @if (alert.address) {
@@ -2239,5 +2258,91 @@
       </div>
     </ng-template>
   </ion-modal>
+
+  <!-- ========================================== -->
+  <!-- MODERN IN-APP LEGAL / PRIVACY MODAL        -->
+  <!-- ========================================== -->
+  @if (isLegalModalOpen) {
+    <div class="auth-popup-backdrop" (click)="closeLegalModal()">
+      <div class="auth-popup-card legal-popup-card" (click)="$event.stopPropagation()">
+        
+        <!-- Close Button (top-right) -->
+        <button class="popup-close-btn" (click)="closeLegalModal()" type="button" aria-label="Close">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+
+        <!-- Segment / Tabs -->
+        <div class="legal-tabs-header">
+          <button 
+            type="button" 
+            class="legal-tab-btn" 
+            [class.active]="activeLegalTab === 'privacy'"
+            (click)="activeLegalTab = 'privacy'">
+            🛡️ {{ 'AUTH.PRIVACY_LINK' | translate }}
+          </button>
+          <button 
+            type="button" 
+            class="legal-tab-btn" 
+            [class.active]="activeLegalTab === 'terms'"
+            (click)="activeLegalTab = 'terms'">
+            📜 {{ 'AUTH.TERMS_LINK' | translate }}
+          </button>
+        </div>
+
+        <!-- Scrollable Legal Body -->
+        <div class="legal-scroll-body">
+          @if (activeLegalTab === 'privacy') {
+            <div class="legal-content">
+              <h3>Политика за приватност</h3>
+              <p class="legal-date">Последно ажурирање: 21 Октомври 2026</p>
+
+              <div class="legal-highlight">
+                🛡️ <strong>Dzeble</strong> не продава и не споделува ваши податоци со рекламни агенции. Податоците се користат исклучиво за вашите корисни дневни сервиси.
+              </div>
+
+              <h4>1. Податоци за сметка</h4>
+              <p>Име, е-пошта и криптирана лозинка со цел сигурна најава и синхронизација.</p>
+
+              <h4>2. Локација (GPS)</h4>
+              <p>Се користи исклучиво за пресметка на оддалеченост до дежурни аптеки, пумпи, приказ на локално време/загаденост и филтрирање на прекини на струја и вода во ваша близина. Dzeble не врши следење во позадина за рекламни цели.</p>
+
+              <h4>3. Нотификации (FCM)</h4>
+              <p>Уникатен токен за навремени известувања за прекини или важни алерти кои самите ќе ги вклучите.</p>
+
+              <h4>4. Лојални картички</h4>
+              <p>Баркодовите и имињата на картичките се чуваат безбедно на вашиот профил за приказ и скенирање на каса.</p>
+
+              <h4>5. Право на бришење податоци (GDPR)</h4>
+              <p>Во секое време можете да побарате целосно бришење на сметката и податоците преку апликацијата или на: <strong>privacy@dzeble.com</strong>.</p>
+            </div>
+          } @else {
+            <div class="legal-content">
+              <h3>Услови за користење</h3>
+              <p class="legal-date">Последно ажурирање: 21 Октомври 2026</p>
+
+              <h4>1. Прифаќање на условите</h4>
+              <p>Со користење на мобилната апликација Dzeble, се согласувате со овие правила и услови за користење.</p>
+
+              <h4>2. Сервис и информации</h4>
+              <p>Dzeble обезбедува информации од јавен интерес (квалитет на воздух, време, комунални прекини, аптеки, горива). Податоците се преземаат од официјални јавни извори (ЕВН, Водовод, АМСМ, ДЗС, ФЗО).</p>
+
+              <h4>3. Безбедност на сметката</h4>
+              <p>Корисникот е одговорен за сигурноста на својата лозинка и уред.</p>
+
+              <h4>4. Контакт</h4>
+              <p>За какви било прашања: <strong>support@dzeble.com</strong>.</p>
+            </div>
+          }
+        </div>
+
+        <div class="legal-footer-actions">
+          <button type="button" class="btn-popup-primary" (click)="closeLegalModal()">
+            {{ 'COMMON.CLOSE' | translate }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </ion-content>

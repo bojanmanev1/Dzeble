@@ -39,6 +39,7 @@
     "ALERTS": "Outages",
     "NOTIF_ON": "Enable notifications",
     "NOTIF_OFF": "Disable notifications",
+    "EDIT": "Edit",
     "EDIT_MODE_TITLE": "Edit Widgets",
     "EDIT_MODE_HINT": "Drag to reorder or remove",
     "DONE": "Done",
@@ -373,6 +374,10 @@
   "PASSWORD": "Password",
   "SIGN_IN": "Sign In",
   "SIGN_UP": "Sign Up",
+  "CONSENT_PRE": "By signing up, you agree to our",
+  "TERMS_LINK": "Terms of Service",
+  "CONSENT_AND": "and",
+  "PRIVACY_LINK": "Privacy Policy",
   "NEED_ACCOUNT": "Don't have an account? Sign Up",
   "HAVE_ACCOUNT": "Already have an account? Sign In",
   "OR": "or",
@@ -411,7 +416,8 @@
     "GUEST_TITLE": "Welcome to Dzeble",
     "GUEST_SUBTITLE": "Sign in to sync widgets & loyalty cards",
     "LANGUAGE": "Language",
-    "DARK_MODE": "Dark Mode"
+    "DARK_MODE": "Dark Mode",
+    "PRIVACY_TERMS": "Privacy Policy & Terms"
   },
   "RESET_PASSWORD": {
     "TITLE": "New Password",

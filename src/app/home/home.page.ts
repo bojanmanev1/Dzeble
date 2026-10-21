@@ -59,7 +59,8 @@ import {
   waterOutline,
   warning,
   flash,
-  water
+  water,
+  createOutline
 } from 'ionicons/icons';
 
 import { 
@@ -85,6 +86,8 @@ import { App } from '@capacitor/app';
 import { PushNotificationService } from '../services/push-notification';
 import { AnalyticsService } from '../services/analytics';
 import * as L from 'leaflet';
+
+const GAS_PUMP_ICON = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' class='ionicon' viewBox='0 0 24 24'><path fill='currentColor' d='M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11c-.94.36-1.61 1.26-1.61 2.33 0 1.38 1.12 2.5 2.5 2.5.36 0 .69-.08 1-.21v7.21c0 .55-.45 1-1 1s-1-.45-1-1V14c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v16h10v-7.5h1.5v5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5zm6 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z'/></svg>`;
 
 interface Widget {
   id: string;
@@ -215,6 +218,8 @@ export class HomePage implements OnInit, OnDestroy {
   newWidgetDate: string = new Date().toISOString();
   inputMkdAmount: number = 100;
   isAuthPromptModalOpen = false;
+  isLegalModalOpen = false;
+  activeLegalTab: 'privacy' | 'terms' = 'privacy';
   selectedCryptoCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('crypto_display_currency') as any) || 'MKD';
 
   private storeColorMap: { [key: string]: string } = {
@@ -256,11 +261,11 @@ export class HomePage implements OnInit, OnDestroy {
   pharmacySearchQuery: string = '';
   selectedPharmacyCity: string = '';
   pharmacyCities: string[] = [
-    'Скопје', 'Битола', 'Куманово', 'Прилеп', 'Тетово', 'Охрид', 'Велес', 'Штип',
-    'Струмица', 'Кавадарци', 'Кочани', 'Гостивар', 'Гевгелија', 'Кичево', 'Неготино',
-    'Ресен', 'Струга', 'Крушево', 'Дебар', 'Берово', 'Валандово', 'Виница',
-    'Делчево', 'Крива Паланка', 'Кратово', 'Пробиштип', 'Свети Николе', 'Демир Хисар',
-    'Македонски Брод', 'Македонска Каменица'
+    'Скопје', 'Берово', 'Битола', 'Валандово', 'Велес', 'Виница', 'Гевгелија', 'Гостивар',
+    'Дебар', 'Делчево', 'Демир Хисар', 'Кавадарци', 'Кичево', 'Кочани', 'Кратово',
+    'Крива Паланка', 'Крушево', 'Куманово', 'Македонска Каменица', 'Македонски Брод',
+    'Неготино', 'Охрид', 'Прилеп', 'Пробиштип', 'Ресен', 'Свети Николе', 'Струга',
+    'Струмица', 'Тетово', 'Штип'
   ];
   private leafletMap: L.Map | null = null;
   private leafletMarkers: L.Marker[] = [];
@@ -311,11 +316,15 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
     { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' },
-    { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'speedometer' },
+    { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'gas-pump' },
     { id: 'alerts', translationKey: 'WIDGETS.ALERTS', value: '0', unit: 'Прекини', icon: 'warning' }
   ];
 
-  readonly DEFAULT_WIDGET_IDS: string[] = ['aqi', 'fuel', 'currency', 'weather', 'crypto', 'stock', 'holidays', 'pharmacy', 'gas_stations'];
+  readonly DEFAULT_WIDGET_IDS: string[] = [
+    'aqi', 'fuel', 'weather',
+    'crypto', 'stock', 'holidays',
+    'pharmacy', 'gas_stations', 'alerts'
+  ];
   readonly MAX_WIDGET_COUNT = 9;
   readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
 
@@ -394,7 +403,10 @@ export class HomePage implements OnInit, OnDestroy {
       'flash': flash,
       'water': water,
       'car': car,
-      'pulse': pulse
+      'pulse': pulse,
+      'gas-pump': GAS_PUMP_ICON,
+      'pump': GAS_PUMP_ICON,
+      'create-outline': createOutline
     });
 
     this.loadSavedWidgetOrder();
@@ -418,6 +430,7 @@ export class HomePage implements OnInit, OnDestroy {
     const localEvents = JSON.parse(localStorage.getItem('guest_user_events') || '[]');
     this.userCalendarEvents = localEvents;
     this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
+    this.pharmacyCities = this.sortCitiesWithSkopjeFirst(this.pharmacyCities);
     this.updateCurrencyWidgetDisplay();
 
     // Hydrate cached weather metrics immediately so frame 1 has city and weather
@@ -636,6 +649,18 @@ export class HomePage implements OnInit, OnDestroy {
   goToLogin() {
     this.isSettingsSheetOpen = false;
     setTimeout(() => this.router.navigate(['/login']), 150);
+  }
+
+  openLegalModal(tab: 'privacy' | 'terms' = 'privacy') {
+    this.activeLegalTab = tab;
+    this.isSettingsSheetOpen = false;
+    this.isLegalModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeLegalModal() {
+    this.isLegalModalOpen = false;
+    this.cdr.markForCheck();
   }
 
   toggleDarkMode(event: any) {
@@ -1296,22 +1321,7 @@ async handleLogout() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           const validIds = parsed.filter(id => this.allWidgets.some(w => w.id === id));
           let uniqueIds = Array.from(new Set(validIds));
-          // Migrate: extract 'loyalty' and replace with 'gas_stations' or add 'gas_stations'
-          const loyaltyIdx = uniqueIds.indexOf('loyalty');
-          if (loyaltyIdx !== -1) {
-            if (!uniqueIds.includes('gas_stations')) {
-              uniqueIds[loyaltyIdx] = 'gas_stations';
-            } else {
-              uniqueIds.splice(loyaltyIdx, 1);
-            }
-          }
-          const uvIdx = uniqueIds.indexOf('uv');
-          if (uvIdx !== -1 && !uniqueIds.includes('pharmacy')) {
-            uniqueIds[uvIdx] = 'pharmacy';
-          }
-          if (!uniqueIds.includes('gas_stations')) {
-            uniqueIds.push('gas_stations');
-          }
+          // Fill up to MAX_WIDGET_COUNT with any missing default widgets
           for (const defaultId of this.DEFAULT_WIDGET_IDS) {
             if (uniqueIds.length >= this.MAX_WIDGET_COUNT) break;
             if (!uniqueIds.includes(defaultId) && this.allWidgets.some(w => w.id === defaultId)) {
@@ -2754,6 +2764,34 @@ isNotificationActive(widgetId: string): boolean {
     return this.pharmacyService.formatDistance(distanceKm);
   }
 
+  // --- CITY HELPERS ---
+  private formatCityTitle(str: string): string {
+    if (!str) return '';
+    const trimmed = str.trim();
+    const lower = trimmed.toLowerCase();
+    if (lower === 'skopje' || lower === 'скопје') return 'Скопје';
+    return trimmed
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  private sortCitiesWithSkopjeFirst(cities: string[]): string[] {
+    const isSkopje = (c: string) => {
+      const norm = (c || '').trim().toLowerCase();
+      return norm === 'скопје' || norm === 'skopje';
+    };
+    const formatted = (cities || []).map(c => this.formatCityTitle(c)).filter(Boolean);
+    const unique = Array.from(new Set(formatted));
+    return unique.sort((a, b) => {
+      const aIsSkopje = isSkopje(a);
+      const bIsSkopje = isSkopje(b);
+      if (aIsSkopje && !bIsSkopje) return -1;
+      if (!aIsSkopje && bIsSkopje) return 1;
+      return a.localeCompare(b, 'mk');
+    });
+  }
+
   // --- GAS STATIONS (БЕНЗИНСКИ ПУМПИ) METHODS ---
 
   async loadGasStations() {
@@ -2778,12 +2816,13 @@ isNotificationActive(widgetId: string): boolean {
       this.gasStationsList = rawStations.map(s => {
         const clean = (s.city || '').trim();
         const norm = clean.toLowerCase();
+        const mapped = cityMap[norm] || clean;
         return {
           ...s,
-          city: cityMap[norm] || clean
+          city: this.formatCityTitle(mapped)
         };
       });
-      this.gasCities = Array.from(new Set(this.gasStationsList.map(s => s.city).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      this.gasCities = this.sortCitiesWithSkopjeFirst(this.gasStationsList.map(s => s.city));
       this.updateNearestGasStation();
       this.updateFilteredGasStations();
       this.updateGasWidgetDisplay();
@@ -3149,12 +3188,16 @@ isNotificationActive(widgetId: string): boolean {
         const c = (a.city || '').toLowerCase();
         const m = (a.municipality || '').toLowerCase();
         return !nonMacedonian.some(nm => c.includes(nm) || m.includes(nm));
-      });
-      this.alertCities = Array.from(new Set(this.alertsList.map(a => a.city).filter(c => {
+      }).map(a => ({
+        ...a,
+        city: this.formatCityTitle(a.city)
+      }));
+      const rawCities = this.alertsList.map(a => a.city).filter(c => {
         if (!c) return false;
         const norm = c.toLowerCase().trim();
         return !nonMacedonian.some(nm => norm.includes(nm));
-      }))).sort((a, b) => a.localeCompare(b));
+      });
+      this.alertCities = this.sortCitiesWithSkopjeFirst(rawCities);
       this.updateFilteredAlerts();
       this.updateAlertsWidgetDisplay();
       this.cdr.markForCheck();

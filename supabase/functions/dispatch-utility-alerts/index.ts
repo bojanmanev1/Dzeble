@@ -97,7 +97,7 @@ serve(async (req) => {
       .select("id, type, title, city, municipality, address, start_time, end_time, status, latitude, longitude")
       .in("status", ["active", "upcoming"])
       .gte("updated_at", cutoff)
-      .limit(30);
+      .limit(200);
 
     if (alertsErr || !recentAlerts || recentAlerts.length === 0) {
       return new Response(

@@ -19,21 +19,60 @@ export class LoyaltyService {
 
   constructor(private supabaseService: SupabaseService) {}
 
-  /**
-   * Fetch all loyalty cards for the current user
-   */
-  async getUserCards(userId: string): Promise<LoyaltyCard[]> {
-    const { data, error } = await this.supabaseService.client
-      .from('user_loyalty_cards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+  private getCacheKey(userId: string): string {
+    return `dzeble_loyalty_cards_${userId}`;
+  }
 
-    if (error) {
-      console.error('Error fetching loyalty cards:', error);
+  public getCachedCards(userId: string): LoyaltyCard[] {
+    try {
+      const raw = localStorage.getItem(this.getCacheKey(userId));
+      return raw ? JSON.parse(raw) : [];
+    } catch {
       return [];
     }
-    return data || [];
+  }
+
+  private setCachedCards(userId: string, cards: LoyaltyCard[]): void {
+    try {
+      localStorage.setItem(this.getCacheKey(userId), JSON.stringify(cards));
+    } catch {}
+  }
+
+  /**
+   * Fetch all loyalty cards for the current user with cache fallback and 1 retry on 502/network hiccup
+   */
+  async getUserCards(userId: string): Promise<LoyaltyCard[]> {
+    const cached = this.getCachedCards(userId);
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const { data, error } = await this.supabaseService.client
+          .from('user_loyalty_cards')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          this.setCachedCards(userId, data);
+          return data;
+        }
+
+        if (error) {
+          console.warn(`LoyaltyService: attempt ${attempt} warning:`, error.message || error);
+          if (attempt === 1) {
+            await new Promise(r => setTimeout(r, 1200));
+          }
+        }
+      } catch (err) {
+        console.warn(`LoyaltyService: network attempt ${attempt} error:`, err);
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1200));
+        }
+      }
+    }
+
+    // Fallback to locally cached cards if Supabase experienced 502 / network interruption
+    return cached;
   }
 
   /**
@@ -50,6 +89,12 @@ export class LoyaltyService {
       console.error('Error adding loyalty card:', error);
       return null;
     }
+
+    if (data && card.user_id) {
+      const current = this.getCachedCards(card.user_id);
+      this.setCachedCards(card.user_id, [data, ...current]);
+    }
+
     return data;
   }
 

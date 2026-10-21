@@ -72,6 +72,17 @@
         <p class="success-text">{{ successMessage }}</p>
       }
 
+      @if (isSignUpMode) {
+        <div class="auth-consent-container">
+          <p class="auth-consent-text">
+            {{ 'AUTH.CONSENT_PRE' | translate }}
+            <a href="javascript:void(0)" (click)="openLegalModal('terms')">{{ 'AUTH.TERMS_LINK' | translate }}</a>
+            {{ 'AUTH.CONSENT_AND' | translate }}
+            <a href="javascript:void(0)" (click)="openLegalModal('privacy')">{{ 'AUTH.PRIVACY_LINK' | translate }}</a>.
+          </p>
+        </div>
+      }
+
       <button type="submit" class="btn-submit" [disabled]="isLoading">
         @if (isLoading) {
           <ion-spinner name="crescent"></ion-spinner>
@@ -174,6 +185,92 @@
               }
             </button>
           }
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ========================================== -->
+  <!-- MODERN IN-APP LEGAL / PRIVACY & TERMS MODAL -->
+  <!-- ========================================== -->
+  @if (isLegalModalOpen) {
+    <div class="auth-popup-backdrop" (click)="closeLegalModal()">
+      <div class="auth-popup-card legal-popup-card" (click)="$event.stopPropagation()">
+        
+        <!-- Close Button (top-right) -->
+        <button class="popup-close-btn" (click)="closeLegalModal()" type="button" aria-label="Close">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+
+        <!-- Segment / Tabs -->
+        <div class="legal-tabs-header">
+          <button 
+            type="button" 
+            class="legal-tab-btn" 
+            [class.active]="activeLegalTab === 'privacy'"
+            (click)="activeLegalTab = 'privacy'">
+            🛡️ {{ 'AUTH.PRIVACY_LINK' | translate }}
+          </button>
+          <button 
+            type="button" 
+            class="legal-tab-btn" 
+            [class.active]="activeLegalTab === 'terms'"
+            (click)="activeLegalTab = 'terms'">
+            📜 {{ 'AUTH.TERMS_LINK' | translate }}
+          </button>
+        </div>
+
+        <!-- Scrollable Legal Body -->
+        <div class="legal-scroll-body">
+          @if (activeLegalTab === 'privacy') {
+            <div class="legal-content">
+              <h3>Политика за приватност</h3>
+              <p class="legal-date">Последно ажурирање: 21 Октомври 2026</p>
+
+              <div class="legal-highlight">
+                🛡️ <strong>Dzeble</strong> не продава и не споделува ваши податоци со рекламни агенции. Податоците се користат исклучиво за вашите корисни дневни сервиси.
+              </div>
+
+              <h4>1. Податоци за сметка</h4>
+              <p>Име, е-пошта и криптирана лозинка со цел сигурна најава и синхронизација.</p>
+
+              <h4>2. Локација (GPS)</h4>
+              <p>Се користи исклучиво за пресметка на оддалеченост до дежурни аптеки, пумпи, приказ на локално време/загаденост и филтрирање на прекини на струја и вода во ваша близина. Dzeble не врши следење во позадина за рекламни цели.</p>
+
+              <h4>3. Нотификации (FCM)</h4>
+              <p>Уникатен токен за навремени известувања за прекини или важни алерти кои самите ќе ги вклучите.</p>
+
+              <h4>4. Лојални картички</h4>
+              <p>Баркодовите и имињата на картичките се чуваат безбедно на вашиот профил за приказ и скенирање на каса.</p>
+
+              <h4>5. Право на бришење податоци (GDPR)</h4>
+              <p>Во секое време можете да побарате целосно бришење на сметката и податоците преку апликацијата или на: <strong>privacy@dzeble.com</strong>.</p>
+            </div>
+          } @else {
+            <div class="legal-content">
+              <h3>Услови за користење</h3>
+              <p class="legal-date">Последно ажурирање: 21 Октомври 2026</p>
+
+              <h4>1. Прифаќање на условите</h4>
+              <p>Со користење на мобилната апликација Dzeble, се согласувате со овие правила и услови за користење.</p>
+
+              <h4>2. Сервис и информации</h4>
+              <p>Dzeble обезбедува информации од јавен интерес (квалитет на воздух, време, комунални прекини, аптеки, горива). Податоците се преземаат од официјални јавни извори (ЕВН, Водовод, АМСМ, ДЗС, ФЗО).</p>
+
+              <h4>3. Безбедност на сметката</h4>
+              <p>Корисникот е одговорен за сигурноста на својата лозинка и уред.</p>
+
+              <h4>4. Контакт</h4>
+              <p>За какви било прашања: <strong>support@dzeble.com</strong>.</p>
+            </div>
+          }
+        </div>
+
+        <div class="legal-footer-actions">
+          <button type="button" class="btn-popup-primary" (click)="closeLegalModal()">
+            {{ 'COMMON.CLOSE' | translate }}
+          </button>
         </div>
 
       </div>
