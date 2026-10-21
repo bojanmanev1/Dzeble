@@ -2217,4 +2217,131 @@ body.dark,
 .leaflet-control-attribution {
   display: none !important;
 }
+
+/* ==========================================================================
+   GLOBAL PREMIUM IN-APP LEGAL / PRIVACY POPUP MODAL (Light & Dark Mode)
+   ========================================================================== */
+.legal-popup-card {
+  max-height: 82vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 24px 20px 20px !important;
+  border-radius: 28px !important;
+  transition: all 0.25s ease !important;
+}
+
+body.dark,
+html.dark,
+.ion-palette-dark {
+  .auth-popup-backdrop {
+    background: rgba(4, 8, 6, 0.78) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+
+  .auth-popup-card.legal-popup-card {
+    background: #111815 !important;
+    border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 30px rgba(16, 185, 129, 0.08) !important;
+  }
+
+  .popup-close-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #9bb0a7 !important;
+
+    ion-icon {
+      color: #9bb0a7 !important;
+    }
+
+    &:hover, &:active {
+      background: rgba(52, 211, 153, 0.22) !important;
+      color: #34d399 !important;
+      ion-icon {
+        color: #34d399 !important;
+      }
+    }
+  }
+
+  .legal-tabs-header {
+    background: #080d0b !important;
+    border: 1px solid rgba(52, 211, 153, 0.18) !important;
+    border-radius: 14px !important;
+    padding: 4px !important;
+
+    .legal-tab-btn {
+      color: #8da49a !important;
+      background: transparent !important;
+      font-weight: 700 !important;
+
+      &.active {
+        background: linear-gradient(135deg, #1b2923 0%, #23372f 100%) !important;
+        color: #f0fdf4 !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45) !important;
+      }
+    }
+  }
+
+  .legal-scroll-body {
+    .legal-content {
+      h3 {
+        color: #f0fdf4 !important;
+        font-weight: 800 !important;
+        font-size: 1.25rem !important;
+        letter-spacing: -0.3px !important;
+      }
+
+      .legal-date {
+        color: #7e968c !important;
+        font-weight: 600 !important;
+        font-size: 0.78rem !important;
+      }
+
+      .legal-highlight {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 150, 105, 0.06) 100%) !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+        border-left: 3.5px solid #10b981 !important;
+        color: #d1fae5 !important;
+        border-radius: 0 12px 12px 0 !important;
+
+        strong {
+          color: #34d399 !important;
+        }
+      }
+
+      h4 {
+        color: #34d399 !important;
+        font-weight: 800 !important;
+        font-size: 0.95rem !important;
+        margin-top: 16px !important;
+      }
+
+      p, li {
+        color: #d1ddd7 !important;
+        font-size: 0.86rem !important;
+        line-height: 1.55 !important;
+      }
+
+      strong {
+        color: #ffffff !important;
+      }
+
+      a {
+        color: #34d399 !important;
+        text-decoration: underline !important;
+        text-underline-offset: 2px !important;
+      }
+    }
+  }
+
+  .legal-footer-actions {
+    .btn-popup-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      color: #ffffff !important;
+      font-weight: 800 !important;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45) !important;
+    }
+  }
+}
 

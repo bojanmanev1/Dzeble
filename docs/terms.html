@@ -17,12 +17,38 @@
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #090d0b;
+        --primary: #10b981;
+        --primary-dark: #34d399;
+        --bg: #090e0c;
         --card-bg: #111815;
-        --text: #f1f5f9;
-        --text-muted: #94a3b8;
-        --border: #1e2923;
-        --accent-badge: rgba(16, 185, 129, 0.15);
+        --text: #f0fdf4;
+        --text-muted: #8da49a;
+        --border: rgba(52, 211, 153, 0.2);
+        --accent-badge: rgba(16, 185, 129, 0.12);
+      }
+      .container {
+        border-color: rgba(52, 211, 153, 0.22);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      }
+      .lang-switcher {
+        background: #080d0b;
+        border: 1px solid rgba(52, 211, 153, 0.2);
+      }
+      .lang-btn.active {
+        background: #23372f;
+        color: #f0fdf4;
+      }
+      a {
+        color: #34d399;
+      }
+      p, li {
+        color: #d1ddd7;
+      }
+      h2 {
+        color: #34d399;
+      }
+      strong {
+        color: #ffffff;
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
