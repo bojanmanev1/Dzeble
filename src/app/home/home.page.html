@@ -2265,11 +2265,6 @@
   @if (isLegalModalOpen) {
     <div class="auth-popup-backdrop" (click)="closeLegalModal()">
       <div class="auth-popup-card legal-popup-card" (click)="$event.stopPropagation()">
-        
-        <!-- Close Button (top-right) -->
-        <button class="popup-close-btn" (click)="closeLegalModal()" type="button" aria-label="Close">
-          <ion-icon name="close-outline"></ion-icon>
-        </button>
 
         <!-- Segment / Tabs -->
         <div class="legal-tabs-header">
