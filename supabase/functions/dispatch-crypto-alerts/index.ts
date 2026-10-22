@@ -184,7 +184,7 @@ serve(async (_req) => {
     );
 
     const COOLDOWN_HOURS = 8;
-    const SIGNIFICANT_CHANGE_THRESHOLD = 4.5;
+    const SIGNIFICANT_CHANGE_THRESHOLD = 3.5; // Only notify if coin moved at least 3.5%
     const now = new Date();
     let sentCount = 0;
 
@@ -202,20 +202,20 @@ serve(async (_req) => {
         const ticker = tickerMap.get(pair);
         if (!ticker) continue;
 
+        const changeAbs = Math.abs(ticker.change24h);
+        // Skip if price movement is negligible (< 3.5%) to avoid notification noise
+        if (changeAbs < SIGNIFICANT_CHANGE_THRESHOLD) continue;
+
         // Individual coin timestamp check
         const coinLastAlert = perCoinHistory[pair];
         const coinHoursDiff = coinLastAlert
           ? (now.getTime() - new Date(coinLastAlert).getTime()) / (1000 * 60 * 60)
           : 999;
 
-        const isPeriodic = coinHoursDiff >= COOLDOWN_HOURS;
-        const isBigMoveWindow = coinHoursDiff >= 3;
+        // Major moves (>= 7%) have a 4h window, normal moves (>= 3.5%) have an 8h cooldown
+        const minCooldown = changeAbs >= 7.0 ? 4 : COOLDOWN_HOURS;
 
-        if (isPeriodic) {
-          // In periodic 8-hour cycle for this specific coin
-          qualifyingPairs.push({ pair, ticker });
-        } else if (isBigMoveWindow && Math.abs(ticker.change24h) >= SIGNIFICANT_CHANGE_THRESHOLD) {
-          // Significant market move on this coin and its own 3-hour cooldown passed
+        if (coinHoursDiff >= minCooldown) {
           qualifyingPairs.push({ pair, ticker });
         }
       }

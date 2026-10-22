@@ -87,10 +87,23 @@ serve(async (req) => {
     const fcmAccessToken = await getFcmAccessToken(serviceAccount);
     const projectId = serviceAccount.project_id;
 
-    // 3. Query fuel prices from DB
-    const { data: prices, error: priceErr } = await supabase
+    // 3. Query fuel prices from DB (attempt with price_changed_at, fallback if missing)
+    let prices: any[] | null = null;
+    let priceErr: any = null;
+
+    const resWithChangedAt = await supabase
       .from("fuel_prices")
-      .select("fuel_type, price_mkd, previous_price_mkd, effective_from, updated_at");
+      .select("fuel_type, price_mkd, previous_price_mkd, effective_from, updated_at, price_changed_at");
+
+    if (!resWithChangedAt.error && resWithChangedAt.data && resWithChangedAt.data.length > 0) {
+      prices = resWithChangedAt.data;
+    } else {
+      const fallbackRes = await supabase
+        .from("fuel_prices")
+        .select("fuel_type, price_mkd, previous_price_mkd, effective_from, updated_at");
+      prices = fallbackRes.data;
+      priceErr = fallbackRes.error;
+    }
 
     if (priceErr || !prices || prices.length === 0) {
       return new Response(
@@ -117,7 +130,7 @@ serve(async (req) => {
       ? p95.price_mkd - p95.previous_price_mkd 
       : 0;
 
-    // 🛑 CRITICAL CHECK: ONLY proceed if there is an ACTUAL non-zero price change
+    // 🛑 CRITICAL CHECK 1: ONLY proceed if there is an ACTUAL non-zero price change
     const hasPriceChange = Math.abs(dieselDiff) >= 0.05 || Math.abs(p95Diff) >= 0.05;
     if (!hasPriceChange) {
       console.log("No fuel price change detected (diff is 0.0). Skipping alert dispatch.");
@@ -127,12 +140,29 @@ serve(async (req) => {
       );
     }
 
-    // Determine when this price change was saved
-    const latestPriceUpdateMs = prices.reduce((latest, p) => {
-      if (!p.updated_at) return latest;
-      const t = new Date(p.updated_at).getTime();
+    // Determine when this price change occurred
+    const priceChangedAtMs = prices.reduce((latest, p) => {
+      const dateStr = p.price_changed_at || p.updated_at;
+      if (!dateStr) return latest;
+      const t = new Date(dateStr).getTime();
       return t > latest ? t : latest;
     }, 0);
+
+    const now = new Date();
+    const nowMs = now.getTime();
+
+    // 🛑 CRITICAL CHECK 2: If the price change happened more than 36 hours ago, it's stale!
+    // Never dispatch repeat alerts days after the price change.
+    if (priceChangedAtMs > 0) {
+      const hoursSinceChange = (nowMs - priceChangedAtMs) / (1000 * 60 * 60);
+      if (hoursSinceChange > 36) {
+        console.log(`Fuel price change is ${hoursSinceChange.toFixed(1)}h old (stale). Skipping alert dispatch.`);
+        return new Response(
+          JSON.stringify({ success: true, message: `Price change is older than 36h (${hoursSinceChange.toFixed(1)}h). Skipped stale dispatch.`, sentCount: 0 }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Build notification helper
     let emoji = "⛽";
@@ -158,7 +188,7 @@ serve(async (req) => {
       };
     };
 
-    // 4. Query devices ready for alerts (filtering disabled devices and checking cooldown)
+    // 4. Query devices ready for alerts (filtering disabled devices)
     const { data: devices, error: devError } = await supabase
       .from("user_devices")
       .select("device_id, user_id, push_token, last_fuel_alert_at, notify_fuel, language")
@@ -173,27 +203,30 @@ serve(async (req) => {
       );
     }
 
-    const COOLDOWN_HOURS = 20;
-    const now = new Date();
     let sentCount = 0;
+    let sampleTitle = "";
+    let sampleBody = "";
 
     for (const dev of devices || []) {
       if (dev.last_fuel_alert_at) {
         const lastAlertTime = new Date(dev.last_fuel_alert_at).getTime();
-        const hoursDiff = (now.getTime() - lastAlertTime) / (1000 * 60 * 60);
 
-        // If the device was already notified AFTER this price update, don't spam again
-        if (latestPriceUpdateMs > 0 && lastAlertTime >= latestPriceUpdateMs) {
+        // 🛑 CRITICAL CHECK 3: If the device was ALREADY notified AT OR AFTER this price change,
+        // NEVER notify it again! A device receives exactly ONE notification per price change.
+        if (priceChangedAtMs > 0 && lastAlertTime >= priceChangedAtMs) {
           continue;
         }
 
-        // If notified less than cooldown hours ago, skip
-        if (hoursDiff < COOLDOWN_HOURS) {
+        // Safety: If notified in the last 6 hours (e.g. concurrent webhook triggers), skip
+        const hoursSinceLastAlert = (nowMs - lastAlertTime) / (1000 * 60 * 60);
+        if (hoursSinceLastAlert < 6) {
           continue;
         }
       }
 
       const { title, body } = getFuelNotificationText(dev.language || 'mk');
+      sampleTitle = title;
+      sampleBody = body;
 
       const ok = await sendFcmPush(
         dev.push_token,
@@ -214,7 +247,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sentCount, title, body }),
+      JSON.stringify({ success: true, sentCount, title: sampleTitle, body: sampleBody }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
 

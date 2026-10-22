@@ -53,10 +53,7 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // 4. Single-Device Session Enforcer
-    if (!this.isResetPasswordFlow) {
-      await this.checkSingleDeviceSession();
-    }
+    // 4. Ensure user stays logged in continuously until they manually choose to log out
   }
 
   private async setupDeepLinks() {
@@ -130,24 +127,6 @@ export class AppComponent implements OnInit {
   }
 
   private async checkSingleDeviceSession() {
-    try {
-      if (this.isResetPasswordFlow || (typeof window !== 'undefined' && window.location.pathname.includes('reset-password'))) {
-        return;
-      }
-
-      const { data } = await this.supabaseService.getCurrentUser();
-
-      if (data?.user) {
-        const isValid = await this.supabaseService.validateSession(data.user);
-
-        if (!isValid) {
-          const alertMessage = this.translate.instant('AUTH.LOGGED_OUT_OTHER_DEVICE');
-          alert(alertMessage);
-          this.navCtrl.navigateRoot('/login');
-        }
-      }
-    } catch (err) {
-      console.error('Session validation error:', err);
-    }
+    return;
   }
 }

@@ -5,6 +5,67 @@ import { BehaviorSubject } from 'rxjs';
 import { Device } from '@capacitor/device';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
+import { App } from '@capacitor/app';
+
+// Custom persistent storage adapter for Supabase Auth using native Capacitor Preferences
+// Ensures auth session is stored in native SharedPreferences / NSUserDefaults
+// and NEVER cleared by Android/iOS WebView cache cleaning.
+const capacitorStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { value } = await Preferences.get({ key });
+        if (value !== null && value !== undefined) {
+          return value;
+        }
+      } catch (e) {
+        console.warn('Preferences.get error for', key, e);
+      }
+      // Migration fallback from web localStorage
+      if (typeof localStorage !== 'undefined') {
+        const localVal = localStorage.getItem(key);
+        if (localVal) {
+          Preferences.set({ key, value: localVal }).catch(() => {});
+          return localVal;
+        }
+      }
+      return null;
+    }
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  },
+
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Preferences.set({ key, value });
+      } catch (e) {
+        console.warn('Preferences.set error for', key, e);
+      }
+    }
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    }
+  },
+
+  removeItem: async (key: string): Promise<void> => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Preferences.remove({ key });
+      } catch (e) {
+        console.warn('Preferences.remove error for', key, e);
+      }
+    }
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    }
+  },
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -15,7 +76,36 @@ export class SupabaseService {
   public isPasswordResetFlow = false;
 
   constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey, {
+      auth: {
+        storage: capacitorStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: !Capacitor.isNativePlatform(),
+      }
+    });
+
+    // Native app lifecycle: manage auto-refresh and check session on resume
+    if (Capacitor.isNativePlatform()) {
+      App.addListener('appStateChange', async ({ isActive }) => {
+        if (isActive) {
+          this.supabase.auth.startAutoRefresh();
+          try {
+            const { data } = await this.supabase.auth.getSession();
+            const sessionUser = data?.session?.user;
+            if (sessionUser && this.isUserVerified(sessionUser)) {
+              if (this.currentUser$.value?.id !== sessionUser.id) {
+                this.currentUser$.next(sessionUser);
+              }
+            }
+          } catch (e) {
+            console.warn('Session refresh check error on app resume:', e);
+          }
+        } else {
+          this.supabase.auth.stopAutoRefresh();
+        }
+      });
+    }
 
     // Global listener: Stream user if email is confirmed, OAuth, or valid session
     this.supabase.auth.onAuthStateChange((event, session) => {
@@ -34,10 +124,29 @@ export class SupabaseService {
 
       if (user && isEmailVerified) {
         this.currentUser$.next(user);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        this.currentUser$.next(null);
+      } else if (event === 'INITIAL_SESSION' && !user) {
         this.currentUser$.next(null);
       }
     });
+
+    // Eagerly restore session from native storage on startup
+    this.restoreInitialSession();
+  }
+
+  private async restoreInitialSession() {
+    try {
+      const { data, error } = await this.supabase.auth.getSession();
+      if (!error && data?.session?.user) {
+        const user = data.session.user;
+        if (this.isUserVerified(user)) {
+          this.currentUser$.next(user);
+        }
+      }
+    } catch (err) {
+      console.warn('Error restoring initial session:', err);
+    }
   }
 
   isUserVerified(user: User | null): boolean {
@@ -152,6 +261,7 @@ async signOut() {
     }
 
     localStorage.removeItem('app_fcm_push_token');
+    await Preferences.remove({ key: 'app_fcm_push_token' }).catch(() => {});
 
     // 2. Clear listeners (DO NOT call unregister() - it breaks FCM re-registration)
     if (Capacitor.isNativePlatform()) {
@@ -161,6 +271,7 @@ async signOut() {
     console.warn('Failed to clear push token during signout:', err);
   } finally {
     localStorage.removeItem('app_device_session_id');
+    await Preferences.remove({ key: 'app_device_session_id' }).catch(() => {});
     const { error } = await this.supabase.auth.signOut();
     if (error) throw error;
   }
@@ -171,6 +282,7 @@ async signOut() {
       ? crypto.randomUUID() 
       : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     localStorage.setItem('app_device_session_id', newSessionId);
+    Preferences.set({ key: 'app_device_session_id', value: newSessionId }).catch(() => {});
 
     try {
       const { error } = await this.supabase
@@ -184,25 +296,11 @@ async signOut() {
     }
   }
 
-async validateSession(user: User): Promise<boolean> {
-  const localSessionId = localStorage.getItem('app_device_session_id');
-
-  const { data, error } = await this.supabase
-    .from('profiles')
-    .select('active_session_id')
-    .eq('id', user.id)
-    .maybeSingle(); 
-
-  if (error || !data) return true;
-
-  if (data.active_session_id && data.active_session_id !== localSessionId) {
-    await this.supabase.auth.signOut();
-    localStorage.removeItem('app_device_session_id');
-    return false;
+  async validateSession(user: User): Promise<boolean> {
+    // Single-device auto-logout is disabled per user requirement:
+    // The user stays logged in permanently on their mobile device until they explicitly tap logout.
+    return true;
   }
-
-  return true;
-}
 
   // --- APP METRICS & UTILITIES ---
   async syncUserWeather(metrics: { userId: string; lat: number; lng: number; temp: number; code: number; uv: number; }) {

@@ -71,10 +71,10 @@ export default {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Query existing prices to accurately preserve previous_price_mkd
+      // Query existing prices to accurately preserve previous_price_mkd and price_changed_at
       const { data: existingPrices } = await supabase
         .from('fuel_prices')
-        .select('fuel_type, price_mkd, previous_price_mkd');
+        .select('fuel_type, price_mkd, previous_price_mkd, effective_from, price_changed_at');
 
       const existingMap = new Map((existingPrices || []).map(p => [p.fuel_type, p]));
 
@@ -87,30 +87,38 @@ export default {
       ];
 
       let anyPriceChanged = false;
+      const nowIso = new Date().toISOString();
 
       for (const record of fuelRecords) {
         const existing = existingMap.get(record.fuel_type);
         const priceDiff = existing ? Math.abs((existing.price_mkd || 0) - (record.price_mkd || 0)) : 0;
         const isNewChange = existing && priceDiff >= 0.05;
+        const isDateChanged = existing && existing.effective_from !== record.effective_from;
 
-        const updatePayload: any = {
-          fuel_type: record.fuel_type,
-          price_mkd: record.price_mkd,
-          effective_from: record.effective_from,
-        };
+        // Only write to DB if the row is new, prices changed, or effective date changed
+        if (!existing || isNewChange || isDateChanged) {
+          const updatePayload: any = {
+            fuel_type: record.fuel_type,
+            price_mkd: record.price_mkd,
+            effective_from: record.effective_from,
+          };
 
-        if (isNewChange) {
-          anyPriceChanged = true;
-          updatePayload.previous_price_mkd = existing.price_mkd;
-          updatePayload.price_changed_at = new Date().toISOString();
-          updatePayload.updated_at = new Date().toISOString();
-        } else if (existing) {
-          updatePayload.previous_price_mkd = existing.previous_price_mkd;
+          if (isNewChange) {
+            anyPriceChanged = true;
+            updatePayload.previous_price_mkd = existing.price_mkd;
+            updatePayload.price_changed_at = nowIso;
+            updatePayload.updated_at = nowIso;
+          } else if (existing) {
+            updatePayload.previous_price_mkd = existing.previous_price_mkd;
+            if (existing.price_changed_at) {
+              updatePayload.price_changed_at = existing.price_changed_at;
+            }
+          }
+
+          await supabase
+            .from('fuel_prices')
+            .upsert(updatePayload, { onConflict: 'fuel_type' });
         }
-
-        await supabase
-          .from('fuel_prices')
-          .upsert(updatePayload, { onConflict: 'fuel_type' });
       }
 
       // If price change was detected, immediately trigger the alert dispatcher!
