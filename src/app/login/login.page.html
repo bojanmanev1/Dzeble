@@ -272,4 +272,19 @@
     </div>
   }
 
+  <!-- ========================================== -->
+  <!-- MODERN LOADER POPUP OVERLAY                -->
+  <!-- ========================================== -->
+  @if (isLoading) {
+    <div class="auth-popup-backdrop loader-popup-backdrop">
+      <div class="auth-popup-card loader-popup-card">
+        <div class="loader-spinner-wrapper">
+          <ion-spinner name="crescent" class="custom-loader-spinner"></ion-spinner>
+        </div>
+        <h3 class="loader-popup-title">{{ loadingMessage }}</h3>
+        <p class="loader-popup-sub">{{ 'COMMON.PLEASE_WAIT' | translate }}</p>
+      </div>
+    </div>
+  }
+
 </ion-content>

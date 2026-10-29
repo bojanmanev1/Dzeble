@@ -137,7 +137,7 @@ function resolveLocation(nasMesto) {
 
   // Check if Skopje municipality
   for (const mun of SKOPJE_MUNICIPALITIES) {
-    if (norm.includes(mun.toUpperCase())) {
+    if (norm.includes(mun.toUpperCase()) && !norm.includes('ЦЕНТАР ЖУПА')) {
       return { city: 'Скопје', municipality: mun };
     }
   }

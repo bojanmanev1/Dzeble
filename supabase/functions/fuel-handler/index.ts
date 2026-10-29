@@ -1,10 +1,9 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 console.info("ERC Direct POST Scraper Engine with Date Tracker initialized");
 
-export default {
-  async fetch(req: Request) {
+serve(async (req) => {
     try {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -144,5 +143,4 @@ export default {
       console.error("[GLOBAL CRASH]:", err.message);
       return Response.json({ error: err.message }, { status: 500 });
     }
-  },
-};
+});

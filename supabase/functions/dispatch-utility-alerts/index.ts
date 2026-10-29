@@ -90,13 +90,13 @@ serve(async (req) => {
     const fcmAccessToken = await getFcmAccessToken(serviceAccount);
     const projectId = serviceAccount.project_id;
 
-    // 2. Query recent active/upcoming utility outages from the last 24 hours
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // 2. Query active/upcoming utility outages that have not yet ended
+    const nowIso = new Date().toISOString();
     const { data: recentAlerts, error: alertsErr } = await supabase
       .from("utility_alerts")
       .select("id, type, title, city, municipality, address, start_time, end_time, status, latitude, longitude")
       .in("status", ["active", "upcoming"])
-      .gte("updated_at", cutoff)
+      .gte("end_time", nowIso)
       .limit(200);
 
     if (alertsErr || !recentAlerts || recentAlerts.length === 0) {
@@ -109,11 +109,11 @@ serve(async (req) => {
     let totalDispatched = 0;
     const dispatchDetails: any[] = [];
 
-    // 3. For each alert, resolve only nearby users (within 2.5 km)
+    // 3. For each alert, resolve eligible users (3 km radius for power/water, nationwide for road/earthquake)
     for (const alert of recentAlerts) {
       const { data: targetDevices, error: rpcErr } = await supabase.rpc(
         "get_devices_for_utility_alert",
-        { p_alert_id: alert.id, p_radius_km: 2.5 }
+        { p_alert_id: alert.id, p_radius_km: 3.0 }
       );
 
       if (rpcErr || !targetDevices || targetDevices.length === 0) {

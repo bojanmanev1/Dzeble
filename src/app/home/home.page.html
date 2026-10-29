@@ -1683,7 +1683,12 @@
 
           <!-- VIEW 1: LIST VIEW -->
           @if (pharmacyModalView === 'list') {
-            @if (filteredPharmacies.length === 0) {
+            @if (isLoadingPharmacies) {
+              <div class="modal-loading-state">
+                <ion-spinner name="crescent" class="modal-loading-spinner"></ion-spinner>
+                <p>{{ 'COMMON.LOADING' | translate }}</p>
+              </div>
+            } @else if (filteredPharmacies.length === 0) {
               <div class="pharmacy-empty-state">
                 <ion-icon name="medkit" style="font-size: 2.2rem; color: #94a3b8;"></ion-icon>
                 <p>{{ 'PHARMACY_MODAL.NO_RESULTS' | translate }}</p>
@@ -1896,7 +1901,12 @@
 
           <!-- VIEW 1: LIST VIEW -->
           @if (gasModalView === 'list') {
-            @if (filteredGasStations.length === 0) {
+            @if (isLoadingGasStations) {
+              <div class="modal-loading-state">
+                <ion-spinner name="crescent" class="modal-loading-spinner"></ion-spinner>
+                <p>{{ 'COMMON.LOADING' | translate }}</p>
+              </div>
+            } @else if (filteredGasStations.length === 0) {
               <div class="gas-empty-state">
                 <ion-icon name="speedometer" style="font-size: 2.2rem; color: #94a3b8;"></ion-icon>
                 <p>{{ 'GAS_MODAL.NO_RESULTS' | translate }}</p>
@@ -2068,7 +2078,12 @@
           </div>
 
           <!-- Alert Cards List -->
-          @if (filteredAlerts.length === 0) {
+          @if (isLoadingAlerts) {
+            <div class="modal-loading-state">
+              <ion-spinner name="crescent" class="modal-loading-spinner"></ion-spinner>
+              <p>{{ 'COMMON.LOADING' | translate }}</p>
+            </div>
+          } @else if (filteredAlerts.length === 0) {
             <div class="no-alerts-state">
               <div class="empty-icon-circle">
                 <ion-icon name="checkmark-circle-outline"></ion-icon>
@@ -2336,6 +2351,21 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  }
+
+  <!-- ========================================== -->
+  <!-- ACTION LOADER POPUP OVERLAY                -->
+  <!-- ========================================== -->
+  @if (isActionLoading) {
+    <div class="action-loader-backdrop">
+      <div class="action-loader-card">
+        <div class="action-loader-spinner-wrap">
+          <ion-spinner name="crescent" class="action-loader-spinner"></ion-spinner>
+        </div>
+        <h3 class="action-loader-title">{{ actionLoadingMessage }}</h3>
+        <p class="action-loader-sub">{{ 'COMMON.PLEASE_WAIT' | translate }}</p>
       </div>
     </div>
   }

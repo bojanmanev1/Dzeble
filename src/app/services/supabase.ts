@@ -7,6 +7,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { App } from '@capacitor/app';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 
 // Custom persistent storage adapter for Supabase Auth using native Capacitor Preferences
 // Ensures auth session is stored in native SharedPreferences / NSUserDefaults
@@ -72,10 +73,53 @@ const capacitorStorage = {
 export class SupabaseService {
   public supabase: SupabaseClient;
   
-  public currentUser$ = new BehaviorSubject<User | null>(null);
+  private getInitialCachedUser(): User | null {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const cached = localStorage.getItem('dzeble_cached_user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.id && this.isUserVerified(parsed)) {
+            return parsed as User;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading cached user:', e);
+    }
+    return null;
+  }
+
+  private setCachedUser(user: User | null): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (user) {
+          localStorage.setItem('dzeble_cached_user', JSON.stringify(user));
+        } else {
+          localStorage.removeItem('dzeble_cached_user');
+        }
+      }
+    } catch (e) {
+      console.warn('Error saving cached user:', e);
+    }
+  }
+
+  public currentUser$ = new BehaviorSubject<User | null>(this.getInitialCachedUser());
   public isPasswordResetFlow = false;
+  private isSocialLoginInitialized = false;
+
+  private authReadyResolver!: (user: User | null) => void;
+  public authReady: Promise<User | null>;
+  public isAuthReady = false;
 
   constructor() {
+    this.authReady = new Promise<User | null>((resolve) => {
+      this.authReadyResolver = (user) => {
+        this.isAuthReady = true;
+        resolve(user);
+      };
+    });
+
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey, {
       auth: {
         storage: capacitorStorage,
@@ -85,8 +129,9 @@ export class SupabaseService {
       }
     });
 
-    // Native app lifecycle: manage auto-refresh and check session on resume
+    // Native app lifecycle: initialize social login and manage auto-refresh on resume
     if (Capacitor.isNativePlatform()) {
+      this.ensureSocialLoginInitialized();
       App.addListener('appStateChange', async ({ isActive }) => {
         if (isActive) {
           this.supabase.auth.startAutoRefresh();
@@ -94,6 +139,7 @@ export class SupabaseService {
             const { data } = await this.supabase.auth.getSession();
             const sessionUser = data?.session?.user;
             if (sessionUser && this.isUserVerified(sessionUser)) {
+              this.setCachedUser(sessionUser);
               if (this.currentUser$.value?.id !== sessionUser.id) {
                 this.currentUser$.next(sessionUser);
               }
@@ -115,7 +161,9 @@ export class SupabaseService {
 
       // If user is in the middle of resetting their password, keep the app in guest mode
       if (this.isPasswordResetFlow) {
+        this.setCachedUser(null);
         this.currentUser$.next(null);
+        this.resolveAuthReady(null);
         return;
       }
 
@@ -123,16 +171,51 @@ export class SupabaseService {
       const isEmailVerified = this.isUserVerified(user);
 
       if (user && isEmailVerified) {
+        this.setCachedUser(user);
         this.currentUser$.next(user);
+        this.resolveAuthReady(user);
       } else if (event === 'SIGNED_OUT') {
+        this.setCachedUser(null);
         this.currentUser$.next(null);
-      } else if (event === 'INITIAL_SESSION' && !user) {
-        this.currentUser$.next(null);
+        this.resolveAuthReady(null);
+      } else if (event === 'INITIAL_SESSION') {
+        if (user && isEmailVerified) {
+          this.setCachedUser(user);
+          this.currentUser$.next(user);
+          this.resolveAuthReady(user);
+        } else if (!this.currentUser$.value) {
+          this.setCachedUser(null);
+          this.currentUser$.next(null);
+          this.resolveAuthReady(null);
+        } else {
+          // Retain cached user while network/storage settles
+          this.resolveAuthReady(this.currentUser$.value);
+        }
       }
     });
 
     // Eagerly restore session from native storage on startup
     this.restoreInitialSession();
+  }
+
+  private resolveAuthReady(user: User | null) {
+    if (!this.isAuthReady && this.authReadyResolver) {
+      this.isAuthReady = true;
+      this.authReadyResolver(user);
+    }
+  }
+
+  public async ensureAuthReady(timeoutMs: number = 2500): Promise<User | null> {
+    if (this.currentUser$.value) {
+      return this.currentUser$.value;
+    }
+    if (this.isAuthReady) {
+      return this.currentUser$.value;
+    }
+    const timeoutPromise = new Promise<User | null>((resolve) =>
+      setTimeout(() => resolve(this.currentUser$.value), timeoutMs)
+    );
+    return await Promise.race([this.authReady, timeoutPromise]);
   }
 
   private async restoreInitialSession() {
@@ -141,12 +224,16 @@ export class SupabaseService {
       if (!error && data?.session?.user) {
         const user = data.session.user;
         if (this.isUserVerified(user)) {
+          this.setCachedUser(user);
           this.currentUser$.next(user);
+          this.resolveAuthReady(user);
+          return;
         }
       }
     } catch (err) {
       console.warn('Error restoring initial session:', err);
     }
+    this.resolveAuthReady(this.currentUser$.value);
   }
 
   isUserVerified(user: User | null): boolean {
@@ -189,9 +276,57 @@ export class SupabaseService {
     return data;
   }
 
+  private async ensureSocialLoginInitialized() {
+    if (this.isSocialLoginInitialized || !environment.googleWebClientId) return;
+    try {
+      await SocialLogin.initialize({
+        google: {
+          webClientId: environment.googleWebClientId,
+          mode: 'online',
+        }
+      });
+      this.isSocialLoginInitialized = true;
+    } catch (err) {
+      console.warn('SocialLogin initialization error:', err);
+    }
+  }
+
   // --- SIGN IN WITH GOOGLE ---
   async signInWithGoogle() {
     const isNative = Capacitor.isNativePlatform();
+
+    // 1. Native Google Sign-In (Android/iOS bottom sheet - no browser redirect, shows "Dzeble" natively)
+    if (isNative && environment.googleWebClientId) {
+      await this.ensureSocialLoginInitialized();
+
+      const loginRes = await SocialLogin.login({
+        provider: 'google',
+        options: {},
+      });
+
+      const idToken = (loginRes?.result as any)?.idToken || (loginRes as any)?.idToken;
+      if (!idToken) {
+        throw new Error('No Google ID token received from native sign-in');
+      }
+
+      const { data, error } = await this.supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) throw error;
+
+      if (data?.user) {
+        await this.registerNewDeviceSession(data.user.id);
+        this.setCachedUser(data.user);
+        this.currentUser$.next(data.user);
+        this.resolveAuthReady(data.user);
+      }
+
+      return data;
+    }
+
+    // 2. Web browser fallback (for browser testing / dev)
     const redirectTo = isNative ? 'dzeble://auth/callback' : `${window.location.origin}/login`;
 
     const { data, error } = await this.supabase.auth.signInWithOAuth({
@@ -205,9 +340,9 @@ export class SupabaseService {
       }
     });
 
-  if (error) throw error;
-  return data;
-}
+    if (error) throw error;
+    return data;
+  }
 
   // --- SIGN IN WITH PASSWORD ---
   async signIn(email: string, password: string) {
@@ -219,7 +354,9 @@ export class SupabaseService {
     
     if (data.user) {
       await this.registerNewDeviceSession(data.user.id);
+      this.setCachedUser(data.user);
       this.currentUser$.next(data.user);
+      this.resolveAuthReady(data.user);
     }
     return data;
   }
@@ -270,6 +407,9 @@ async signOut() {
   } catch (err) {
     console.warn('Failed to clear push token during signout:', err);
   } finally {
+    this.setCachedUser(null);
+    this.currentUser$.next(null);
+    this.resolveAuthReady(null);
     localStorage.removeItem('app_device_session_id');
     await Preferences.remove({ key: 'app_device_session_id' }).catch(() => {});
     const { error } = await this.supabase.auth.signOut();
@@ -685,12 +825,27 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
     return data;
   }
 
-async updateUserPassword(newPassword: string) {
-  const { data, error } = await this.supabase.auth.updateUser({
-    password: newPassword,
-  });
+  async updateUserPassword(newPassword: string) {
+    const { data, error } = await this.supabase.auth.updateUser({
+      password: newPassword,
+    });
 
-  if (error) throw error;
-  return data;
-}
+    if (error) throw error;
+    return data;
+  }
+
+  async getLatestNews(limit: number = 10): Promise<any[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('latest_news')
+        .select('*')
+        .order('published_at', { ascending: false })
+        .limit(limit);
+
+      if (error || !data) return [];
+      return data;
+    } catch {
+      return [];
+    }
+  }
 }

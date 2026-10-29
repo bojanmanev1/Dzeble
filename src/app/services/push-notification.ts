@@ -10,8 +10,15 @@ import { Subject } from 'rxjs';
 export class PushNotificationService {
   private currentToken: string | null = null;
   public notificationAction$ = new Subject<{ widgetId: string; data?: any }>();
+  private pendingAction: { widgetId: string; data?: any } | null = null;
 
   constructor(private supabaseService: SupabaseService) {}
+
+  public getAndClearPendingAction(): { widgetId: string; data?: any } | null {
+    const action = this.pendingAction;
+    this.pendingAction = null;
+    return action;
+  }
 
   public async requestPushPermissionAndRegister(): Promise<string | null> {
     if (!Capacitor.isNativePlatform()) {
@@ -45,8 +52,9 @@ export class PushNotificationService {
         await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
           const data = action.notification.data;
           if (data?.widgetId) {
-            console.log(`Opening widget: ${data.widgetId}`);
-            this.notificationAction$.next({ widgetId: data.widgetId, data });
+            console.log(`Opening widget: ${data.widgetId}`, data);
+            this.pendingAction = { widgetId: data.widgetId, data };
+            this.notificationAction$.next(this.pendingAction);
           }
         });
 
@@ -81,7 +89,11 @@ export class PushNotificationService {
 
   public async saveTokenToSupabase(pushToken: string): Promise<void> {
     try {
-      const { data: { user } } = await this.supabaseService.supabase.auth.getUser();
+      let user = this.supabaseService.currentUser$.value;
+      if (!user) {
+        const userRes = await this.supabaseService.supabase.auth.getUser();
+        user = userRes?.data?.user ?? null;
+      }
       if (!user) {
         console.log('Skipping push token Supabase sync: No user session.');
         return;

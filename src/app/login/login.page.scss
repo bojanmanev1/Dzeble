@@ -646,3 +646,57 @@
 .legal-footer-actions {
   flex-shrink: 0;
 }
+
+/* ========================================== */
+/* ACTION LOADER POPUP OVERLAY                */
+/* ========================================== */
+.loader-popup-backdrop {
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-popup-card {
+  max-width: 280px;
+  padding: 30px 24px !important;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  animation: popupScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.loader-spinner-wrapper {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.custom-loader-spinner {
+  width: 36px;
+  height: 36px;
+  --color: #10b981;
+  color: #10b981;
+}
+
+.loader-popup-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.loader-popup-sub {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+}

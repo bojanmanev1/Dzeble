@@ -5,7 +5,17 @@
     "CONFIRM": "Confirm",
     "SAVE": "Save",
     "DELETE": "Delete",
-    "OK": "OK"
+    "OK": "OK",
+    "PLEASE_WAIT": "Please wait...",
+    "LOADING": "Loading...",
+    "SAVING": "Saving...",
+    "DELETING": "Deleting...",
+    "LOGGING_IN": "Signing in...",
+    "LOGGING_OUT": "Logging out...",
+    "UPDATING": "Updating...",
+    "GOOGLE_SIGN_IN": "Signing in with Google...",
+    "CREATING_ACCOUNT": "Creating account...",
+    "SENDING": "Sending..."
   },
   "HOME": {
     "CITY": "Skopje",

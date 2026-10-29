@@ -57,6 +57,7 @@ export class LoginPage implements OnInit, OnDestroy {
 
   isSignUpMode = false;
   isLoading = false;
+  loadingMessage = '';
   errorMessage = '';
   successMessage = '';
 
@@ -214,6 +215,9 @@ export class LoginPage implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
+    this.loadingMessage = this.isSignUpMode 
+      ? (this.translate.instant('COMMON.CREATING_ACCOUNT') || 'Се креира сметка...') 
+      : (this.translate.instant('COMMON.LOGGING_IN') || 'Се најавува...');
 
     try {
       if (this.isSignUpMode) {
@@ -279,11 +283,23 @@ export class LoginPage implements OnInit, OnDestroy {
   async signInWithGoogle() {
     try {
       this.isLoading = true;
+      this.loadingMessage = this.translate.instant('COMMON.GOOGLE_SIGN_IN') || 'Се најавува со Google...';
       this.errorMessage = '';
-      await this.supabaseService.signInWithGoogle();
+      const data: any = await this.supabaseService.signInWithGoogle();
+      if (data?.session && data?.user) {
+        this.zone.run(() => {
+          this.navCtrl.navigateRoot('/dashboard');
+        });
+      }
     } catch (err: any) {
+      const errorMsg = (err?.message || err?.code || '').toString().toLowerCase();
+      if (errorMsg.includes('cancel') || (errorMsg.includes('16') && errorMsg.includes('cancel'))) {
+        console.log('Google Sign-In dismissed by user');
+        return;
+      }
       console.error('Google Auth Error:', err);
-      this.errorMessage = this.translate.instant('AUTH.GOOGLE_ERROR');
+      const detail = err?.message || err?.error_description || err?.code || (typeof err === 'string' ? err : '');
+      this.errorMessage = detail ? `${this.translate.instant('AUTH.GOOGLE_ERROR')} (${detail})` : this.translate.instant('AUTH.GOOGLE_ERROR');
     } finally {
       this.isLoading = false;
     }
@@ -303,6 +319,7 @@ export class LoginPage implements OnInit, OnDestroy {
 
     try {
       this.isLoading = true;
+      this.loadingMessage = this.translate.instant('COMMON.SENDING') || 'Се испраќа...';
       await this.supabaseService.resetPasswordForEmail(this.email.trim());
       this.popupTitle = this.translate.instant('AUTH.PASSWORD_RESET_SENT');
       this.popupSubtitle = this.translate.instant('AUTH.SIGNUP_SUCCESS_SUBTITLE');

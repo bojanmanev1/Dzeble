@@ -71,6 +71,7 @@ import {
   IonIcon,
   IonDatetime,
   IonToggle,
+  IonSpinner,
   AlertController,
   ActionSheetController
 } from '@ionic/angular/standalone';
@@ -126,6 +127,7 @@ import { ThemeService } from '../services/theme';
     IonIcon, 
     IonDatetime, 
     IonToggle, 
+    IonSpinner,
     FormsModule, 
     BarcodeRenderDirective, 
     TranslatePipe
@@ -180,6 +182,23 @@ export class HomePage implements OnInit, OnDestroy {
   currentCityName: string = localStorage.getItem('user_current_city') || 'Скопје'; 
   isLocatingCity: boolean = false;
   rawDatabaseFuel: any[] = [];
+
+  isActionLoading = false;
+  actionLoadingMessage = '';
+  isLoadingAlerts = false;
+  isLoadingPharmacies = false;
+  isLoadingGasStations = false;
+
+  showActionLoader(messageKey: string) {
+    this.actionLoadingMessage = this.translate.instant(messageKey) || messageKey;
+    this.isActionLoading = true;
+    this.cdr.markForCheck();
+  }
+
+  hideActionLoader() {
+    this.isActionLoading = false;
+    this.cdr.markForCheck();
+  }
 
   selectedDefaultFuel = localStorage.getItem('default_fuel_type') || 'Дизел';
   selectedDefaultCurrency = localStorage.getItem('default_currency') || 'EUR';
@@ -445,6 +464,17 @@ export class HomePage implements OnInit, OnDestroy {
       } catch {}
     }
 
+    // Hydrate cached device coordinates immediately so distances are computed at frame 0
+    const savedLat = localStorage.getItem('user_current_lat');
+    const savedLng = localStorage.getItem('user_current_lng');
+    if (savedLat && savedLng) {
+      const lat = parseFloat(savedLat);
+      const lng = parseFloat(savedLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        this.currentUserCoords = { latitude: lat, longitude: lng };
+      }
+    }
+
     this.supabaseService.currentUser$.subscribe(async (user) => {
       this.currentUser = user;
 
@@ -476,10 +506,26 @@ export class HomePage implements OnInit, OnDestroy {
       });
     }
 
-    this.pushService.notificationAction$.subscribe(action => {
+    // Process any pending push notification tap that occurred during startup
+    const pendingPush = this.pushService.getAndClearPendingAction();
+    if (pendingPush?.widgetId) {
+      this.zone.run(async () => {
+        await this.supabaseService.ensureAuthReady();
+        if (pendingPush.data?.alertType) {
+          this.applyPushAlertTypeFilter(pendingPush.data.alertType);
+        }
+        await this.onWidgetClick(pendingPush.widgetId);
+      });
+    }
+
+    this.pushService.notificationAction$.subscribe(async action => {
       if (action?.widgetId) {
-        this.zone.run(() => {
-          this.onWidgetClick(action.widgetId);
+        await this.supabaseService.ensureAuthReady();
+        this.zone.run(async () => {
+          if (action.data?.alertType) {
+            this.applyPushAlertTypeFilter(action.data.alertType);
+          }
+          await this.onWidgetClick(action.widgetId);
         });
       }
     });
@@ -494,6 +540,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.loadDutyPharmacies();
     this.loadGasStations();
     this.loadUtilityAlerts();
+    this.loadTickerData();
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -679,8 +726,13 @@ export class HomePage implements OnInit, OnDestroy {
 
 async handleLogout() {
   this.isSettingsSheetOpen = false;
-  await this.supabaseService.signOut();
-  this.filterWidgets();
+  this.showActionLoader('COMMON.LOGGING_OUT');
+  try {
+    await this.supabaseService.signOut();
+    this.filterWidgets();
+  } finally {
+    this.hideActionLoader();
+  }
   this.cdr.markForCheck();
 }
 
@@ -849,28 +901,38 @@ async handleLogout() {
   async saveLoyaltyCard() {
     if (!this.currentUser || !this.newBarcodeData.trim() || !this.newCustomStoreName.trim()) return;
     const storeName = this.newCustomStoreName.trim();
-    const saved = await this.loyaltyService.addCard({
-      user_id: this.currentUser.id,
-      store_name: storeName,
-      barcode_data: this.newBarcodeData.trim(),
-      barcode_format: this.newBarcodeFormat,
-      card_color: this.newCardColor
-    });
-    if (saved) {
-      this.analyticsService.track('loyalty', 'card_added', storeName);
-      await this.loadLoyaltyCards(this.currentUser.id);
-      this.closeLoyaltySubView();
+    this.showActionLoader('COMMON.SAVING');
+    try {
+      const saved = await this.loyaltyService.addCard({
+        user_id: this.currentUser.id,
+        store_name: storeName,
+        barcode_data: this.newBarcodeData.trim(),
+        barcode_format: this.newBarcodeFormat,
+        card_color: this.newCardColor
+      });
+      if (saved) {
+        this.analyticsService.track('loyalty', 'card_added', storeName);
+        await this.loadLoyaltyCards(this.currentUser.id);
+        this.closeLoyaltySubView();
+      }
+    } finally {
+      this.hideActionLoader();
     }
   }
 
   async deleteLoyaltyCard(cardId?: string) {
     if (!cardId || !this.currentUser) return;
     const targetCard = this.loyaltyCards.find(c => c.id === cardId);
-    const success = await this.loyaltyService.deleteCard(cardId);
-    if (success) {
-      this.analyticsService.track('loyalty', 'card_deleted', targetCard?.store_name);
-      await this.loadLoyaltyCards(this.currentUser.id);
-      this.closeLoyaltySubView();
+    this.showActionLoader('COMMON.DELETING');
+    try {
+      const success = await this.loyaltyService.deleteCard(cardId);
+      if (success) {
+        this.analyticsService.track('loyalty', 'card_deleted', targetCard?.store_name);
+        await this.loadLoyaltyCards(this.currentUser.id);
+        this.closeLoyaltySubView();
+      }
+    } finally {
+      this.hideActionLoader();
     }
   }
 
@@ -1850,6 +1912,17 @@ async handleLogout() {
     this.goToLogin();
   }
 
+  private applyPushAlertTypeFilter(alertType: string) {
+    if (alertType === 'water') {
+      this.selectedAlertType = 'water';
+    } else if (alertType === 'power') {
+      this.selectedAlertType = 'power';
+    } else if (alertType === 'road' || alertType === 'earthquake') {
+      this.selectedAlertType = 'other';
+    }
+    this.updateFilteredAlerts();
+  }
+
   async onWidgetClick(widgetId: string, index?: number) {
     if (this.longPressTriggered) {
       this.longPressTriggered = false;
@@ -1857,6 +1930,13 @@ async handleLogout() {
     }
     if (this.isWidgetEditMode || this.isDragging) {
       return;
+    }
+
+    if (!this.currentUser) {
+      const readyUser = await this.supabaseService.ensureAuthReady();
+      if (readyUser) {
+        this.currentUser = readyUser;
+      }
     }
 
     if (!this.currentUser) {
@@ -1908,7 +1988,7 @@ async handleLogout() {
       this.loadGasStations();
     }
     if (widgetId === 'alerts') {
-      if (!this.selectedAlertCity && this.currentCityName) {
+      if (!this.currentUserCoords && !this.selectedAlertCity && this.currentCityName) {
         const norm = this.currentCityName.toLowerCase();
         const match = this.alertCities.find(c => c.toLowerCase().includes(norm));
         if (match) this.selectedAlertCity = match;
@@ -2137,6 +2217,7 @@ async handleLogout() {
   async addEventForSelectedDate() {
     if (!this.newEventTitle.trim() || !this.currentUser) return;
     const randomColor = this.getRandomEventColor();
+    this.showActionLoader('COMMON.SAVING');
     try {
       await this.supabaseService.addUserWidget(
         this.currentUser.id,
@@ -2149,6 +2230,8 @@ async handleLogout() {
       this.isAddingEventInputOpen = false;
     } catch (err) {
       console.error('Failed to save event:', err);
+    } finally {
+      this.hideActionLoader();
     }
   }
 
@@ -2159,11 +2242,14 @@ async handleLogout() {
 
   async deleteUserEvent(eventId: string) {
     if (!this.currentUser) return;
+    this.showActionLoader('COMMON.DELETING');
     try {
       await this.supabaseService.deleteUserWidget(eventId);
       await this.loadUserEvents(this.currentUser.id);
     } catch (err) {
       console.error('Failed to delete event:', err);
+    } finally {
+      this.hideActionLoader();
     }
   }
 
@@ -2213,44 +2299,58 @@ async handleLogout() {
 
   startTickerRotation() {
     if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
+    // Info banner rotation set to 6 seconds
     this.tickerIntervalSub = setInterval(() => {
       if (this.tickerItems.length > 0) {
         this.currentTickerIndex = (this.currentTickerIndex + 1) % this.tickerItems.length;
       }
-    }, 5000);
+    }, 6000);
   }
 
   async loadTickerData() {
     const combinedItems: TickerItem[] = [];
-    const newsFromDb = await this.fetchLatestNewsFromDatabase();
-    if (newsFromDb.length > 0) {
-      combinedItems.push(...newsFromDb);
-    } else {
-      combinedItems.push({
-        id: 'dummy-1',
-        type: 'news',
-        headerKey: 'TICKER.NEWS_HEADER',
-        title: this.translate.instant('TICKER.NEWS_1')
-      });
-    }
 
+    // 1. Next upcoming holiday / non-working day
     const todayStr = new Date().toISOString().split('T')[0];
-    const upcomingHoliday = this.holidaysList.find(h => h.holiday_date >= todayStr);
+    const upcomingHoliday = this.holidaysList?.find(h => h.holiday_date >= todayStr);
     if (upcomingHoliday) {
       const holidayTitle = upcomingHoliday[`title_${this.currentLang}`] || upcomingHoliday.title_mk;
       const formattedDate = this.formatHolidayDateDDMMYYYY(upcomingHoliday.holiday_date);
-      combinedItems.splice(1, 0, {
+      combinedItems.push({
         id: `holiday-${upcomingHoliday.id}`,
         type: 'holiday',
         headerKey: 'TICKER.HOLIDAY_HEADER',
         title: `${holidayTitle} (${formattedDate})`
       });
     }
+
+    // 2. Real RSS News from reputable Macedonian portals (Nova Makedonija, Faktor, Fokus, etc.)
+    const newsFromDb = await this.fetchLatestNewsFromDatabase();
+    if (newsFromDb.length > 0) {
+      combinedItems.push(...newsFromDb);
+    }
+
     this.tickerItems = combinedItems;
     this.startTickerRotation();
   }
 
-  async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> { return []; }
+  async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
+    try {
+      const rawNews = await this.supabaseService.getLatestNews(10);
+      if (!rawNews || rawNews.length === 0) return [];
+
+      return rawNews.map((item: any) => ({
+        id: item.id,
+        type: 'news' as const,
+        rawHeader: `📰 ${item.source_name || 'Вести'}`,
+        title: item.title,
+        linkUrl: item.link_url
+      }));
+    } catch (e) {
+      console.warn('Failed to load RSS news for ticker:', e);
+      return [];
+    }
+  }
 
   onTickerItemClick(item: TickerItem) {
     if (!item) return;
@@ -2348,15 +2448,19 @@ isNotificationActive(widgetId: string): boolean {
   // --- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) METHODS ---
 
   async loadDutyPharmacies() {
+    this.isLoadingPharmacies = true;
+    this.cdr.markForCheck();
     try {
       const data = await this.pharmacyService.fetchPharmacies();
       this.pharmaciesList = data || [];
       this.updateNearestPharmacy();
       this.updateFilteredPharmacies();
       this.updatePharmacyWidgetDisplay();
-      this.cdr.markForCheck();
     } catch (err) {
       console.warn('Error loading pharmacies in home page:', err);
+    } finally {
+      this.isLoadingPharmacies = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -2795,6 +2899,8 @@ isNotificationActive(widgetId: string): boolean {
   // --- GAS STATIONS (БЕНЗИНСКИ ПУМПИ) METHODS ---
 
   async loadGasStations() {
+    this.isLoadingGasStations = true;
+    this.cdr.markForCheck();
     try {
       const data = await this.gasStationService.fetchGasStations();
       const rawStations = data || [];
@@ -2829,6 +2935,9 @@ isNotificationActive(widgetId: string): boolean {
       this.cdr.markForCheck();
     } catch (err) {
       console.warn('Error loading gas stations in home page:', err);
+    } finally {
+      this.isLoadingGasStations = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -3181,6 +3290,8 @@ isNotificationActive(widgetId: string): boolean {
   // --- UTILITY ALERTS (ПРЕКИНИ ЗА СТРУЈА & ВОДА) METHODS ---
 
   async loadUtilityAlerts() {
+    this.isLoadingAlerts = true;
+    this.cdr.markForCheck();
     try {
       const data = await this.utilityAlertService.fetchAlerts();
       const nonMacedonian = ['албанија', 'грција', 'србија', 'косово', 'бугарија'];
@@ -3200,9 +3311,11 @@ isNotificationActive(widgetId: string): boolean {
       this.alertCities = this.sortCitiesWithSkopjeFirst(rawCities);
       this.updateFilteredAlerts();
       this.updateAlertsWidgetDisplay();
-      this.cdr.markForCheck();
     } catch (err) {
       console.warn('Error loading utility alerts in home page:', err);
+    } finally {
+      this.isLoadingAlerts = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -3210,7 +3323,7 @@ isNotificationActive(widgetId: string): boolean {
     const w = this.allWidgets.find(item => item.id === 'alerts');
     if (w) {
       const city = this.currentCityName || 'Скопје';
-      const count = this.utilityAlertService.getActiveAlertsCount(city, this.alertsList);
+      const count = this.utilityAlertService.getActiveAlertsCount(city, this.alertsList, this.currentUserCoords);
       w.value = count > 0 ? `${count}` : '0';
       w.unit = count === 1 ? 'Прекин' : 'Прекини';
       w.customColor = count > 0 ? '#f59e0b' : '#10b981';
@@ -3256,21 +3369,60 @@ isNotificationActive(widgetId: string): boolean {
       list = this.utilityAlertService.annotateDistances(list, this.currentUserCoords);
     }
 
-    // 5. Sort: active first, then upcoming, then resolved; and by start_time
-    const statusWeight: Record<string, number> = {
-      'active': 1,
-      'upcoming': 2,
-      'resolved': 3
-    };
+    // 5. Sort: Sort by proximity (distance from user location)
+    if (this.currentUserCoords) {
+      list.sort((a, b) => {
+        // Priority 1: Keep resolved (completed) alerts at the bottom
+        const isResolvedA = a.status === 'resolved';
+        const isResolvedB = b.status === 'resolved';
+        if (isResolvedA !== isResolvedB) {
+          return isResolvedA ? 1 : -1;
+        }
 
-    list.sort((a, b) => {
-      const wA = statusWeight[a.status] || 99;
-      const wB = statusWeight[b.status] || 99;
-      if (wA !== wB) return wA - wB;
-      const tA = new Date(a.start_time).getTime();
-      const tB = new Date(b.start_time).getTime();
-      return tB - tA;
-    });
+        // Priority 2: Sort by distance from nearest to farthest (ascending km)
+        const distA = a.distanceKm != null ? a.distanceKm : 999999;
+        const distB = b.distanceKm != null ? b.distanceKm : 999999;
+        if (distA !== distB) {
+          return distA - distB;
+        }
+
+        // Priority 3: Active before upcoming if distance is identical
+        const statusWeight: Record<string, number> = {
+          'active': 1,
+          'upcoming': 2,
+          'resolved': 3
+        };
+        const wA = statusWeight[a.status] || 99;
+        const wB = statusWeight[b.status] || 99;
+        if (wA !== wB) return wA - wB;
+
+        // Priority 4: Newer/upcoming start_time first
+        const tA = new Date(a.start_time).getTime();
+        const tB = new Date(b.start_time).getTime();
+        return tB - tA;
+      });
+    } else {
+      // Fallback when GPS location is not available
+      const statusWeight: Record<string, number> = {
+        'active': 1,
+        'upcoming': 2,
+        'resolved': 3
+      };
+      list.sort((a, b) => {
+        if (this.currentCityName) {
+          const normCity = this.currentCityName.toLowerCase();
+          const aInCity = (a.city || '').toLowerCase().includes(normCity) || ((a.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
+          const bInCity = (b.city || '').toLowerCase().includes(normCity) || ((b.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
+          if (aInCity !== bInCity) return aInCity - bInCity;
+        }
+        const wA = statusWeight[a.status] || 99;
+        const wB = statusWeight[b.status] || 99;
+        if (wA !== wB) return wA - wB;
+        const tA = new Date(a.start_time).getTime();
+        const tB = new Date(b.start_time).getTime();
+        return tB - tA;
+      });
+    }
 
     this.filteredAlerts = list;
     this.cdr.markForCheck();
@@ -3294,8 +3446,12 @@ isNotificationActive(widgetId: string): boolean {
   }
 
   selectAlertCity(city: string) {
-    this.selectedAlertCity = city;
-    this.analyticsService.track('alerts', 'city_filtered', city);
+    if (this.selectedAlertCity === city) {
+      this.selectedAlertCity = '';
+    } else {
+      this.selectedAlertCity = city;
+    }
+    this.analyticsService.track('alerts', 'city_filtered', this.selectedAlertCity || 'all');
     this.updateFilteredAlerts();
     this.triggerHaptic(20);
   }

@@ -137,10 +137,11 @@ export class UtilityAlertService {
         if (a.type === 'earthquake') {
           return (now - start) < 72 * 60 * 60 * 1000;
         }
-        // Roads: keep if ongoing or within last 24h
+        // Roads: keep if active or ongoing within last 48h
         if (a.type === 'road') {
-          const end = a.end_time ? new Date(a.end_time).getTime() : start + 7 * 24 * 60 * 60 * 1000;
-          return now <= end || (now - end) < 24 * 60 * 60 * 1000;
+          if (a.status === 'active') return true;
+          const end = a.end_time ? new Date(a.end_time).getTime() : start + 14 * 24 * 60 * 60 * 1000;
+          return now <= end || (now - end) < 48 * 60 * 60 * 1000;
         }
         // Water: keep recent repairs and outages for 7 days (Vodovod only has a few per week)
         if (a.type === 'water') {
@@ -170,11 +171,29 @@ export class UtilityAlertService {
       });
   }
 
-  public getActiveAlertsCount(city: string, alerts: UtilityAlert[]): number {
+  public getActiveAlertsCount(city: string, alerts: UtilityAlert[], userCoords?: { latitude: number; longitude: number } | null): number {
     const norm = (city || '').toLowerCase().trim();
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
     return alerts.filter(a => {
       const matchCity = !norm || norm === 'all' || a.city.toLowerCase().includes(norm) || (a.municipality && a.municipality.toLowerCase().includes(norm));
-      return matchCity && (a.status === 'active' || a.status === 'upcoming');
+      const isNearby = (userCoords && a.latitude && a.longitude)
+        ? this.calculateDistanceKm(userCoords.latitude, userCoords.longitude, a.latitude, a.longitude) <= 30
+        : false;
+
+      if (!matchCity && !isNearby) return false;
+
+      // 1. Currently active / ongoing outage right now
+      if (a.status === 'active') return true;
+
+      // 2. Upcoming outage scheduled for today
+      if (a.status === 'upcoming' && a.start_time) {
+        const alertDay = a.start_time.split('T')[0];
+        return alertDay === todayStr;
+      }
+
+      return false;
     }).length;
   }
 

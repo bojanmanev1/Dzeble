@@ -5,7 +5,17 @@
     "CONFIRM": "Konfirmo",
     "SAVE": "Ruaj",
     "DELETE": "Fshij",
-    "OK": "Në rregull"
+    "OK": "Në rregull",
+    "PLEASE_WAIT": "Ju lutemi prisni...",
+    "LOADING": "Po ngarkohet...",
+    "SAVING": "Po ruhet...",
+    "DELETING": "Po fshihet...",
+    "LOGGING_IN": "Po kyçeni...",
+    "LOGGING_OUT": "Po çkyçeni...",
+    "UPDATING": "Po përditësohet...",
+    "GOOGLE_SIGN_IN": "Po kyçeni me Google...",
+    "CREATING_ACCOUNT": "Po krijohet llogaria...",
+    "SENDING": "Po dërgohet..."
   },
   "HOME": {
     "CITY": "Shkup",
