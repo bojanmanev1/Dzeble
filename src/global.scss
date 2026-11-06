@@ -126,11 +126,23 @@ ion-popover {
    ========================================================================== */
 :root {
   --modal-bg: #ffffff;
+  --ion-color-primary: #10b981;
+  --ion-color-primary-rgb: 16, 185, 129;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #059669;
+  --ion-color-primary-tint: #34d399;
 }
 
 body.dark,
-html.dark {
+html.dark,
+.ion-palette-dark {
   --modal-bg: #121514;
+  --ion-color-primary: #10b981 !important;
+  --ion-color-primary-rgb: 16, 185, 129 !important;
+  --ion-color-primary-contrast: #ffffff !important;
+  --ion-color-primary-shade: #059669 !important;
+  --ion-color-primary-tint: #34d399 !important;
 }
 
 /* ==========================================================================
@@ -2897,6 +2909,50 @@ html.dark,
       font-weight: 800 !important;
       box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45) !important;
     }
+  }
+
+  /* ==========================================================================
+     MODERN ACTION & AUTH LOADER OVERLAY (GLOBAL DARK THEME)
+     ========================================================================== */
+  .loader-popup-backdrop,
+  .action-loader-backdrop {
+    background: rgba(3, 8, 6, 0.82) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+
+  .loader-popup-card,
+  .action-loader-card {
+    background: #111815 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.22) !important;
+    border-radius: 24px !important;
+  }
+
+  .loader-spinner-wrapper,
+  .action-loader-spinner-wrap {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.45) !important;
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .custom-loader-spinner,
+  .action-loader-spinner,
+  ion-spinner {
+    --color: #34d399 !important;
+    color: #34d399 !important;
+  }
+
+  .loader-popup-title,
+  .action-loader-title {
+    color: #f0fdf4 !important;
+    font-weight: 800 !important;
+  }
+
+  .loader-popup-sub,
+  .action-loader-sub {
+    color: #6ee7b7 !important;
+    opacity: 0.9;
   }
 }
 

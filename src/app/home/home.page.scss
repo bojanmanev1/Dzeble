@@ -3696,21 +3696,44 @@ body.dark,
   }
 }
 
+:host-context(body.dark),
+:host-context(.ion-palette-dark),
+:host-context(html.dark),
 :host-context(body.dark-theme) {
   .modal-loading-state p {
     color: #94a3b8;
   }
 
+  .action-loader-backdrop {
+    background: rgba(3, 8, 6, 0.82) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+
   .action-loader-card {
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #111815 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.22) !important;
+
+    .action-loader-spinner-wrap {
+      background: rgba(16, 185, 129, 0.2) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.45) !important;
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    .action-loader-spinner {
+      --color: #34d399 !important;
+      color: #34d399 !important;
+    }
 
     .action-loader-title {
-      color: #f8fafc;
+      color: #f0fdf4 !important;
+      font-weight: 800 !important;
     }
 
     .action-loader-sub {
-      color: #94a3b8;
+      color: #6ee7b7 !important;
+      opacity: 0.9;
     }
   }
 }
