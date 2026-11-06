@@ -1,0 +1,23 @@
+name: Sync Utility Alerts (Power, Water, Road, Earthquakes)
+
+on:
+  schedule:
+    # Runs every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    name: Sync Utility Alerts to Supabase
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Supabase sync-utility-alerts Edge Function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://pvxnzqpbdizhyneiyzlf.supabase.co' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2eG56cXBiZGl6aHluZWl5emxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mzg2Njk1MCwiZXhwIjoyMDk5NDQyOTUwfQ.1ysqRDZdtV0EYkt4fiDq16DSyQDZiMaO6At1QkMVIUU' }}
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/sync-utility-alerts" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'

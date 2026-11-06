@@ -140,12 +140,20 @@
     </div>
 
     <!-- 4. BOTTOM NEWS & HOLIDAY TICKER FEED -->
-    <div class="news-ticker-container" (click)="onTickerItemClick(tickerItems[currentTickerIndex])" style="cursor: pointer;">
+    <div 
+      class="news-ticker-container" 
+      (touchstart)="onTickerTouchStart($event)"
+      (touchend)="onTickerTouchEnd($event, tickerItems[currentTickerIndex])"
+      (mousedown)="onTickerMouseDown($event)"
+      (mouseup)="onTickerMouseUp($event, tickerItems[currentTickerIndex])"
+      (click)="onTickerContainerClick($event, tickerItems[currentTickerIndex])" 
+      style="cursor: pointer;">
+      <div class="ticker-pull-indicator"></div>
       @for (item of [tickerItems[currentTickerIndex]]; track currentTickerIndex + '-' + item?.id) {
         @if (item) {
           <div class="news-body-wrapper">
             <div class="news-header">
-              <span>{{ item.headerKey ? (item.headerKey | translate) : item.rawHeader }}</span>
+              <span class="header-tag">{{ item.headerKey ? (item.headerKey | translate) : item.rawHeader }}</span>
             </div>
             <p class="news-body">
               {{ item.title }}
@@ -2161,9 +2169,471 @@
         </div>
       }
 
+      <!-- PUBLIC TRANSIT (ЈАВЕН ПРЕВОЗ: ЈСП, МЕЃУГРАДСКИ, ВОЗОВИ) DETAILS -->
+      @if (activeDetailWidgetId === 'transport') {
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="bus" class="transit-hero-icon" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;">
+              {{ 'TRANSPORT_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; font-size: 0.85rem;">
+            {{ 'TRANSPORT_MODAL.SUBTITLE' | translate }}
+          </p>
+
+          <!-- 2-Tab Switcher: JSP and Train (Automated) -->
+          <div class="transport-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="transportModalTab === 'jsp'"
+              (click)="setTransportModalTab('jsp')">
+              <ion-icon name="bus"></ion-icon>
+              <span>{{ 'TRANSPORT_MODAL.TAB_JSP' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="transportModalTab === 'train'"
+              (click)="setTransportModalTab('train')">
+              <ion-icon name="train"></ion-icon>
+              <span>{{ 'TRANSPORT_MODAL.TAB_TRAIN' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; max-width: 100%; box-sizing: border-box; padding: 4px 0;">
+          
+          <!-- TAB 1: JSP SKOPJE (ГРАДСКИ ПРЕВОЗ) -->
+          @if (transportModalTab === 'jsp') {
+            @if (!selectedJspLine) {
+              <!-- Search Box -->
+              <div class="transport-search-box">
+                <ion-icon name="search" class="search-icon"></ion-icon>
+                <input 
+                  #jspSearchInput
+                  type="text" 
+                  [(ngModel)]="transportJspSearchQuery" 
+                  (input)="onTransportJspSearchChange()"
+                  [placeholder]="'TRANSPORT_MODAL.SEARCH_JSP_PLACEHOLDER' | translate" 
+                  class="transport-search-input" />
+                @if (transportJspSearchQuery) {
+                  <button class="transport-search-clear" (click)="transportJspSearchQuery = ''; onTransportJspSearchChange()">
+                    <ion-icon name="close"></ion-icon>
+                  </button>
+                }
+              </div>
+
+              <!-- Nearest Stops Section (5 Nearest Stops by default) -->
+              @if (nearestJspStops.length > 0 && !transportJspSearchQuery) {
+                <div class="transit-section-header">
+                  <div class="transit-section-title">
+                    <ion-icon name="location" class="section-icon"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.NEAREST_STOPS' | translate }} ({{ nearestJspStops.length }})</span>
+                  </div>
+                </div>
+
+                <div class="nearest-stops-list">
+                  @for (stop of nearestJspStops; track stop.id) {
+                    <div class="nearest-stop-card">
+                      <div class="stop-info-row">
+                        <div class="stop-name-group">
+                          <span class="stop-name">{{ stop.name }}</span>
+                          <span class="stop-direction">{{ stop.direction }}</span>
+                        </div>
+                        @if (stop.distanceKm != null) {
+                          <span class="stop-distance-badge">
+                            {{ transitService.formatDistance(stop.distanceKm) }}
+                          </span>
+                        }
+                      </div>
+                      <div class="stop-lines-row">
+                        <span class="stop-lines-label">{{ 'TRANSPORT_MODAL.LINES_LABEL' | translate }}</span>
+                        @for (ln of stop.lines; track ln) {
+                          <span 
+                            class="line-tag-pill" 
+                            (click)="selectJspLine(transitService.getJspLineById(ln) || null)">
+                            {{ ln }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Search Prompt Card when not searching -->
+                <div class="transit-search-prompt-card" (click)="jspSearchInput.focus()">
+                  <div class="prompt-icon-wrap">
+                    <ion-icon name="search"></ion-icon>
+                  </div>
+                  <div class="prompt-content">
+                    <span class="prompt-title">{{ 'TRANSPORT_MODAL.PROMPT_TITLE' | translate }}</span>
+                    <span class="prompt-desc">{{ 'TRANSPORT_MODAL.PROMPT_DESC' | translate }}</span>
+                  </div>
+                </div>
+              }
+
+              <!-- JSP Bus Lines List (ONLY SHOWN WHEN SEARCHING) -->
+              @if (transportJspSearchQuery && transportJspSearchQuery.trim().length > 0) {
+                <div class="transit-section-header" style="margin-top: 10px;">
+                  <div class="transit-section-title">
+                    <ion-icon name="bus" class="section-icon"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.SEARCH_RESULTS' | translate }} ({{ jspLinesList.length }})</span>
+                  </div>
+                </div>
+
+                @if (jspLinesList.length > 0) {
+                  <div class="jsp-lines-grid">
+                    @for (line of jspLinesList; track line.id) {
+                      <div class="jsp-line-card" (click)="selectJspLine(line)">
+                        <div 
+                          class="line-badge" 
+                          [class.badge-sm]="getCleanLineNumber(line.number).length === 3"
+                          [class.badge-xs]="getCleanLineNumber(line.number).length >= 4"
+                          [style.background]="line.badgeColor">
+                          {{ getCleanLineNumber(line.number) }}
+                        </div>
+                        <div class="line-main-info">
+                          <div class="line-title-row">
+                            <span class="line-title">{{ line.title }}</span>
+                            <span class="line-type-tag" [class.suburban]="line.type === 'suburban'">
+                              {{ line.type === 'city' ? ('TRANSPORT_MODAL.TYPE_CITY' | translate) : ('TRANSPORT_MODAL.TYPE_SUBURBAN' | translate) }}
+                            </span>
+                          </div>
+                          <div class="line-route-text">{{ line.route }}</div>
+                          <div class="line-schedule-meta">
+                            <span class="meta-item">
+                              <ion-icon name="time-outline"></ion-icon>
+                              {{ line.frequency }}
+                            </span>
+                            @if (getNextJspDepartureLabel(line)) {
+                              <span class="next-dep-badge">
+                                {{ getNextJspDepartureLabel(line) }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                        <ion-icon name="chevron-forward" class="line-chevron"></ion-icon>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="empty-transit-state" style="padding: 32px 16px; text-align: center;">
+                    <ion-icon name="search-outline" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 8px; display: block;"></ion-icon>
+                    <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">
+                      {{ 'TRANSPORT_MODAL.NO_RESULTS' | translate }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b;">
+                      {{ 'TRANSPORT_MODAL.NO_LINES_MATCH' | translate }} „{{ transportJspSearchQuery }}“.
+                    </div>
+                  </div>
+                }
+              }
+            } @else {
+              <!-- VIEW: SELECTED JSP LINE DETAIL -->
+              <div class="selected-line-view">
+                <!-- Top Nav Row: Back button (single arrow) + Swap Direction button -->
+                <div class="transit-detail-top-row">
+                  <button type="button" class="btn-transit-back" (click)="selectJspLine(null)">
+                    <ion-icon name="chevron-back"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.BACK' | translate }}</span>
+                  </button>
+
+                  <button type="button" class="btn-transit-swap-dir" (click)="toggleJspLineDirection()">
+                    <ion-icon name="swap-horizontal"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.SWAP_DIRECTION' | translate }}</span>
+                  </button>
+                </div>
+
+                <!-- Hero Card -->
+                <div class="line-hero-card">
+                  <div class="line-hero-top">
+                    <div 
+                      class="hero-line-badge" 
+                      [class.hero-badge-sm]="getCleanLineNumber(selectedJspLine.number).length === 3"
+                      [class.hero-badge-xs]="getCleanLineNumber(selectedJspLine.number).length >= 4"
+                      [style.background]="selectedJspLine.badgeColor">
+                      {{ getCleanLineNumber(selectedJspLine.number) }}
+                    </div>
+                    <div class="hero-line-titles">
+                      <h3 class="hero-title">{{ getJspLineCurrentSchedule()?.title || selectedJspLine.title }}</h3>
+                      <p class="hero-frequency">{{ selectedJspLine.frequency }} • {{ selectedJspLine.firstDeparture }} - {{ selectedJspLine.lastDeparture }}</p>
+                    </div>
+                  </div>
+                  @if (getNextJspDepartureLabel(selectedJspLine)) {
+                    <div class="hero-next-live">
+                      <ion-icon name="time-outline"></ion-icon>
+                      <span>{{ 'TRANSPORT_MODAL.NEXT_DEPARTURE' | translate }}: <strong>{{ getNextJspDepartureLabel(selectedJspLine) }}</strong></span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Direction 2-Pill Switcher (Instant one-tap selection) -->
+                <div class="transit-direction-switcher">
+                  <button 
+                    type="button"
+                    class="dir-switcher-pill" 
+                    [class.active]="selectedJspDirection === 'A'" 
+                    (click)="setJspLineDirection('A')">
+                    <span>{{ selectedJspLine.directionA.origin }} → {{ selectedJspLine.directionA.destination }}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    class="dir-switcher-pill" 
+                    [class.active]="selectedJspDirection === 'B'" 
+                    (click)="setJspLineDirection('B')">
+                    <span>{{ selectedJspLine.directionB.origin }} → {{ selectedJspLine.directionB.destination }}</span>
+                  </button>
+                </div>
+
+                <!-- Stops Timeline -->
+                <div class="transit-section-header">
+                  <div class="transit-section-title">
+                    <ion-icon name="location"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.STOPS' | translate }} ({{ getJspLineCurrentSchedule()?.stops?.length || 0 }})</span>
+                  </div>
+                </div>
+
+                <div class="line-stops-timeline">
+                  @for (stop of (getJspLineCurrentSchedule()?.stops || []); track $index; let first = $first; let last = $last) {
+                    <div class="timeline-stop-item" [class.first-stop]="first" [class.last-stop]="last">
+                      <div class="timeline-dot-wrapper">
+                        <span class="timeline-dot"></span>
+                        @if (!last) {
+                          <span class="timeline-line"></span>
+                        }
+                      </div>
+                      <span class="timeline-stop-name">{{ stop }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Timetable with 3-Day Switcher -->
+                <div class="transit-section-header" style="margin-top: 14px;">
+                  <div class="transit-section-title">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span>{{ 'TRANSPORT_MODAL.DEPARTURES' | translate }}</span>
+                  </div>
+                </div>
+
+                <!-- 3-Day Switcher: Пон - Пет, Сабота, Недела -->
+                <div class="schedule-day-switcher">
+                  <button 
+                    type="button"
+                    class="day-pill" 
+                    [class.active]="selectedScheduleDay === 'workday'" 
+                    (click)="selectedScheduleDay = 'workday'">
+                    <span>{{ 'TRANSPORT_MODAL.DAY_WORKDAY' | translate }}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    class="day-pill" 
+                    [class.active]="selectedScheduleDay === 'saturday'" 
+                    (click)="selectedScheduleDay = 'saturday'">
+                    <span>{{ 'TRANSPORT_MODAL.DAY_SATURDAY' | translate }}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    class="day-pill" 
+                    [class.active]="selectedScheduleDay === 'sunday'" 
+                    (click)="selectedScheduleDay = 'sunday'">
+                    <span>{{ 'TRANSPORT_MODAL.DAY_SUNDAY' | translate }}</span>
+                  </button>
+                </div>
+
+                <!-- Departure Times Chips -->
+                <div class="departures-chips-wrap">
+                  @for (time of getJspLineDepartures(selectedScheduleDay); track time) {
+                    <span class="dep-time-chip" [class.weekend]="selectedScheduleDay !== 'workday'">{{ time }}</span>
+                  }
+                </div>
+              </div>
+            }
+          }
+
+
+          <!-- TAB 3: TRAINS (ВОЗОВИ ЖРСМ) -->
+          @if (transportModalTab === 'train') {
+            <!-- Search input -->
+            <div class="transport-search-box">
+              <ion-icon name="search" class="search-icon"></ion-icon>
+              <input 
+                type="text" 
+                [(ngModel)]="transportTrainSearchQuery" 
+                (input)="onTransportTrainSearchChange()"
+                [placeholder]="'TRANSPORT_MODAL.SEARCH_TRAIN_PLACEHOLDER' | translate" 
+                class="transport-search-input" />
+              @if (transportTrainSearchQuery) {
+                <button class="transport-search-clear" (click)="transportTrainSearchQuery = ''; onTransportTrainSearchChange()">
+                  <ion-icon name="close"></ion-icon>
+                </button>
+              }
+            </div>
+
+            <!-- Train Routes List -->
+            <div class="train-routes-list">
+              @for (route of trainRoutesList; track route.id) {
+                <div class="train-route-card" (click)="selectTrainRoute(selectedTrainRoute?.id === route.id ? null : route)">
+                  <div class="train-card-top">
+                    <div class="train-number-badge" [class.express]="route.type === 'брз'">
+                      {{ route.trainNumber }} • {{ route.type }}
+                    </div>
+                    <span class="train-runs-badge">{{ route.runs }}</span>
+                  </div>
+
+                  <div class="train-journey-row">
+                    <div class="time-city-col">
+                      <span class="time-large">{{ route.departureTime }}</span>
+                      <span class="city-sub">{{ route.fromCity }}</span>
+                    </div>
+                    <div class="journey-duration-col">
+                      <span class="duration-text">{{ route.duration }}</span>
+                      <div class="journey-line-indicator">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-line"></span>
+                        <ion-icon name="train" class="indicator-icon"></ion-icon>
+                      </div>
+                    </div>
+                    <div class="time-city-col align-right">
+                      <span class="time-large">{{ route.arrivalTime }}</span>
+                      <span class="city-sub">{{ route.toCity }}</span>
+                    </div>
+                  </div>
+
+                  <div class="train-card-bottom">
+                    <span class="stops-summary-btn">
+                      {{ selectedTrainRoute?.id === route.id ? ('TRANSPORT_MODAL.HIDE_INTERMEDIATE_STOPS' | translate) : (('TRANSPORT_MODAL.VIEW_INTERMEDIATE_STOPS' | translate) + ' (' + route.stops.length + ')') }}
+                    </span>
+                    <ion-icon [name]="selectedTrainRoute?.id === route.id ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+                  </div>
+
+                  <!-- Expandable Intermediate Stops -->
+                  @if (selectedTrainRoute?.id === route.id) {
+                    <div class="train-stops-expanded">
+                      <div class="train-stops-timeline">
+                        @for (st of route.stops; track st.station; let isFirst = $first; let isLast = $last) {
+                          <div class="train-stop-item" [class.terminal]="isFirst || isLast">
+                            <span class="stop-time">{{ st.time }}</span>
+                            <div class="stop-node">
+                              <span class="dot"></span>
+                              @if (!isLast) {
+                                <span class="line"></span>
+                              }
+                            </div>
+                            <span class="stop-station-name">{{ st.station }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (trainRoutesList.length === 0) {
+                <div class="empty-transit-state">
+                  <ion-icon name="search"></ion-icon>
+                  <p>{{ 'TRANSPORT_MODAL.NO_RESULTS' | translate }}</p>
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      }
+
       <!-- DISMISS FOOTER ANCHORED ABOVE MOBILE NAVIGATION BAR -->
       <div class="modal-footer" style="padding-top: 10px; flex-shrink: 0;">
         <button class="btn-modal-cancel" (click)="$event.stopPropagation(); setDetailModal(false);" style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold; border: none; cursor: pointer;">
+          {{ 'HOME.CLOSE' | translate }}
+        </button>
+      </div>
+
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- ========================================== -->
+<!-- MODAL: ALL LATEST NEWS (SWIPE UP / EXPAND) -->
+<!-- ========================================== -->
+<ion-modal 
+  [isOpen]="isNewsModalOpen" 
+  (didDismiss)="closeNewsModal()" 
+  class="premium-modal news-modal"
+  [canDismiss]="true"
+  [initialBreakpoint]="1.0"
+  [breakpoints]="[0, 1.0]"
+  [handle]="true">
+  <ng-template>
+    <div class="modal-wrapper" style="display: flex; flex-direction: column; height: 100%; max-height: 85vh; padding: 30px 16px max(16px, env(safe-area-inset-bottom)) 16px; box-sizing: border-box; overflow-x: hidden; width: 100%; max-width: 100%;">
+      
+      <!-- Modal Header -->
+      <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+        <h2 class="news-modal-title" style="font-size: 1.15rem; font-weight: 700; margin: 0 0 4px 0; color: #0f172a;">
+          📰 {{ 'NEWS_MODAL.TITLE' | translate }}
+        </h2>
+        <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">
+          {{ 'NEWS_MODAL.SUBTITLE' | translate }} ({{ allNewsItems.length }})
+        </p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body news-modal-body" style="flex: 1; overflow-y: auto; padding: 4px 2px 14px 2px;">
+        
+        <!-- Upcoming Holiday Banner if available -->
+        @if (getUpcomingHolidayItem(); as holiday) {
+          <div class="holiday-featured-card" (click)="closeNewsModal(); onWidgetClick('holidays')">
+            <div class="holiday-card-content">
+              <span class="holiday-badge">🎉 {{ 'TICKER.HOLIDAY_HEADER' | translate }}</span>
+              <h4 class="holiday-title">{{ holiday.title }}</h4>
+            </div>
+            <ion-icon name="arrow-forward-outline" class="holiday-arrow"></ion-icon>
+          </div>
+        }
+
+        <!-- List of all news items -->
+        @if (allNewsItems.length > 0) {
+          <div class="news-items-list">
+            @for (news of allNewsItems; track news.id || $index) {
+              <div class="news-list-card" (click)="openNewsArticle(news.linkUrl)">
+                <div class="news-card-header">
+                  <span class="source-badge">
+                    {{ news.sourceName || 'Вести' }}
+                  </span>
+                  @if (news.publishedAt) {
+                    <span class="news-time">
+                      <ion-icon name="time-outline"></ion-icon>
+                      {{ formatNewsTime(news.publishedAt) }}
+                    </span>
+                  }
+                </div>
+                <h3 class="news-card-title">{{ news.title }}</h3>
+                @if (news.summary) {
+                  <p class="news-card-summary">{{ news.summary }}</p>
+                }
+                <div class="news-card-footer">
+                  <span class="read-hint">{{ 'NEWS_MODAL.READ_FULL' | translate }}</span>
+                  <ion-icon name="open-outline" class="open-icon"></ion-icon>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- Empty state -->
+          <div style="text-align: center; padding: 40px 16px; color: #64748b;">
+            <ion-icon name="newspaper-outline" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 8px;"></ion-icon>
+            <p style="font-size: 0.9rem; margin: 0;">{{ 'NEWS_MODAL.NO_NEWS' | translate }}</p>
+          </div>
+        }
+
+      </div>
+
+      <!-- DISMISS FOOTER ANCHORED ABOVE MOBILE NAVIGATION BAR -->
+      <div class="modal-footer" style="padding-top: 10px; flex-shrink: 0;">
+        <button 
+          class="btn-modal-cancel" 
+          (click)="$event.stopPropagation(); closeNewsModal();" 
+          style="background: #111; color: white; width: 100%; border-radius: 14px; padding: 14px; font-weight: bold; border: none; cursor: pointer;">
           {{ 'HOME.CLOSE' | translate }}
         </button>
       </div>

@@ -173,16 +173,21 @@ serve(async (_req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const now = new Date();
     const collectedAlerts: any[] = [];
+    let evnSuccess = false;
+    let vodovodSuccess = false;
+    let amsmSuccess = false;
+    let emscSuccess = false;
 
     // 1. Fetch Power Alerts from EVN API
     try {
       const res = await fetch('https://portal-api.elektrodistribucija.mk/DSO/Prekini/ZemiPrekini');
       if (res.ok) {
+        evnSuccess = true;
         const data = await res.json();
         for (const item of (data || [])) {
           const startDate = new Date(item.pocetok);
           const endDate = new Date(item.kraj);
-          if (now.getTime() - endDate.getTime() > 12 * 60 * 60 * 1000) continue;
+          if (now.getTime() - endDate.getTime() > 2 * 60 * 60 * 1000) continue;
 
           let status = 'upcoming';
           if (now >= startDate && now <= endDate) status = 'active';
@@ -262,6 +267,7 @@ serve(async (_req) => {
     try {
       const res = await fetch('https://www.vodovod-skopje.com.mk/mk-MK/article/INFORMACIIIZAPREKINNAVODOSNABDUVANjEIDEFEKTI_1');
       if (res.ok) {
+        vodovodSuccess = true;
         const html = await res.text();
         const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
         let match;
@@ -362,6 +368,7 @@ serve(async (_req) => {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       if (res.ok) {
+        amsmSuccess = true;
         const html = await res.text();
         const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
         let m;
@@ -430,6 +437,7 @@ serve(async (_req) => {
       const url = 'https://www.seismicportal.eu/fdsnws/event/1/query?format=json&lat=41.6&lon=21.7&maxradius=2.6&minmag=1.8&limit=10';
       const res = await fetch(url);
       if (res.ok) {
+        emscSuccess = true;
         const data = await res.json();
         for (const f of (data.features || [])) {
           const p = f.properties;
@@ -479,7 +487,95 @@ serve(async (_req) => {
       console.warn("EMSC sync error:", e.message);
     }
 
-    // 5. Upsert into utility_alerts table
+    // 5. Authoritative synchronization: Purge records that are no longer in the live source
+    // 5a. Clean stale EVN power outages (authoritative live mirror)
+    if (evnSuccess) {
+      const activePowerIds = new Set(collectedAlerts.filter(a => a.type === 'power').map(a => a.id));
+      const { data: existingPower } = await supabase
+        .from('utility_alerts')
+        .select('id')
+        .eq('type', 'power');
+
+      if (existingPower && existingPower.length > 0) {
+        const stalePowerIds = existingPower
+          .map((r: any) => r.id)
+          .filter((id: string) => !activePowerIds.has(id));
+
+        if (stalePowerIds.length > 0) {
+          console.log(`Purging ${stalePowerIds.length} stale power outages no longer present in EVN API...`);
+          for (let i = 0; i < stalePowerIds.length; i += 100) {
+            const batch = stalePowerIds.slice(i, i + 100);
+            await supabase
+              .from('utility_alerts')
+              .delete()
+              .in('id', batch);
+          }
+        }
+      }
+    }
+
+    // 5b. Clean stale water outages
+    if (vodovodSuccess) {
+      const activeWaterIds = new Set(collectedAlerts.filter(a => a.type === 'water').map(a => a.id));
+      const { data: existingWater } = await supabase
+        .from('utility_alerts')
+        .select('id')
+        .eq('type', 'water');
+
+      if (existingWater && existingWater.length > 0) {
+        const staleWaterIds = existingWater
+          .map((r: any) => r.id)
+          .filter((id: string) => !activeWaterIds.has(id));
+
+        if (staleWaterIds.length > 0) {
+          console.log(`Purging ${staleWaterIds.length} stale water outages...`);
+          for (let i = 0; i < staleWaterIds.length; i += 100) {
+            const batch = staleWaterIds.slice(i, i + 100);
+            await supabase
+              .from('utility_alerts')
+              .delete()
+              .in('id', batch);
+          }
+        }
+      }
+    }
+
+    // 5c. Clean stale road notices
+    if (amsmSuccess) {
+      const activeRoadIds = new Set(collectedAlerts.filter(a => a.type === 'road').map(a => a.id));
+      const { data: existingRoad } = await supabase
+        .from('utility_alerts')
+        .select('id')
+        .eq('type', 'road');
+
+      if (existingRoad && existingRoad.length > 0) {
+        const staleRoadIds = existingRoad
+          .map((r: any) => r.id)
+          .filter((id: string) => !activeRoadIds.has(id));
+
+        if (staleRoadIds.length > 0) {
+          console.log(`Purging ${staleRoadIds.length} stale road alerts...`);
+          for (let i = 0; i < staleRoadIds.length; i += 100) {
+            const batch = staleRoadIds.slice(i, i + 100);
+            await supabase
+              .from('utility_alerts')
+              .delete()
+              .in('id', batch);
+          }
+        }
+      }
+    }
+
+    // 5d. Clean earthquakes older than 72 hours
+    try {
+      await supabase
+        .from('utility_alerts')
+        .delete()
+        .eq('type', 'earthquake')
+        .lt('start_time', new Date(now.getTime() - 72 * 60 * 60 * 1000).toISOString());
+    } catch {}
+
+    // 5e. Upsert all currently valid alerts
     if (collectedAlerts.length > 0) {
       const { error: upsertErr } = await supabase
         .from('utility_alerts')
@@ -488,29 +584,29 @@ serve(async (_req) => {
       if (upsertErr) {
         throw new Error(`Failed to upsert alerts: ${upsertErr.message}`);
       }
+    }
 
-      // 5b. Automatically purge obsolete utility alerts that ended more than 24 hours ago
-      try {
-        await supabase
-          .from('utility_alerts')
-          .delete()
-          .lt('end_time', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString());
-      } catch (purgeErr: any) {
-        console.warn("Purge obsolete alerts warning:", purgeErr.message);
-      }
+    // 5f. Final safeguard: delete any outage whose end_time has passed by more than 2 hours
+    try {
+      await supabase
+        .from('utility_alerts')
+        .delete()
+        .lt('end_time', new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString());
+    } catch (purgeErr: any) {
+      console.warn("Purge obsolete alerts warning:", purgeErr.message);
+    }
 
-      // 6. Auto-trigger dispatch-utility-alerts to deliver notifications to affected users
-      try {
-        await fetch(`${supabaseUrl}/functions/v1/dispatch-utility-alerts`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${supabaseServiceKey}`,
-            "Content-Type": "application/json",
-          },
-        });
-      } catch (dispatchErr: any) {
-        console.warn("Auto-dispatch trigger warning:", dispatchErr.message);
-      }
+    // 6. Auto-trigger dispatch-utility-alerts to deliver notifications to affected users
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/dispatch-utility-alerts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (dispatchErr: any) {
+      console.warn("Auto-dispatch trigger warning:", dispatchErr.message);
     }
 
     return new Response(JSON.stringify({

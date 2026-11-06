@@ -60,7 +60,12 @@ import {
   warning,
   flash,
   water,
-  createOutline
+  createOutline,
+  bus,
+  train,
+  swapHorizontal,
+  arrowForward,
+  arrowBack
 } from 'ionicons/icons';
 
 import { 
@@ -81,7 +86,9 @@ import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
 import { GasStationService, GasStation } from '../services/gas-station';
 import { UtilityAlertService, UtilityAlert } from '../services/utility-alert';
+import { TransitService, JspLine, JspStop, TrainRoute, JspDirectionSchedule } from '../services/transit';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
+import { LockSheetDragDirective } from '../directives/lock-sheet-drag.directive';
 import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
 import { App } from '@capacitor/app';
 import { PushNotificationService } from '../services/push-notification';
@@ -105,9 +112,12 @@ export interface TickerItem {
   type: 'news' | 'holiday' | 'alert' | 'system';
   headerKey?: string;
   rawHeader?: string;
+  sourceName?: string;
   title: string;
   linkUrl?: string;
   date?: string;
+  summary?: string;
+  publishedAt?: string;
 }
 
 import { ThemeService } from '../services/theme';
@@ -130,6 +140,7 @@ import { ThemeService } from '../services/theme';
     IonSpinner,
     FormsModule, 
     BarcodeRenderDirective, 
+    LockSheetDragDirective,
     TranslatePipe
   ]
 })
@@ -169,7 +180,13 @@ export class HomePage implements OnInit, OnDestroy {
   selectedStockCurrency: 'USD' | 'MKD' | 'EUR' = (localStorage.getItem('stock_display_currency') as any) || 'USD';
   parsedWeatherData: any = null;
   tickerItems: TickerItem[] = [];
+  allNewsItems: TickerItem[] = [];
   currentTickerIndex = 0;
+  isNewsModalOpen = false;
+  private tickerTouchStartY: number = 0;
+  private tickerTouchStartX: number = 0;
+  private tickerTouchStartTime: number = 0;
+  private isTickerSwipeGesture: boolean = false;
   stockSearchQuery: string = '';
   isSearchingStock: boolean = false;
   stockSearchError: string = '';
@@ -324,6 +341,22 @@ export class HomePage implements OnInit, OnDestroy {
   alertSearchQuery: string = '';
   alertCities: string[] = [];
 
+  // Public Transit State (JSP & Train)
+  public transitService = inject(TransitService);
+  transportModalTab: 'jsp' | 'train' = 'jsp';
+  transportJspSearchQuery: string = '';
+  transportTrainSearchQuery: string = '';
+  selectedJspLine: JspLine | null = null;
+  selectedJspDirection: 'A' | 'B' = 'A';
+  selectedScheduleDay: 'workday' | 'saturday' | 'sunday' = 'workday';
+  selectedTrainRoute: TrainRoute | null = null;
+  jspLinesList: JspLine[] = [];
+  nearestJspStops: JspStop[] = [];
+  trainRoutesList: TrainRoute[] = [];
+  nextTrainDeparture: { route: TrainRoute; inMinutes: number } | null = null;
+  transitWidgetCurrentIcon: 'bus' | 'train' = 'bus';
+  transitIconIntervalSub: any;
+
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
     { id: 'fuel', translationKey: 'WIDGETS.FUEL', value: '--.-', unit: 'МКД', icon: 'speedometer' },
@@ -336,12 +369,13 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
     { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' },
     { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'gas-pump' },
-    { id: 'alerts', translationKey: 'WIDGETS.ALERTS', value: '0', unit: 'Прекини', icon: 'warning' }
+    { id: 'alerts', translationKey: 'WIDGETS.ALERTS', value: '0', unit: 'Прекини', icon: 'warning' },
+    { id: 'transport', translationKey: 'WIDGETS.TRANSPORT', value: 'ЈСП', unit: 'Превоз', icon: 'bus' }
   ];
 
   readonly DEFAULT_WIDGET_IDS: string[] = [
     'aqi', 'fuel', 'weather',
-    'crypto', 'stock', 'holidays',
+    'crypto', 'transport', 'holidays',
     'pharmacy', 'gas_stations', 'alerts'
   ];
   readonly MAX_WIDGET_COUNT = 9;
@@ -425,7 +459,12 @@ export class HomePage implements OnInit, OnDestroy {
       'pulse': pulse,
       'gas-pump': GAS_PUMP_ICON,
       'pump': GAS_PUMP_ICON,
-      'create-outline': createOutline
+      'create-outline': createOutline,
+      'bus': bus,
+      'train': train,
+      'swap-horizontal': swapHorizontal,
+      'arrow-forward': arrowForward,
+      'arrow-back': arrowBack
     });
 
     this.loadSavedWidgetOrder();
@@ -541,6 +580,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.loadGasStations();
     this.loadUtilityAlerts();
     this.loadTickerData();
+    this.initTransitData();
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -1390,6 +1430,17 @@ async handleLogout() {
               uniqueIds.push(defaultId);
             }
           }
+          // Ensure new transport widget is active if not present
+          if (!uniqueIds.includes('transport') && this.allWidgets.some(w => w.id === 'transport')) {
+            const replaceIdx = uniqueIds.indexOf('stock');
+            if (replaceIdx !== -1) {
+              uniqueIds[replaceIdx] = 'transport';
+            } else if (uniqueIds.length < this.MAX_WIDGET_COUNT) {
+              uniqueIds.push('transport');
+            } else if (uniqueIds.length > 4) {
+              uniqueIds[4] = 'transport';
+            }
+          }
           uniqueIds = uniqueIds.slice(0, this.MAX_WIDGET_COUNT);
           if (uniqueIds.length > 0) {
             this.activeWidgetIds = uniqueIds;
@@ -2002,6 +2053,16 @@ async handleLogout() {
       }
       this.loadUtilityAlerts();
     }
+    if (widgetId === 'transport') {
+      this.initTransitData();
+      if (!this.currentUserCoords) {
+        this.weatherService.getDeviceCoordinates().subscribe(coords => {
+          this.currentUserCoords = coords;
+          this.initTransitData();
+          this.cdr.markForCheck();
+        });
+      }
+    }
     this.isDetailModalOpen = true;
   }
 
@@ -2028,6 +2089,7 @@ async handleLogout() {
     if (this.stockSub) this.stockSub.unsubscribe();
     if (this.tickerIntervalSub) clearInterval(this.tickerIntervalSub);
     if (this.widgetRotationIntervalSub) clearInterval(this.widgetRotationIntervalSub);
+    if (this.transitIconIntervalSub) clearInterval(this.transitIconIntervalSub);
     this.cryptoService.disconnect();
     this.stockService.disconnect();
     this.destroyLeafletMap();
@@ -2326,6 +2388,7 @@ async handleLogout() {
 
     // 2. Real RSS News from reputable Macedonian portals (Nova Makedonija, Faktor, Fokus, etc.)
     const newsFromDb = await this.fetchLatestNewsFromDatabase();
+    this.allNewsItems = newsFromDb;
     if (newsFromDb.length > 0) {
       combinedItems.push(...newsFromDb);
     }
@@ -2336,15 +2399,18 @@ async handleLogout() {
 
   async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
     try {
-      const rawNews = await this.supabaseService.getLatestNews(10);
+      const rawNews = await this.supabaseService.getLatestNews(30);
       if (!rawNews || rawNews.length === 0) return [];
 
       return rawNews.map((item: any) => ({
         id: item.id,
         type: 'news' as const,
         rawHeader: `📰 ${item.source_name || 'Вести'}`,
+        sourceName: item.source_name || 'Вести',
         title: item.title,
-        linkUrl: item.link_url
+        linkUrl: item.link_url,
+        summary: item.summary,
+        publishedAt: item.published_at || item.created_at
       }));
     } catch (e) {
       console.warn('Failed to load RSS news for ticker:', e);
@@ -2359,6 +2425,102 @@ async handleLogout() {
     } else if (item.linkUrl) {
       window.open(item.linkUrl, '_blank');
     }
+  }
+
+  onTickerTouchStart(event: TouchEvent) {
+    if (event.touches.length > 0) {
+      this.tickerTouchStartY = event.touches[0].clientY;
+      this.tickerTouchStartX = event.touches[0].clientX;
+      this.tickerTouchStartTime = Date.now();
+      this.isTickerSwipeGesture = false;
+    }
+  }
+
+  onTickerTouchEnd(event: TouchEvent, item?: TickerItem) {
+    if (event.changedTouches.length > 0) {
+      const deltaY = this.tickerTouchStartY - event.changedTouches[0].clientY;
+      const deltaX = Math.abs(this.tickerTouchStartX - event.changedTouches[0].clientX);
+      const deltaTime = Date.now() - this.tickerTouchStartTime;
+
+      // Swipe UP: finger moved upwards by >= 35px, primarily vertical
+      if (deltaY > 35 && deltaY > deltaX && deltaTime < 1000) {
+        this.isTickerSwipeGesture = true;
+        this.openNewsModal();
+      }
+    }
+  }
+
+  onTickerMouseDown(event: MouseEvent) {
+    this.tickerTouchStartY = event.clientY;
+    this.tickerTouchStartX = event.clientX;
+    this.tickerTouchStartTime = Date.now();
+    this.isTickerSwipeGesture = false;
+  }
+
+  onTickerMouseUp(event: MouseEvent, item?: TickerItem) {
+    const deltaY = this.tickerTouchStartY - event.clientY;
+    const deltaX = Math.abs(this.tickerTouchStartX - event.clientX);
+    const deltaTime = Date.now() - this.tickerTouchStartTime;
+
+    if (deltaY > 35 && deltaY > deltaX && deltaTime < 1000) {
+      this.isTickerSwipeGesture = true;
+      this.openNewsModal();
+    }
+  }
+
+  onTickerContainerClick(event: Event, item?: TickerItem) {
+    if (this.isTickerSwipeGesture) {
+      this.isTickerSwipeGesture = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (item) {
+      this.onTickerItemClick(item);
+    }
+  }
+
+  openNewsModal() {
+    this.triggerHaptic(20);
+    this.isNewsModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeNewsModal() {
+    this.isNewsModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  openNewsArticle(url?: string) {
+    if (!url) return;
+    this.triggerHaptic(15);
+    window.open(url, '_blank');
+  }
+
+  formatNewsTime(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Сега';
+      if (diffMins < 60) return `пред ${diffMins} мин`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `пред ${diffHours} ч`;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${day}.${month} ${hours}:${mins}`;
+    } catch {
+      return '';
+    }
+  }
+
+  getUpcomingHolidayItem(): TickerItem | undefined {
+    return this.tickerItems.find(i => i.type === 'holiday');
   }
 
   getUserInitial(): string {
@@ -3369,60 +3531,51 @@ isNotificationActive(widgetId: string): boolean {
       list = this.utilityAlertService.annotateDistances(list, this.currentUserCoords);
     }
 
-    // 5. Sort: Sort by proximity (distance from user location)
-    if (this.currentUserCoords) {
-      list.sort((a, b) => {
-        // Priority 1: Keep resolved (completed) alerts at the bottom
-        const isResolvedA = a.status === 'resolved';
-        const isResolvedB = b.status === 'resolved';
-        if (isResolvedA !== isResolvedB) {
-          return isResolvedA ? 1 : -1;
-        }
+    // 5. Sort:
+    // Priority 1: 'active' (ongoing right now) ALWAYS at the top, upcoming next, resolved last
+    // Priority 2: Earlier dates before later dates (today before tomorrow before next week)
+    // Priority 3: User city / proximity on the same day
+    const statusWeight: Record<string, number> = {
+      'active': 1,
+      'upcoming': 2,
+      'resolved': 3
+    };
 
-        // Priority 2: Sort by distance from nearest to farthest (ascending km)
+    list.sort((a, b) => {
+      // 1. Status: Active always first, upcoming second, resolved last
+      const wA = statusWeight[a.status] || 99;
+      const wB = statusWeight[b.status] || 99;
+      if (wA !== wB) return wA - wB;
+
+      // 2. Chronological by day: earlier date/day comes first (e.g. today before next week)
+      const tA = new Date(a.start_time).getTime();
+      const tB = new Date(b.start_time).getTime();
+      const dayA = Math.floor(tA / (24 * 60 * 60 * 1000));
+      const dayB = Math.floor(tB / (24 * 60 * 60 * 1000));
+      if (dayA !== dayB) {
+        return dayA - dayB;
+      }
+
+      // 3. On the same day: prioritize current city/municipality
+      if (this.currentCityName) {
+        const normCity = this.currentCityName.toLowerCase();
+        const aInCity = (a.city || '').toLowerCase().includes(normCity) || ((a.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
+        const bInCity = (b.city || '').toLowerCase().includes(normCity) || ((b.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
+        if (aInCity !== bInCity) return aInCity - bInCity;
+      }
+
+      // 4. On the same day: prioritize closer distance (if GPS available)
+      if (this.currentUserCoords) {
         const distA = a.distanceKm != null ? a.distanceKm : 999999;
         const distB = b.distanceKm != null ? b.distanceKm : 999999;
-        if (distA !== distB) {
+        if (Math.abs(distA - distB) > 2) {
           return distA - distB;
         }
+      }
 
-        // Priority 3: Active before upcoming if distance is identical
-        const statusWeight: Record<string, number> = {
-          'active': 1,
-          'upcoming': 2,
-          'resolved': 3
-        };
-        const wA = statusWeight[a.status] || 99;
-        const wB = statusWeight[b.status] || 99;
-        if (wA !== wB) return wA - wB;
-
-        // Priority 4: Newer/upcoming start_time first
-        const tA = new Date(a.start_time).getTime();
-        const tB = new Date(b.start_time).getTime();
-        return tB - tA;
-      });
-    } else {
-      // Fallback when GPS location is not available
-      const statusWeight: Record<string, number> = {
-        'active': 1,
-        'upcoming': 2,
-        'resolved': 3
-      };
-      list.sort((a, b) => {
-        if (this.currentCityName) {
-          const normCity = this.currentCityName.toLowerCase();
-          const aInCity = (a.city || '').toLowerCase().includes(normCity) || ((a.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
-          const bInCity = (b.city || '').toLowerCase().includes(normCity) || ((b.municipality || '').toLowerCase().includes(normCity)) ? 0 : 1;
-          if (aInCity !== bInCity) return aInCity - bInCity;
-        }
-        const wA = statusWeight[a.status] || 99;
-        const wB = statusWeight[b.status] || 99;
-        if (wA !== wB) return wA - wB;
-        const tA = new Date(a.start_time).getTime();
-        const tB = new Date(b.start_time).getTime();
-        return tB - tA;
-      });
-    }
+      // 5. Earliest hour/minute on the same day
+      return tA - tB;
+    });
 
     this.filteredAlerts = list;
     this.cdr.markForCheck();
@@ -3491,5 +3644,166 @@ isNotificationActive(widgetId: string): boolean {
       return this.translate.instant('ALERTS_MODAL.STATUS_UPCOMING') || 'Најавено';
     }
     return this.translate.instant('ALERTS_MODAL.STATUS_RESOLVED') || 'Завршено';
+  }
+
+  initTransitData() {
+    this.jspLinesList = this.transitService.getJspLines(this.transportJspSearchQuery);
+    this.trainRoutesList = this.transitService.getTrainRoutes(undefined, undefined, this.transportTrainSearchQuery);
+    this.nextTrainDeparture = this.transitService.getNextTrainDeparture();
+
+    if (this.currentUserCoords) {
+      this.nearestJspStops = this.transitService.getNearestJspStops(
+        this.currentUserCoords.latitude,
+        this.currentUserCoords.longitude,
+        5
+      );
+    } else {
+      this.nearestJspStops = this.transitService.getAllJspStops().slice(0, 5);
+    }
+
+    this.startTransitIconRotator();
+    this.updateTransitWidgetDisplay();
+    this.cdr.markForCheck();
+
+    // Fetch live from Supabase (visible in DevTools Network tab like other widgets)
+    this.transitService.fetchTransitDataFromSupabase().then(() => {
+      this.jspLinesList = this.transitService.getJspLines(this.transportJspSearchQuery);
+      this.trainRoutesList = this.transitService.getTrainRoutes(undefined, undefined, this.transportTrainSearchQuery);
+      this.nextTrainDeparture = this.transitService.getNextTrainDeparture();
+      if (this.currentUserCoords) {
+        this.nearestJspStops = this.transitService.getNearestJspStops(
+          this.currentUserCoords.latitude,
+          this.currentUserCoords.longitude,
+          5
+        );
+      } else {
+        this.nearestJspStops = this.transitService.getAllJspStops().slice(0, 5);
+      }
+      this.updateTransitWidgetDisplay();
+      this.cdr.markForCheck();
+    });
+  }
+
+  startTransitIconRotator() {
+    if (this.transitIconIntervalSub) clearInterval(this.transitIconIntervalSub);
+    this.transitIconIntervalSub = setInterval(() => {
+      this.zone.run(() => {
+        this.transitWidgetCurrentIcon = this.transitWidgetCurrentIcon === 'bus' ? 'train' : 'bus';
+        const w = this.visibleWidgets.find(x => x.id === 'transport');
+        if (w) {
+          w.icon = this.transitWidgetCurrentIcon;
+          this.cdr.markForCheck();
+        }
+      });
+    }, 3500);
+  }
+
+  setTransportModalTab(tab: 'jsp' | 'train') {
+    this.transportModalTab = tab;
+    this.triggerHaptic(20);
+    this.cdr.markForCheck();
+  }
+
+  onTransportJspSearchChange() {
+    this.jspLinesList = this.transitService.getJspLines(this.transportJspSearchQuery);
+    this.cdr.markForCheck();
+  }
+
+  onTransportTrainSearchChange() {
+    this.trainRoutesList = this.transitService.getTrainRoutes(
+      undefined,
+      undefined,
+      this.transportTrainSearchQuery
+    );
+    this.cdr.markForCheck();
+  }
+
+  selectJspLine(line: JspLine | null) {
+    this.selectedJspLine = line;
+    this.selectedJspDirection = 'A';
+    const day = new Date().getDay();
+    if (day === 6) {
+      this.selectedScheduleDay = 'saturday';
+    } else if (day === 0) {
+      this.selectedScheduleDay = 'sunday';
+    } else {
+      this.selectedScheduleDay = 'workday';
+    }
+    this.triggerHaptic(25);
+    this.cdr.markForCheck();
+  }
+
+  toggleJspLineDirection() {
+    this.selectedJspDirection = this.selectedJspDirection === 'A' ? 'B' : 'A';
+    this.triggerHaptic(25);
+    this.cdr.markForCheck();
+  }
+
+  setJspLineDirection(dir: 'A' | 'B') {
+    this.selectedJspDirection = dir;
+    this.triggerHaptic(25);
+    this.cdr.markForCheck();
+  }
+
+  getJspLineCurrentSchedule(): JspDirectionSchedule | null {
+    if (!this.selectedJspLine) return null;
+    return this.transitService.getJspLineSchedule(this.selectedJspLine, this.selectedJspDirection);
+  }
+
+  getJspLineDepartures(dayType: 'workday' | 'saturday' | 'sunday'): string[] {
+    if (!this.selectedJspLine) return [];
+    const sched = this.transitService.getJspLineSchedule(this.selectedJspLine, this.selectedJspDirection);
+    if (dayType === 'saturday') {
+      return sched.departuresSaturday?.length ? sched.departuresSaturday : (this.selectedJspLine.departuresWeekend || sched.departuresWorkday);
+    }
+    if (dayType === 'sunday') {
+      return sched.departuresSunday?.length ? sched.departuresSunday : (this.selectedJspLine.departuresWeekend || sched.departuresWorkday);
+    }
+    return sched.departuresWorkday;
+  }
+
+  getCleanLineNumber(num?: string): string {
+    if (!num) return '';
+    return String(num).replace(/\s+/g, '');
+  }
+
+  selectTrainRoute(route: TrainRoute | null) {
+    this.selectedTrainRoute = route;
+    this.triggerHaptic(25);
+    this.cdr.markForCheck();
+  }
+
+  updateTransitWidgetDisplay() {
+    const w = this.visibleWidgets.find(x => x.id === 'transport');
+    if (!w) return;
+
+    if (this.nextTrainDeparture && this.nextTrainDeparture.inMinutes <= 90 && this.nextTrainDeparture.inMinutes > 0) {
+      w.value = this.nextTrainDeparture.route.departureTime;
+      w.unit = `Воз (${this.nextTrainDeparture.route.toCity})`;
+    } else if (this.nearestJspStops.length > 0 && this.nearestJspStops[0].lines.length > 0) {
+      const topStop = this.nearestJspStops[0];
+      const topLine = topStop.lines[0];
+      const lineObj = this.transitService.getJspLineById(topLine);
+      const nextDep = lineObj ? this.transitService.getNextDeparture(lineObj) : null;
+      if (nextDep && nextDep.inMinutes < 60) {
+        w.value = `Линија ${topLine}`;
+        w.unit = `за ${nextDep.inMinutes}м`;
+      } else {
+        w.value = `Линија ${topLine}`;
+        w.unit = 'ЈСП';
+      }
+    } else {
+      w.value = 'ЈСП';
+      w.unit = 'Превоз';
+    }
+    w.icon = this.transitWidgetCurrentIcon;
+  }
+
+  getNextJspDepartureLabel(line: JspLine): string {
+    const dep = this.transitService.getNextDeparture(line, this.selectedJspDirection, this.selectedScheduleDay);
+    if (!dep) return '';
+    if (dep.inMinutes <= 0) return 'тргнува сега';
+    if (dep.inMinutes < 60) return `за ${dep.inMinutes} мин (${dep.next})`;
+    return `во ${dep.next}`;
   }
 }

@@ -29,7 +29,7 @@ export interface UtilityAlert {
 export class UtilityAlertService {
   private supabaseService = inject(SupabaseService);
   private http = inject(HttpClient);
-  private cacheKey = 'cached_utility_alerts_v5';
+  private cacheKey = 'cached_utility_alerts_v6';
   private bundledAlertsCache: UtilityAlert[] | null = null;
 
   private async getBundledAlerts(): Promise<UtilityAlert[]> {
@@ -49,12 +49,14 @@ export class UtilityAlertService {
   }
 
   public async fetchAlerts(city?: string): Promise<UtilityAlert[]> {
-    // 1. Try Supabase first
+    // 1. Try Supabase first (only active or upcoming outages within 2 hours of end_time)
     try {
+      const activeWindowCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       let query = this.supabaseService.supabase
         .from('utility_alerts')
         .select('*')
-        .order('start_time', { ascending: false });
+        .gte('end_time', activeWindowCutoff)
+        .order('start_time', { ascending: true });
 
       if (city && city !== 'all') {
         query = query.ilike('city', `%${city}%`);
@@ -143,13 +145,13 @@ export class UtilityAlertService {
           const end = a.end_time ? new Date(a.end_time).getTime() : start + 14 * 24 * 60 * 60 * 1000;
           return now <= end || (now - end) < 48 * 60 * 60 * 1000;
         }
-        // Water: keep recent repairs and outages for 7 days (Vodovod only has a few per week)
+        // Water: keep recent repairs and outages for 24 hours
         if (a.type === 'water') {
-          return (now - start) < 7 * 24 * 60 * 60 * 1000;
+          return (now - start) < 24 * 60 * 60 * 1000;
         }
-        // Power (EVN): purge outages ended more than 24h ago to prevent 100s of obsolete items
+        // Power (EVN): purge outages ended more than 2h ago so obsolete items disappear promptly
         const end = a.end_time ? new Date(a.end_time).getTime() : start + 4 * 60 * 60 * 1000;
-        return (now - end) < 24 * 60 * 60 * 1000;
+        return (now - end) < 2 * 60 * 60 * 1000;
       })
       .map(a => {
         const start = new Date(a.start_time).getTime();

@@ -70,6 +70,14 @@ ion-modal {
   padding-bottom: max(16px, env(safe-area-inset-bottom)); 
 }
 
+.modal-body,
+.settings-wrapper,
+.add-widget-sheet-wrapper,
+.auth-prompt-sheet {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Modern Popover Dropdown Styling for Language Select */
 ion-popover {
   --background: #ffffff;
@@ -218,6 +226,10 @@ html.dark {
     color: #10b981 !important; /* Vibrant Emerald Green trend */
   }
 
+  .transport-icon {
+    color: #10b981 !important; /* Vibrant Emerald Green bus */
+  }
+
   /* Icons that were dark grey in light mode: lighten them so they pop */
   .holidays-icon {
     color: #e2e8f0 !important; /* Clean silver-white calendar icon */
@@ -264,13 +276,80 @@ html.dark {
     border: 1px solid rgba(52, 211, 153, 0.18) !important;
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
 
-    .news-header span {
-      color: #34d399 !important;
-      font-weight: 700 !important;
+    .ticker-pull-indicator {
+      background: rgba(52, 211, 153, 0.3) !important;
+    }
+
+    .news-header {
+      .header-tag, span {
+        color: #34d399 !important;
+        font-weight: 700 !important;
+      }
     }
 
     .news-body {
       color: #f0fdf4 !important;
+    }
+  }
+
+  /* News Modal Dark Overrides */
+  .news-modal {
+    .news-modal-title {
+      color: #f1f5f9 !important;
+    }
+
+    .news-list-card {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      &:active {
+        background: #23342f !important;
+      }
+
+      .source-badge {
+        background: rgba(16, 185, 129, 0.18) !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      }
+
+      .news-time {
+        color: #9bb0a7 !important;
+      }
+
+      .news-card-title {
+        color: #f1f5f9 !important;
+      }
+
+      .news-card-summary {
+        color: #9bb0a7 !important;
+      }
+
+      .news-card-footer {
+        color: #34d399 !important;
+      }
+    }
+
+    .holiday-featured-card {
+      background: linear-gradient(135deg, #2d2613 0%, #3b3216 100%) !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+
+      .holiday-badge {
+        color: #fbbf24 !important;
+      }
+
+      .holiday-title {
+        color: #fde68a !important;
+      }
+
+      .holiday-arrow {
+        color: #fbbf24 !important;
+      }
+    }
+
+    .modal-close-btn {
+      background: #1c2824 !important;
+      color: #f1f5f9 !important;
+      border-color: rgba(52, 211, 153, 0.25) !important;
     }
   }
 
@@ -1781,6 +1860,482 @@ html.dark {
       color: #f8fafc !important;
     }
   }
+
+  /* ==========================================================================
+     Public Transit (Јавен Превоз: ЈСП, Меѓуградски, Возови) Dark Theme
+     ========================================================================== */
+  .transit-hero-icon {
+    color: #34d399 !important;
+  }
+
+  .transport-view-switcher {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+
+    .switcher-pill {
+      color: #9bb0a7 !important;
+      background: transparent !important;
+      border: none !important;
+
+      ion-icon {
+        color: #9bb0a7 !important;
+      }
+
+      &.active {
+        background: #10b981 !important;
+        color: #042f2e !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35) !important;
+
+        ion-icon {
+          color: #042f2e !important;
+        }
+      }
+    }
+  }
+
+  .transport-search-box {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+
+    .search-icon {
+      color: #9bb0a7 !important;
+    }
+
+    .transport-search-input {
+      background: transparent !important;
+      color: #f1f5f9 !important;
+
+      &::placeholder {
+        color: #6b857a !important;
+      }
+    }
+
+    .transport-search-clear {
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #9bb0a7 !important;
+      }
+    }
+  }
+
+  .transit-section-header {
+    .transit-section-title {
+      color: #34d399 !important;
+      font-weight: 800 !important;
+
+      .section-icon,
+      ion-icon {
+        color: #10b981 !important;
+      }
+    }
+  }
+
+  /* Nearest Stops */
+  .nearest-stop-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    .stop-name {
+      color: #f1f5f9 !important;
+    }
+
+    .stop-direction {
+      color: #9bb0a7 !important;
+    }
+
+    .stop-distance-badge {
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    }
+
+    .stop-lines-row {
+      .stop-lines-label {
+        color: #9bb0a7 !important;
+      }
+
+      .line-tag-pill {
+        background: #131f1b !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+        &:active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+        }
+      }
+    }
+  }
+
+  /* JSP Line Cards */
+  .jsp-line-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .line-title {
+      color: #f1f5f9 !important;
+    }
+
+    .line-route-text {
+      color: #9bb0a7 !important;
+    }
+
+    .line-type-tag {
+      background: rgba(52, 211, 153, 0.15) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+      &.suburban {
+        background: rgba(245, 158, 11, 0.18) !important;
+        color: #fbbf24 !important;
+        border: 1px solid rgba(245, 158, 11, 0.35) !important;
+      }
+    }
+
+    .line-schedule-meta {
+      .meta-item {
+        color: #9bb0a7 !important;
+
+        ion-icon {
+          color: #34d399 !important;
+        }
+      }
+
+      .next-dep-badge {
+        background: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+      }
+    }
+
+    .line-chevron {
+      color: #4b6358 !important;
+    }
+  }
+
+  /* Line Detail View */
+  .selected-line-view {
+    .btn-transit-back,
+    .btn-transit-swap-dir {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #34d399 !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+
+      &:hover {
+        background: #243530 !important;
+      }
+    }
+
+    .transit-direction-switcher {
+      background: #15221e !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+      .dir-switcher-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .schedule-day-switcher {
+      background: #15221e !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+      .day-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .line-hero-card {
+      background: linear-gradient(135deg, #13241e 0%, #1c352c 100%) !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+      color: #f1f5f9 !important;
+
+      .hero-title {
+        color: #ffffff !important;
+      }
+
+      .hero-frequency {
+        color: #9bb0a7 !important;
+      }
+
+      .hero-next-live {
+        border-top: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #34d399 !important;
+
+        ion-icon {
+          color: #10b981 !important;
+        }
+      }
+    }
+
+    .line-stops-timeline {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+      .timeline-stop-item {
+        .timeline-stop-name {
+          color: #f1f5f9 !important;
+        }
+
+        .timeline-line {
+          background: rgba(52, 211, 153, 0.2) !important;
+        }
+
+        .timeline-dot {
+          background: #4b6358 !important;
+        }
+
+        &.first-stop .timeline-dot {
+          background: #10b981 !important;
+        }
+
+        &.last-stop .timeline-dot {
+          background: #ef4444 !important;
+        }
+      }
+    }
+
+    .departures-chips-wrap {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+      .dep-time-chip {
+        background: #131f1b !important;
+        border: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #f1f5f9 !important;
+
+        &.weekend {
+          background: rgba(245, 158, 11, 0.18) !important;
+          border-color: rgba(245, 158, 11, 0.35) !important;
+          color: #fbbf24 !important;
+        }
+      }
+    }
+  }
+
+  /* Intercity Routes */
+  .transit-city-scroll {
+    .transit-chip {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      color: #9bb0a7 !important;
+
+      &.active {
+        background: #10b981 !important;
+        background-color: #10b981 !important;
+        color: #042f2e !important;
+        border-color: #10b981 !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35) !important;
+      }
+    }
+  }
+
+  .intercity-route-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .route-endpoints {
+      color: #f1f5f9 !important;
+
+      .arrow-icon {
+        color: #34d399 !important;
+      }
+    }
+
+    .price-tag-badge {
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    }
+
+    .operator-badge {
+      color: #34d399 !important;
+    }
+
+    .duration-badge {
+      color: #9bb0a7 !important;
+    }
+
+    .route-notes-text {
+      color: #9bb0a7 !important;
+    }
+
+    .departures-container {
+      .departures-label {
+        color: #9bb0a7 !important;
+      }
+
+      .intercity-dep-chip {
+        background: #131f1b !important;
+        border: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #f1f5f9 !important;
+      }
+    }
+
+    .station-meta-row {
+      color: #6b857a !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+    }
+  }
+
+  /* Train Routes */
+  .train-route-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .train-number-badge {
+      background: rgba(16, 185, 129, 0.18) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+
+      &.express {
+        background: rgba(239, 68, 68, 0.2) !important;
+        color: #f87171 !important;
+        border-color: rgba(248, 113, 113, 0.35) !important;
+      }
+    }
+
+    .train-runs-badge {
+      color: #9bb0a7 !important;
+    }
+
+    .time-city-col {
+      .time-large {
+        color: #f1f5f9 !important;
+      }
+
+      .city-sub {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    .journey-duration-col {
+      .duration-text {
+        color: #9bb0a7 !important;
+      }
+
+      .journey-line-indicator {
+        .indicator-dot {
+          background: #10b981 !important;
+        }
+
+        .indicator-line {
+          background: rgba(52, 211, 153, 0.25) !important;
+        }
+
+        .indicator-icon {
+          color: #34d399 !important;
+        }
+      }
+    }
+
+    .train-card-bottom {
+      border-top-color: rgba(52, 211, 153, 0.15) !important;
+      color: #34d399 !important;
+
+      .stops-summary-btn {
+        color: #34d399 !important;
+      }
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+    }
+
+    .train-stops-expanded {
+      border-top-color: rgba(52, 211, 153, 0.2) !important;
+
+      .train-stop-item {
+        .stop-time {
+          color: #f1f5f9 !important;
+        }
+
+        .dot {
+          background: #4b6358 !important;
+        }
+
+        .line {
+          background: rgba(52, 211, 153, 0.2) !important;
+        }
+
+        .stop-station-name {
+          color: #cbd5e1 !important;
+        }
+
+        &.terminal {
+          .stop-time {
+            color: #34d399 !important;
+          }
+
+          .dot {
+            background: #10b981 !important;
+          }
+
+          .stop-station-name {
+            color: #f1f5f9 !important;
+            font-weight: 800 !important;
+          }
+        }
+      }
+    }
+  }
+
+  .empty-transit-state {
+    color: #6b857a !important;
+
+    ion-icon {
+      color: #4b6358 !important;
+    }
+  }
 }
 
 /* ==========================================================================
@@ -2344,4 +2899,489 @@ html.dark,
     }
   }
 }
+
+/* ==========================================================================
+   PUBLIC TRANSIT (ЈАВЕН ПРЕВОЗ: ЈСП, МЕЃУГРАДСКИ, ВОЗОВИ) GLOBAL DARK THEME
+   ========================================================================== */
+body.dark,
+html.dark,
+.ion-palette-dark {
+  .transport-icon {
+    color: #10b981 !important;
+  }
+
+  .transit-hero-icon {
+    color: #34d399 !important;
+  }
+
+  .transport-view-switcher {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+
+    .switcher-pill {
+      color: #9bb0a7 !important;
+      background: transparent !important;
+      border: none !important;
+
+      ion-icon {
+        color: #9bb0a7 !important;
+      }
+
+      &.active {
+        background: #10b981 !important;
+        color: #042f2e !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35) !important;
+
+        ion-icon {
+          color: #042f2e !important;
+        }
+      }
+    }
+  }
+
+  .transport-search-box {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+
+    .search-icon {
+      color: #9bb0a7 !important;
+    }
+
+    .transport-search-input {
+      background: transparent !important;
+      color: #f1f5f9 !important;
+
+      &::placeholder {
+        color: #6b857a !important;
+      }
+    }
+
+    .transport-search-clear {
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #9bb0a7 !important;
+      }
+    }
+  }
+
+  .transit-section-header {
+    .transit-section-title {
+      color: #34d399 !important;
+      font-weight: 800 !important;
+
+      .section-icon,
+      ion-icon {
+        color: #10b981 !important;
+      }
+    }
+  }
+
+  /* Nearest Stops */
+  .nearest-stop-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    .stop-name {
+      color: #f1f5f9 !important;
+    }
+
+    .stop-direction {
+      color: #9bb0a7 !important;
+    }
+
+    .stop-distance-badge {
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    }
+
+    .stop-lines-row {
+      .stop-lines-label {
+        color: #9bb0a7 !important;
+      }
+
+      .line-tag-pill {
+        background: #131f1b !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+        &:active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+        }
+      }
+    }
+  }
+
+  /* JSP Line Cards */
+  .jsp-line-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .line-title {
+      color: #f1f5f9 !important;
+    }
+
+    .line-route-text {
+      color: #9bb0a7 !important;
+    }
+
+    .line-type-tag {
+      background: rgba(52, 211, 153, 0.15) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+      &.suburban {
+        background: rgba(245, 158, 11, 0.18) !important;
+        color: #fbbf24 !important;
+        border: 1px solid rgba(245, 158, 11, 0.35) !important;
+      }
+    }
+
+    .line-schedule-meta {
+      .meta-item {
+        color: #9bb0a7 !important;
+
+        ion-icon {
+          color: #34d399 !important;
+        }
+      }
+
+      .next-dep-badge {
+        background: rgba(16, 185, 129, 0.2) !important;
+        color: #34d399 !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+      }
+    }
+
+    .line-chevron {
+      color: #4b6358 !important;
+    }
+  }
+
+  /* Line Detail View */
+  .selected-line-view {
+    .btn-transit-back,
+    .btn-transit-swap-dir {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #34d399 !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+
+      &:hover {
+        background: #243530 !important;
+      }
+    }
+
+    .transit-direction-switcher {
+      background: #15221e !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+      .dir-switcher-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .schedule-day-switcher {
+      background: #15221e !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+      .day-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .line-hero-card {
+      background: linear-gradient(135deg, #13241e 0%, #1c352c 100%) !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+      color: #f1f5f9 !important;
+
+      .hero-title {
+        color: #ffffff !important;
+      }
+
+      .hero-frequency {
+        color: #9bb0a7 !important;
+      }
+
+      .hero-next-live {
+        border-top: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #34d399 !important;
+
+        ion-icon {
+          color: #10b981 !important;
+        }
+      }
+    }
+
+    .line-stops-timeline {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+      .timeline-stop-item {
+        .timeline-stop-name {
+          color: #f1f5f9 !important;
+        }
+
+        .timeline-line {
+          background: rgba(52, 211, 153, 0.2) !important;
+        }
+
+        .timeline-dot {
+          background: #4b6358 !important;
+        }
+
+        &.first-stop .timeline-dot {
+          background: #10b981 !important;
+        }
+
+        &.last-stop .timeline-dot {
+          background: #ef4444 !important;
+        }
+      }
+    }
+
+    .departures-chips-wrap {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+      .dep-time-chip {
+        background: #131f1b !important;
+        border: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #f1f5f9 !important;
+
+        &.weekend {
+          background: rgba(245, 158, 11, 0.18) !important;
+          border-color: rgba(245, 158, 11, 0.35) !important;
+          color: #fbbf24 !important;
+        }
+      }
+    }
+  }
+
+  /* Intercity Routes */
+  .transit-city-scroll {
+    .transit-chip {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      color: #9bb0a7 !important;
+
+      &.active {
+        background: #10b981 !important;
+        background-color: #10b981 !important;
+        color: #042f2e !important;
+        border-color: #10b981 !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35) !important;
+      }
+    }
+  }
+
+  .intercity-route-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .route-endpoints {
+      color: #f1f5f9 !important;
+
+      .arrow-icon {
+        color: #34d399 !important;
+      }
+    }
+
+    .price-tag-badge {
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    }
+
+    .operator-badge {
+      color: #34d399 !important;
+    }
+
+    .duration-badge {
+      color: #9bb0a7 !important;
+    }
+
+    .route-notes-text {
+      color: #9bb0a7 !important;
+    }
+
+    .departures-container {
+      .departures-label {
+        color: #9bb0a7 !important;
+      }
+
+      .intercity-dep-chip {
+        background: #131f1b !important;
+        border: 1px solid rgba(52, 211, 153, 0.2) !important;
+        color: #f1f5f9 !important;
+      }
+    }
+
+    .station-meta-row {
+      color: #6b857a !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+    }
+  }
+
+  /* Train Routes */
+  .train-route-card {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+
+    &:active {
+      background: #23342f !important;
+    }
+
+    .train-number-badge {
+      background: rgba(16, 185, 129, 0.18) !important;
+      color: #34d399 !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+
+      &.express {
+        background: rgba(239, 68, 68, 0.2) !important;
+        color: #f87171 !important;
+        border-color: rgba(248, 113, 113, 0.35) !important;
+      }
+    }
+
+    .train-runs-badge {
+      color: #9bb0a7 !important;
+    }
+
+    .time-city-col {
+      .time-large {
+        color: #f1f5f9 !important;
+      }
+
+      .city-sub {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    .journey-duration-col {
+      .duration-text {
+        color: #9bb0a7 !important;
+      }
+
+      .journey-line-indicator {
+        .indicator-dot {
+          background: #10b981 !important;
+        }
+
+        .indicator-line {
+          background: rgba(52, 211, 153, 0.25) !important;
+        }
+
+        .indicator-icon {
+          color: #34d399 !important;
+        }
+      }
+    }
+
+    .train-card-bottom {
+      border-top-color: rgba(52, 211, 153, 0.15) !important;
+      color: #34d399 !important;
+
+      .stops-summary-btn {
+        color: #34d399 !important;
+      }
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+    }
+
+    .train-stops-expanded {
+      border-top-color: rgba(52, 211, 153, 0.2) !important;
+
+      .train-stop-item {
+        .stop-time {
+          color: #f1f5f9 !important;
+        }
+
+        .dot {
+          background: #4b6358 !important;
+        }
+
+        .line {
+          background: rgba(52, 211, 153, 0.2) !important;
+        }
+
+        .stop-station-name {
+          color: #cbd5e1 !important;
+        }
+
+        &.terminal {
+          .stop-time {
+            color: #34d399 !important;
+          }
+
+          .dot {
+            background: #10b981 !important;
+          }
+
+          .stop-station-name {
+            color: #f1f5f9 !important;
+            font-weight: 800 !important;
+          }
+        }
+      }
+    }
+  }
+
+  .empty-transit-state {
+    color: #6b857a !important;
+
+    ion-icon {
+      color: #4b6358 !important;
+    }
+  }
+}
+
 
