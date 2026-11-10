@@ -89,3 +89,27 @@ verify_jwt = false
 import_map = "./functions/sync-utility-alerts/deno.json"
 entrypoint = "./functions/sync-utility-alerts/index.ts"
 
+[functions.privacy-policy]
+enabled = true
+verify_jwt = false
+import_map = "./functions/privacy-policy/deno.json"
+entrypoint = "./functions/privacy-policy/index.ts"
+
+[functions.terms]
+enabled = true
+verify_jwt = false
+import_map = "./functions/terms/deno.json"
+entrypoint = "./functions/terms/index.ts"
+
+[functions.sync-news]
+enabled = true
+verify_jwt = true
+import_map = "./functions/sync-news/deno.json"
+entrypoint = "./functions/sync-news/index.ts"
+
+[functions.sync-transit]
+enabled = true
+verify_jwt = true
+import_map = "./functions/sync-transit/deno.json"
+entrypoint = "./functions/sync-transit/index.ts"
+

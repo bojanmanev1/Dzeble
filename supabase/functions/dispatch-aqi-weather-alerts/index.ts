@@ -219,6 +219,192 @@ function getUvStatusText(uv: number, lang: string): string {
   return "Екстремен";
 }
 
+export type SevereWeatherType =
+  | "hail"
+  | "thunder"
+  | "snow_heavy"
+  | "snow"
+  | "freezing_rain"
+  | "rain_heavy"
+  | "rain"
+  | "wind"
+  | "fog";
+
+export interface UpcomingDisturbance {
+  timeStr: string; // e.g. "18:00"
+  type: SevereWeatherType;
+  hour: number;
+  icon: string;
+  windSpeed?: number;
+}
+
+function findUpcomingWeatherDisturbance(
+  hourly: any[],
+  currentHour: number,
+  currentCategory: WeatherCategory
+): UpcomingDisturbance | null {
+  if (!Array.isArray(hourly) || hourly.length === 0) return null;
+
+  for (let i = 0; i < hourly.length; i++) {
+    const item = hourly[i];
+    let itemHour = item.hour;
+    if (itemHour === undefined && item.rawTime) {
+      itemHour = parseInt(item.rawTime.split("T")[1]?.substring(0, 2), 10);
+    }
+    if (itemHour === undefined && item.time && item.time.includes(":")) {
+      itemHour = parseInt(item.time.split(":")[0], 10);
+    }
+
+    // Only look ahead for future hours today (itemHour > currentHour)
+    if (itemHour === undefined || itemHour <= currentHour) continue;
+    // Don't look further than 16 hours ahead
+    if (i > 16) break;
+
+    const code = item.weather_code != null ? Number(item.weather_code) : null;
+    const pop = Number(item.pop || 0);
+    const icon = item.icon || "";
+    const wind = Number(item.wind || 0);
+
+    // 1. Hail (Невреме со град)
+    if (code === 96 || code === 99) {
+      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "hail", hour: itemHour, icon: "⛈️" };
+    }
+
+    // 2. Thunderstorm (Грмотевици / невреме)
+    if (code === 95 || icon === "⛈️") {
+      if (currentCategory !== "THUNDER") {
+        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "thunder", hour: itemHour, icon: "⛈️" };
+      }
+    }
+
+    // 3. Freezing rain / Glaze (Леден дожд / голомразица)
+    if (code === 56 || code === 57 || code === 66 || code === 67) {
+      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "freezing_rain", hour: itemHour, icon: "🧊" };
+    }
+
+    // 4. Heavy snow (Пороен снег / вејавица)
+    if (code === 85 || code === 86) {
+      if (currentCategory !== "SNOW") {
+        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "snow_heavy", hour: itemHour, icon: "🌨️" };
+      }
+    }
+
+    // 5. Snow (Снег)
+    if ((code != null && code >= 71 && code <= 77) || icon === "❄️") {
+      if (currentCategory !== "SNOW") {
+        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "snow", hour: itemHour, icon: "❄️" };
+      }
+    }
+
+    // 6. Strong gale winds (Силен ветер >= 50 km/h)
+    if (wind >= 50) {
+      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "wind", hour: itemHour, icon: "💨", windSpeed: wind };
+    }
+
+    // 7. Heavy rain showers (Пороен дожд / плускови)
+    if (code != null && code >= 80 && code <= 82) {
+      if (currentCategory !== "RAIN") {
+        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "rain_heavy", hour: itemHour, icon: "🌧️" };
+      }
+    }
+
+    // 8. Rain / Drizzle (Дожд)
+    if ((code != null && code >= 51 && code <= 65) || icon === "🌧️" || icon === "🌦️" || pop >= 50) {
+      if (currentCategory !== "RAIN") {
+        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "rain", hour: itemHour, icon: "🌧️" };
+      }
+    }
+
+    // 9. Dense fog (Густа магла)
+    if (code === 45 || code === 48 || icon === "🌫️") {
+      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "fog", hour: itemHour, icon: "🌫️" };
+    }
+  }
+
+  return null;
+}
+
+function getDisturbanceSentence(dist: UpcomingDisturbance, lang: string): string {
+  const time = dist.timeStr;
+  if (lang === "en") {
+    switch (dist.type) {
+      case "hail": return `Hailstorm expected around ${time}.`;
+      case "thunder": return `Thunderstorms expected around ${time}.`;
+      case "snow_heavy": return `Heavy snowfall expected around ${time}.`;
+      case "snow": return `Snow expected around ${time}.`;
+      case "freezing_rain": return `Freezing rain expected around ${time}.`;
+      case "rain_heavy": return `Heavy rain expected around ${time}.`;
+      case "rain": return `Rain expected around ${time}.`;
+      case "wind": return `Strong winds (${dist.windSpeed || 50} km/h) expected around ${time}.`;
+      case "fog": return `Dense fog expected around ${time}.`;
+    }
+  } else if (lang === "al") {
+    switch (dist.type) {
+      case "hail": return `Priten stuhi me breshër rreth orës ${time}.`;
+      case "thunder": return `Priten stuhi me rrufe rreth orës ${time}.`;
+      case "snow_heavy": return `Priten reshje të dendura bore rreth orës ${time}.`;
+      case "snow": return `Priten reshje bore rreth orës ${time}.`;
+      case "freezing_rain": return `Pritet shi i ngrirë rreth orës ${time}.`;
+      case "rain_heavy": return `Priten reshje të rrëmbyeshme shiu rreth orës ${time}.`;
+      case "rain": return `Priten reshje shiu rreth orës ${time}.`;
+      case "wind": return `Priten erëra të forta (${dist.windSpeed || 50} km/h) rreth orës ${time}.`;
+      case "fog": return `Pritet mjegull e dendur rreth orës ${time}.`;
+    }
+  }
+  // Default Macedonian
+  switch (dist.type) {
+    case "hail": return `Се очекува невреме со град околу ${time} часот.`;
+    case "thunder": return `Се очекуваат грмотевици околу ${time} часот.`;
+    case "snow_heavy": return `Се очекува пороен снег околу ${time} часот.`;
+    case "snow": return `Се очекува снег околу ${time} часот.`;
+    case "freezing_rain": return `Се очекува леден дожд и голомразица околу ${time} часот.`;
+    case "rain_heavy": return `Се очекува пороен дожд околу ${time} часот.`;
+    case "rain": return `Се очекува дожд околу ${time} часот.`;
+    case "wind": return `Се очекува силен ветер (${dist.windSpeed || 50} km/h) околу ${time} часот.`;
+    case "fog": return `Се очекува густа магла околу ${time} часот.`;
+  }
+}
+
+function getDisturbanceAlertTitle(dist: UpcomingDisturbance, city: string, lang: string): string {
+  if (lang === "en") {
+    switch (dist.type) {
+      case "hail": return `⛈️ Hailstorm Warning for ${city}`;
+      case "thunder": return `⛈️ Thunderstorms Expected in ${city}`;
+      case "snow_heavy": return `🌨️ Heavy Snow Warning for ${city}`;
+      case "snow": return `❄️ Snow Expected in ${city}`;
+      case "freezing_rain": return `🧊 Freezing Rain Warning for ${city}`;
+      case "rain_heavy": return `🌧️ Heavy Rain Warning for ${city}`;
+      case "rain": return `🌧️ Rain Expected in ${city}`;
+      case "wind": return `💨 High Wind Alert for ${city}`;
+      case "fog": return `🌫️ Dense Fog Alert for ${city}`;
+    }
+  } else if (lang === "al") {
+    switch (dist.type) {
+      case "hail": return `⛈️ Paralajmërim për breshër në ${city}`;
+      case "thunder": return `⛈️ Stuhi me rrufe në ${city}`;
+      case "snow_heavy": return `🌨️ Reshje të dendura bore në ${city}`;
+      case "snow": return `❄️ Reshje bore në ${city}`;
+      case "freezing_rain": return `🧊 Shi i ngrirë në ${city}`;
+      case "rain_heavy": return `🌧️ Reshje të rrëmbyeshme shiu në ${city}`;
+      case "rain": return `🌧️ Reshje shiu në ${city}`;
+      case "wind": return `💨 Erëra të forta në ${city}`;
+      case "fog": return `🌫️ Mjegull e dendur në ${city}`;
+    }
+  }
+  // Default Macedonian
+  switch (dist.type) {
+    case "hail": return `⛈️ Најава за град и невреме во ${city}`;
+    case "thunder": return `⛈️ Најава за невреме во ${city}`;
+    case "snow_heavy": return `🌨️ Најава за пороен снег во ${city}`;
+    case "snow": return `❄️ Најава за снег во ${city}`;
+    case "freezing_rain": return `🧊 Најава за леден дожд во ${city}`;
+    case "rain_heavy": return `🌧️ Најава за пороен дожд во ${city}`;
+    case "rain": return `🌧️ Најава за дожд во ${city}`;
+    case "wind": return `💨 Најава за силен ветер во ${city}`;
+    case "fog": return `🌫️ Најава за густа магла во ${city}`;
+  }
+}
+
 serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -312,6 +498,13 @@ serve(async (req) => {
       let body = "";
       let alertType: "weather" | "aqi" | "uv" = "weather";
 
+      const upcomingDist = findUpcomingWeatherDisturbance(
+        cityMetric.hourly_forecast,
+        skopjeHour,
+        category
+      );
+      const distSentence = upcomingDist ? getDisturbanceSentence(upcomingDist, devLang) : "";
+
       if (isMorningRun) {
         // --- 🌅 MORNING DAILY BRIEFING (~7:00 AM) ---
         // Morning daily briefing is a weather forecast: only send if allowWeather is enabled
@@ -345,19 +538,31 @@ serve(async (req) => {
 
         if (devLang === "en") {
           title = `${morningEmoji} Daily Forecast for ${localizedCity}`;
-          body = maxTemp != null
-            ? `Morning: ${currentTemp}°C | Today up to: ${maxTemp}°C. ${conditionText}. Air quality: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
-            : `Morning: ${currentTemp}°C. ${conditionText}. Air quality: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`;
+          const parts = [
+            maxTemp != null ? `Morning: ${currentTemp}°C | Today up to: ${maxTemp}°C` : `Morning: ${currentTemp}°C`,
+            conditionText,
+            distSentence,
+            `Air quality: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
+          ].filter(Boolean);
+          body = parts.join(". ");
         } else if (devLang === "al") {
           title = `${morningEmoji} Parashikimi ditor për ${localizedCity}`;
-          body = maxTemp != null
-            ? `Mëngjes: ${currentTemp}°C | Sot deri në: ${maxTemp}°C. ${conditionText}. Cilësia e ajrit: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
-            : `Mëngjes: ${currentTemp}°C. ${conditionText}. Cilësia e ajrit: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`;
+          const parts = [
+            maxTemp != null ? `Mëngjes: ${currentTemp}°C | Sot deri në: ${maxTemp}°C` : `Mëngjes: ${currentTemp}°C`,
+            conditionText,
+            distSentence,
+            `Cilësia e ajrit: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
+          ].filter(Boolean);
+          body = parts.join(". ");
         } else {
           title = `${morningEmoji} Денешна прогноза за ${localizedCity}`;
-          body = maxTemp != null
-            ? `Утрово: ${currentTemp}°C | Денес до: ${maxTemp}°C. ${conditionText}. Воздух: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
-            : `Утрово: ${currentTemp}°C. ${conditionText}. Воздух: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`;
+          const parts = [
+            maxTemp != null ? `Утрово: ${currentTemp}°C | Денес до: ${maxTemp}°C` : `Утрово: ${currentTemp}°C`,
+            conditionText,
+            distSentence,
+            `Воздух: ${aqiText} (${cityMetric.aqi_value || 40} AQI).`
+          ].filter(Boolean);
+          body = parts.join(". ");
         }
 
         shouldSend = true;
@@ -421,13 +626,13 @@ serve(async (req) => {
             } else if (category === "SUNNY" && cityMetric.is_day === 1) {
               if (devLang === "en") {
                 title = `☀️ Clearing up in ${localizedCity}`;
-                body = `Weather is clearing up with sunshine. Current temperature: ${currentTemp}°C.`;
+                body = `Weather is clearing up with sunshine (currently ${currentTemp}°C).${distSentence ? ` ${distSentence}` : ''}`;
               } else if (devLang === "al") {
                 title = `☀️ Qartësim i motit në ${localizedCity}`;
-                body = `Moti po qetësohet dhe dielli po shkëlqen. Temperatura aktuale: ${currentTemp}°C.`;
+                body = `Moti po qetësohet dhe dielli po shkëlqen (aktualisht ${currentTemp}°C).${distSentence ? ` ${distSentence}` : ''}`;
               } else {
                 title = `☀️ Разведрување во ${localizedCity}`;
-                body = `Времето се смирува и изгрева сонце. Моментална температура: ${currentTemp}°C.`;
+                body = `Времето се смирува и изгрева сонце (моментално ${currentTemp}°C).${distSentence ? ` ${distSentence}` : ''}`;
               }
               shouldSend = true;
             } else {
@@ -436,6 +641,29 @@ serve(async (req) => {
                 .from("user_devices")
                 .update({ last_weather_category: category })
                 .eq("device_id", dev.device_id);
+            }
+          }
+
+          // Advance Weather Disturbance Alert: If disturbance is expected in 1 to 4 hours
+          if (!shouldSend && upcomingDist) {
+            const hoursAhead = upcomingDist.hour - skopjeHour;
+            if (hoursAhead >= 1 && hoursAhead <= 4) {
+              const weatherHoursSince = dev.last_weather_alert_at
+                ? (now.getTime() - new Date(dev.last_weather_alert_at).getTime()) / (1000 * 60 * 60)
+                : 999;
+
+              if (weatherHoursSince >= 6) {
+                title = getDisturbanceAlertTitle(upcomingDist, localizedCity, devLang);
+                if (devLang === "en") {
+                  body = `Currently ${conditionText.toLowerCase()} (${currentTemp}°C). ${getDisturbanceSentence(upcomingDist, devLang)}`;
+                } else if (devLang === "al") {
+                  body = `Aktualisht ${conditionText.toLowerCase()} (${currentTemp}°C). ${getDisturbanceSentence(upcomingDist, devLang)}`;
+                } else {
+                  body = `Моментално е ${conditionText.toLowerCase()} (${currentTemp}°C). ${getDisturbanceSentence(upcomingDist, devLang)}`;
+                }
+                alertType = "weather";
+                shouldSend = true;
+              }
             }
           }
 

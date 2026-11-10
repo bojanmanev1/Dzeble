@@ -115,6 +115,8 @@ serve(async (req) => {
             time: i === 0 ? "Сега" : hourPart,
             rawTime: timeStr,
             hour: hourNum,
+            weather_code: code,
+            pop: weatherData.hourly.precipitation_probability?.[idx] ?? 0,
             temp: `${Math.round(weatherData.hourly.temperature_2m[idx])}°`,
             icon: getWmoIcon(code, isDayHour),
             humidity: Math.round(weatherData.hourly.relative_humidity_2m?.[idx] ?? currentItem.relative_humidity_2m),

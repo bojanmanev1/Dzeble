@@ -171,11 +171,35 @@ BEGIN
       )
 
       -- ========================================================
-      -- TIER 2: ПАТИШТА / СООБРАЌАЈ (Roads - AMSM) -> СИТЕ ВО МАКЕДОНИЈА (Nationwide)
-      -- Барање: "патишта да стига на сите"
+      -- TIER 2: ПАТИШТА / СООБРАЌАЈ (Roads - AMSM)
+      -- Локално за градот на корисникот (или во радиус од 15 km), 
+      -- или вонреден nationwide прекин на сообраќај
       -- ========================================================
       OR (
         v_alert.type = 'road'
+        AND (
+          -- Корисникот е во близина (радиус <= 15 km за патишта)
+          (
+            v_alert.latitude IS NOT NULL 
+            AND d.latitude IS NOT NULL 
+            AND public.haversine_distance_km(v_alert.latitude, v_alert.longitude, d.latitude, d.longitude) <= 15.0
+          )
+          -- Истиот град
+          OR (
+            v_alert.city IS NOT NULL 
+            AND v_alert.city <> 'Македонија'
+            AND LOWER(TRIM(COALESCE(d.city_preference, ''))) = LOWER(TRIM(v_alert.city))
+          )
+          -- Вонредна национална блокада на патишта
+          OR (
+            v_alert.city = 'Македонија' 
+            AND (
+              LOWER(v_alert.title) LIKE '%затворен%' 
+              OR LOWER(v_alert.title) LIKE '%свлечиште%'
+              OR LOWER(v_alert.title) LIKE '%одрони%'
+            )
+          )
+        )
       )
 
       -- ========================================================

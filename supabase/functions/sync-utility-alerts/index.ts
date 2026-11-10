@@ -146,7 +146,11 @@ const CITY_COORDS: Record<string, { lat: number; lon: number }> = {
   'Кривогаштани': { lat: 41.3364, lon: 21.3333 },
   'Могила': { lat: 41.1089, lon: 21.3789 },
   'Новаци': { lat: 41.0417, lon: 21.4567 },
-  'Пласница': { lat: 41.4678, lon: 21.1228 }
+  'Пласница': { lat: 41.4678, lon: 21.1228 },
+  'Другово': { lat: 41.4833, lon: 20.9222 },
+  'Дебарца': { lat: 41.3000, lon: 20.8167 },
+  'Чешиново': { lat: 41.8719, lon: 22.2889 },
+  'Облешево': { lat: 41.8719, lon: 22.2889 }
 };
 
 function simpleHash(str: string): string {
@@ -156,6 +160,92 @@ function simpleHash(str: string): string {
     hash |= 0;
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function parseEVNLocation(nasMesto: string, adresa: string): { city: string; municipality: string | null; coords: { lat: number; lon: number } | null } {
+  const rawLoc = (nasMesto || '').trim();
+  const lowerLoc = rawLoc.toLowerCase();
+  const lowerAdr = (adresa || '').toLowerCase();
+  const firstPart = rawLoc.split('-')[0].trim();
+  const lowerFirst = firstPart.toLowerCase();
+
+  let city = '';
+  let municipality: string | null = null;
+
+  // 1. Check if firstPart or rawLoc is a known Skopje municipality
+  for (const m of SKOPJE_MUNICIPALITIES) {
+    if (m === 'Центар' && (lowerLoc.includes('центар жупа') || lowerAdr.includes('центар жупа'))) continue;
+    if (lowerFirst === m.toLowerCase() || lowerLoc.startsWith(m.toLowerCase()) || lowerLoc.includes('-' + m.toLowerCase())) {
+      city = 'Скопје';
+      municipality = m;
+      break;
+    }
+  }
+
+  // 2. If rawLoc mentions Skopje explicitly
+  if (lowerLoc.includes('скопје')) {
+    city = 'Скопје';
+    if (!municipality) {
+      for (const m of SKOPJE_MUNICIPALITIES) {
+        if (m === 'Центар' && (lowerLoc.includes('центар жупа') || lowerAdr.includes('центар жупа'))) continue;
+        if (lowerLoc.includes(m.toLowerCase()) || lowerAdr.includes(m.toLowerCase())) {
+          municipality = m;
+          break;
+        }
+      }
+    }
+    if (!municipality) {
+      for (const [neigh, muni] of Object.entries(SKOPJE_NEIGHBORHOOD_TO_MUNI)) {
+        if (lowerLoc.includes(neigh) || lowerAdr.includes(neigh)) {
+          municipality = muni;
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. If not Skopje, check firstPart against CITY_COORDS
+  if (!city) {
+    const citiesDesc = Object.keys(CITY_COORDS).filter(c => c !== 'Скопје').sort((a,b) => b.length - a.length);
+    for (const c of citiesDesc) {
+      if (c === 'Дебар' && lowerLoc.includes('дебарца')) continue;
+      if (lowerFirst === c.toLowerCase() || lowerLoc.startsWith(c.toLowerCase())) {
+        city = c;
+        break;
+      }
+    }
+  }
+
+  // 4. If still not found, check anywhere in rawLoc
+  if (!city) {
+    const citiesDesc = Object.keys(CITY_COORDS).filter(c => c !== 'Скопје').sort((a,b) => b.length - a.length);
+    for (const c of citiesDesc) {
+      if (c === 'Дебар' && lowerLoc.includes('дебарца')) continue;
+      if (lowerLoc.includes(c.toLowerCase())) {
+        city = c;
+        break;
+      }
+    }
+  }
+
+  // 5. Fallback for city: use firstPart formatted (NEVER blindly default to Skopje!)
+  if (!city) {
+    city = firstPart ? (firstPart.charAt(0).toUpperCase() + firstPart.slice(1).toLowerCase()) : 'Северна Македонија';
+  }
+
+  // 6. Coordinates resolution
+  let coords: { lat: number; lon: number } | null = null;
+  if (city === 'Скопје') {
+    if (municipality && MUNICIPALITY_COORDS[municipality]) {
+      coords = MUNICIPALITY_COORDS[municipality];
+    } else {
+      coords = CITY_COORDS['Скопје'];
+    }
+  } else if (CITY_COORDS[city]) {
+    coords = CITY_COORDS[city];
+  }
+
+  return { city, municipality, coords };
 }
 
 serve(async (_req) => {
@@ -193,68 +283,28 @@ serve(async (_req) => {
           if (now >= startDate && now <= endDate) status = 'active';
           else if (now > endDate) status = 'resolved';
 
-          const rawLoc = (item.nasMesto || '').trim();
-          let city = '';
-          let municipality = '';
-
-          // 1. Check if rawLoc directly matches any known city / municipality
-          for (const c of Object.keys(CITY_COORDS)) {
-            if (rawLoc.toLowerCase() === c.toLowerCase() || rawLoc.toLowerCase().includes(c.toLowerCase())) {
-              city = c;
-              break;
-            }
-          }
-
-          // 2. Check if rawLoc is a Skopje municipality (excluding Centar Zupa)
-          if (!city) {
-            for (const m of SKOPJE_MUNICIPALITIES) {
-              if (rawLoc.toLowerCase().includes(m.toLowerCase()) && !rawLoc.toLowerCase().includes('центар жупа')) {
-                city = 'Скопје';
-                municipality = m;
-                break;
-              }
-            }
-          }
-
-          // 3. Fallback for city: If rawLoc exists, use it (capitalized) instead of blindly defaulting to Skopje
-          if (!city) {
-            city = rawLoc ? (rawLoc.charAt(0).toUpperCase() + rawLoc.slice(1).toLowerCase()) : 'Скопје';
-          }
-
-          // 4. ONLY search for Skopje municipalities in item.adresa IF the city is indeed 'Скопје'!
-          if (city === 'Скопје' && !municipality) {
-            for (const m of SKOPJE_MUNICIPALITIES) {
-              if (item.adresa && item.adresa.toLowerCase().includes(m.toLowerCase())) {
-                // Avoid matching 'Центар' when the text actually refers to 'Центар Жупа'
-                if (m === 'Центар' && item.adresa.toLowerCase().includes('центар жупа')) {
-                  continue;
-                }
-                municipality = m;
-                break;
-              }
-            }
-          }
-
-          const coords = municipality && MUNICIPALITY_COORDS[municipality] 
-            ? MUNICIPALITY_COORDS[municipality] 
-            : (CITY_COORDS[city] || CITY_COORDS['Скопје']);
+          const loc = parseEVNLocation(item.nasMesto, item.adresa);
+          const normNasMesto = (item.nasMesto || '').trim().toLowerCase();
+          const normAdresa = (item.adresa || '').trim().toLowerCase();
+          const normPocetok = (item.pocetok || '').substring(0, 16);
+          const alertId = `pwr_${simpleHash(`${normNasMesto}_${normAdresa}_${normPocetok}`)}`;
 
           collectedAlerts.push({
-            id: String(item.prekinID || `pwr_${simpleHash(item.nasMesto + item.adresa + item.pocetok)}`),
+            id: alertId,
             type: 'power',
             source: 'elektrodistribucija',
             source_title: 'Електродистрибуција · ЕВН',
             title: item.tipPrekin || 'Планиран прекин на електрична енергија',
-            city: city,
-            municipality: municipality || null,
+            city: loc.city,
+            municipality: loc.municipality,
             location_name: item.nasMesto,
             address: item.adresa,
             start_time: startDate.toISOString(),
             end_time: endDate.toISOString(),
             status: status,
             voltage: item.napNivo,
-            latitude: coords.lat,
-            longitude: coords.lon,
+            latitude: loc.coords ? loc.coords.lat : null,
+            longitude: loc.coords ? loc.coords.lon : null,
             description: `Прекин во снабдување со електрична енергија (${item.napNivo || 'НН'}). Засегнати локации: ${item.adresa}.`
           });
         }

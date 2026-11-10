@@ -1414,6 +1414,130 @@ async handleLogout() {
     return this.weatherService.getWeatherDesc(this.parsedWeatherData.weather_code);
   }
 
+  getUpcomingWeatherDisturbance(): { text: string; icon: string } | null {
+    const list = this.parsedWeatherData?.hourly_forecast;
+    if (!Array.isArray(list) || list.length === 0) return null;
+
+    const currentCode = Number(this.parsedWeatherData?.weather_code ?? 0);
+    const isActivelyRaining = (currentCode >= 51 && currentCode <= 67) || (currentCode >= 80 && currentCode <= 82);
+    const isActivelySnowing = (currentCode >= 71 && currentCode <= 77) || (currentCode >= 85 && currentCode <= 86);
+    const isActivelyThunder = currentCode >= 95 && currentCode <= 99;
+
+    const nowHour = new Date().getHours();
+    const lang = this.currentLang || 'mk';
+
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      let itemHour = item.hour;
+      if (itemHour === undefined && item.rawTime) {
+        itemHour = parseInt(item.rawTime.split('T')[1]?.substring(0, 2), 10);
+      }
+      if (itemHour === undefined && item.time && item.time.includes(':')) {
+        itemHour = parseInt(item.time.split(':')[0], 10);
+      }
+
+      if (itemHour === undefined || itemHour <= nowHour) continue;
+      if (i > 16) break;
+
+      const code = item.weather_code != null ? Number(item.weather_code) : null;
+      const pop = Number(item.pop || 0);
+      const icon = item.icon || '';
+      const wind = Number(item.wind || 0);
+      const timeStr = `${String(itemHour).padStart(2, '0')}:00`;
+
+      // 1. Hail (Невреме со град)
+      if (code === 96 || code === 99) {
+        if (!isActivelyThunder) {
+          const text = lang === 'en' ? `Hailstorm expected around ${timeStr}`
+            : (lang === 'al' ? `Priten stuhi me breshër rreth orës ${timeStr}`
+            : `Се очекува невреме со град околу ${timeStr} ч.`);
+          return { text, icon: '⛈️' };
+        }
+      }
+
+      // 2. Thunderstorm (Грмотевици / невреме)
+      if (code === 95 || icon === '⛈️') {
+        if (!isActivelyThunder) {
+          const text = lang === 'en' ? `Thunderstorms expected around ${timeStr}`
+            : (lang === 'al' ? `Priten stuhi rreth orës ${timeStr}`
+            : `Се очекуваат грмотевици околу ${timeStr} ч.`);
+          return { text, icon: '⛈️' };
+        }
+      }
+
+      // 3. Freezing rain / Glaze (Леден дожд / голомразица)
+      if (code === 56 || code === 57 || code === 66 || code === 67) {
+        if (!isActivelyRaining) {
+          const text = lang === 'en' ? `Freezing rain expected around ${timeStr}`
+            : (lang === 'al' ? `Pritet shi i ngrirë rreth orës ${timeStr}`
+            : `Се очекува леден дожд околу ${timeStr} ч.`);
+          return { text, icon: '🧊' };
+        }
+      }
+
+      // 4. Heavy Snow (Пороен снег / вејавица)
+      if (code === 85 || code === 86) {
+        if (!isActivelySnowing) {
+          const text = lang === 'en' ? `Heavy snow expected around ${timeStr}`
+            : (lang === 'al' ? `Priten reshje të dendura bore rreth orës ${timeStr}`
+            : `Се очекува пороен снег околу ${timeStr} ч.`);
+          return { text, icon: '🌨️' };
+        }
+      }
+
+      // 5. Snow (Снег)
+      if ((code != null && code >= 71 && code <= 77) || icon === '❄️') {
+        if (!isActivelySnowing) {
+          const text = lang === 'en' ? `Snow expected around ${timeStr}`
+            : (lang === 'al' ? `Priten reshje bore rreth orës ${timeStr}`
+            : `Се очекува снег околу ${timeStr} ч.`);
+          return { text, icon: '❄️' };
+        }
+      }
+
+      // 6. Strong Gale Winds (>= 50 km/h)
+      if (wind >= 50) {
+        const text = lang === 'en' ? `Strong winds (${wind} km/h) expected around ${timeStr}`
+          : (lang === 'al' ? `Priten erëra të forta (${wind} km/h) rreth orës ${timeStr}`
+          : `Се очекува силен ветер (${wind} km/h) околу ${timeStr} ч.`);
+        return { text, icon: '💨' };
+      }
+
+      // 7. Heavy Rain Showers (Пороен дожд / плускови)
+      if (code != null && code >= 80 && code <= 82) {
+        if (!isActivelyRaining) {
+          const text = lang === 'en' ? `Heavy rain expected around ${timeStr}`
+            : (lang === 'al' ? `Priten reshje të rrëmbyeshme shiu rreth orës ${timeStr}`
+            : `Се очекува пороен дожд околу ${timeStr} ч.`);
+          return { text, icon: '🌧️' };
+        }
+      }
+
+      // 8. Rain / Drizzle (Дожд)
+      if ((code != null && code >= 51 && code <= 65) || icon === '🌧️' || icon === '🌦️' || pop >= 50) {
+        if (!isActivelyRaining) {
+          const text = lang === 'en' ? `Rain expected around ${timeStr}`
+            : (lang === 'al' ? `Priten reshje shiu rreth orës ${timeStr}`
+            : `Се очекува дожд околу ${timeStr} ч.`);
+          return { text, icon: '🌧️' };
+        }
+      }
+
+      // 9. Dense Fog (Густа магла)
+      if (code === 45 || code === 48 || icon === '🌫️') {
+        const text = lang === 'en' ? `Dense fog expected around ${timeStr}`
+          : (lang === 'al' ? `Pritet mjegull e dendur rreth orës ${timeStr}`
+          : `Се очекува густа магла околу ${timeStr} ч.`);
+        return { text, icon: '🌫️' };
+      }
+    }
+    return null;
+  }
+
+  getUpcomingPrecipitationText(): string | null {
+    return this.getUpcomingWeatherDisturbance()?.text || null;
+  }
+
 
   loadSavedWidgetOrder() {
     try {
