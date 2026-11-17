@@ -15,6 +15,15 @@ const config: CapacitorConfig = {
       resize: 'body',
       style: 'DARK',
       resizeOnFullScreen: true
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+      iconColor: '#0f172a',
+      smallIcon: 'ic_stat_dzeble_notification'
+    },
+    LocalNotifications: {
+      smallIcon: 'ic_stat_dzeble_notification',
+      iconColor: '#0f172a'
     }
   }
 };

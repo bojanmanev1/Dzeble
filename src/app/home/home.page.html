@@ -9,17 +9,23 @@
 }
     <div class="utility-bar">
       <div class="utility-left">
-        <span class="app-brand-title">Dzeble</span>
+        <span class="greeting-sub">{{ 'HOME.WELCOME' | translate }}</span>
+        @if (currentUser) {
+          <span class="greeting-name">{{ getUserFirstName() }}</span>
+        }
+      </div>
+      <div class="utility-center">
+        <img src="assets/icon/dzeble-logo.png" alt="Dzeble Logo" class="header-pocket-logo" />
       </div>
       <div class="utility-right">
         <!-- Clean Interactive Avatar Button -->
-      <div class="user-avatar-btn" (click)="openSettingsSheet()">
-      @if (currentUser) {
-        <span class="avatar-initial">{{ getUserInitial() }}</span>
-      } @else {
-        <ion-icon name="person-outline" class="guest-avatar-icon"></ion-icon>
-      }
-    </div>
+        <div class="user-avatar-btn" (click)="openSettingsSheet()">
+          @if (currentUser) {
+            <span class="avatar-initial">{{ getUserInitial() }}</span>
+          } @else {
+            <ion-icon name="person-outline" class="guest-avatar-icon"></ion-icon>
+          }
+        </div>
       </div>
     </div>
 
@@ -61,81 +67,85 @@
 
     <!-- 3. WIDGETS GRID LAYER -->
     <div class="widgets-container premium-grid" [class.is-edit-mode]="isWidgetEditMode">
-      @for (widget of visibleWidgets; track widget.id; let i = $index) {
-        <div 
-          class="widget-card-wrapper" 
-          [attr.data-widget-id]="widget.id"
-          [class.guest-locked]="!currentUser && !isWidgetEditMode"
-          [class.in-edit-mode]="isWidgetEditMode"
-          [class.is-being-dragged]="isDragging && draggedWidgetId === widget.id"
-          [style.--drag-x.px]="draggedWidgetId === widget.id ? dragCurrentX : 0"
-          [style.--drag-y.px]="draggedWidgetId === widget.id ? dragCurrentY : 0"
-          (pointerdown)="onWidgetPointerDown($event, widget.id, i)"
-          (contextmenu)="onWidgetContextMenu($event)"
-          (click)="onWidgetClick(widget.id, i)">
-          
-          <div class="interactive-card">
-
-            @if (isWidgetEditMode) {
-              <!-- Remove Widget Badge Button -->
-              <button 
-                class="widget-remove-btn" 
-                (pointerdown)="$event.stopPropagation()"
-                (click)="removeWidget(widget.id, $event)"
-                [title]="'WIDGETS.REMOVE_TOOLTIP' | translate">
-                <ion-icon name="close"></ion-icon>
-              </button>
-            }
-
-            @if (supportsNotification(widget.id) && currentUser && !isWidgetEditMode) {
-              <div 
-                class="widget-notif-toggle" 
-                (click)="toggleWidgetNotification(widget.id, $event)"
-                [class.active]="isNotificationActive(widget.id)"
-                [title]="isNotificationActive(widget.id) ? ('WIDGETS.NOTIF_ON' | translate) : ('WIDGETS.NOTIF_OFF' | translate)">
-                <ion-icon [name]="isNotificationActive(widget.id) ? 'notifications' : 'notifications-off-outline'"></ion-icon>
-              </div>
-            }
-
-            @if (!currentUser && !isWidgetEditMode) {
-              <div class="widget-guest-lock" [title]="'AUTH.REQUIRED_TITLE' | translate">
-                <ion-icon name="lock-closed"></ion-icon>
-              </div>
-            }
-
-            <div class="card-icon-frame">
-              @if (widget.id === 'weather' && widget.weatherEmoji) {
-                <span class="weather-rich-icon">{{ widget.weatherEmoji }}</span>
-              } @else {
-                <ion-icon 
-                  [name]="widget.icon" 
-                  class="widget-vector-icon" 
-                  [ngClass]="widget.id + '-icon'"
-                  [style.color]="widget.customColor || null">
-                </ion-icon>
-              }
-            </div>
+      @for (slot of gridSlots; track $index; let i = $index) {
+        @if (slot) {
+          <div 
+            class="widget-card-wrapper" 
+            [attr.data-widget-id]="slot.id"
+            [attr.data-slot-index]="i"
+            [class.guest-locked]="!currentUser && !isWidgetEditMode"
+            [class.in-edit-mode]="isWidgetEditMode"
+            [class.is-being-dragged]="isDragging && draggedWidgetId === slot.id"
+            [style.--drag-x.px]="draggedWidgetId === slot.id ? dragCurrentX : 0"
+            [style.--drag-y.px]="draggedWidgetId === slot.id ? dragCurrentY : 0"
+            (pointerdown)="onWidgetPointerDown($event, slot.id, i)"
+            (contextmenu)="onWidgetContextMenu($event)"
+            (click)="onWidgetClick(slot.id, i)">
             
-            <!-- Value colored dynamically (e.g. green for 49 AQI) -->
-            <div class="card-value" [style.color]="widget.customColor || null">
-              {{ widget.value }}
-            </div>
+            <div class="interactive-card">
 
-            <div class="card-label">{{ widget.translationKey | translate }}</div>
-          </div>
-        </div>
-      }
+              @if (isWidgetEditMode) {
+                <!-- Remove Widget Badge Button -->
+                <button 
+                  class="widget-remove-btn" 
+                  (pointerdown)="$event.stopPropagation()"
+                  (click)="removeWidget(slot.id, $event, i)"
+                  [title]="'WIDGETS.REMOVE_TOOLTIP' | translate">
+                  <ion-icon name="close"></ion-icon>
+                </button>
+              }
 
-      <!-- Empty Slots when fewer than 9 widgets -->
-      @for (slot of getEmptySlotsCount(); track $index) {
-        <div class="widget-card-wrapper empty-slot-card" (click)="openAddWidgetModal()">
-          <div class="empty-slot-inner">
-            <div class="empty-slot-icon-frame">
-              <ion-icon name="add"></ion-icon>
+              @if (supportsNotification(slot.id) && currentUser && !isWidgetEditMode) {
+                <div 
+                  class="widget-notif-toggle" 
+                  (click)="toggleWidgetNotification(slot.id, $event)"
+                  [class.active]="isNotificationActive(slot.id)"
+                  [title]="isNotificationActive(slot.id) ? ('WIDGETS.NOTIF_ON' | translate) : ('WIDGETS.NOTIF_OFF' | translate)">
+                  <ion-icon [name]="isNotificationActive(slot.id) ? 'notifications' : 'notifications-off-outline'"></ion-icon>
+                </div>
+              }
+
+              @if (!currentUser && !isWidgetEditMode) {
+                <div class="widget-guest-lock" [title]="'AUTH.REQUIRED_TITLE' | translate">
+                  <ion-icon name="lock-closed"></ion-icon>
+                </div>
+              }
+
+              <div class="card-icon-frame">
+                @if (slot.id === 'weather' && slot.weatherEmoji) {
+                  <span class="weather-rich-icon">{{ slot.weatherEmoji }}</span>
+                } @else {
+                  <ion-icon 
+                    [name]="slot.icon" 
+                    class="widget-vector-icon" 
+                    [ngClass]="slot.id + '-icon'"
+                    [style.color]="slot.customColor || null">
+                  </ion-icon>
+                }
+              </div>
+              
+              <!-- Value colored dynamically (e.g. green for 49 AQI) -->
+              <div class="card-value" [style.color]="slot.customColor || null">
+                {{ slot.value }}
+              </div>
+
+              <div class="card-label">{{ slot.translationKey | translate }}</div>
             </div>
-            <span class="empty-slot-label">{{ 'WIDGETS.ADD_WIDGET' | translate }}</span>
           </div>
-        </div>
+        } @else {
+          <!-- Empty In-Place Slot -->
+          <div 
+            class="widget-card-wrapper empty-slot-card" 
+            [attr.data-slot-index]="i"
+            (click)="openAddWidgetModal(i)">
+            <div class="empty-slot-inner">
+              <div class="empty-slot-icon-frame">
+                <ion-icon name="add"></ion-icon>
+              </div>
+              <span class="empty-slot-label">{{ 'WIDGETS.ADD_WIDGET' | translate }}</span>
+            </div>
+          </div>
+        }
       }
     </div>
 
@@ -911,33 +921,33 @@
       <!-- LOYALTY CARDS MODULE -->
       @if (activeDetailWidgetId === 'loyalty' && currentUser) {
         @if (loyaltyModalView === 'list') {
-          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+          <div class="modal-hero loyalty-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-              <ion-icon name="card" style="font-size: 1.3rem; color: #6366f1;"></ion-icon>
-              <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              <ion-icon name="card" class="loyalty-hero-icon"></ion-icon>
+              <h2 class="loyalty-modal-title">
                 {{ 'LOYALTY_MODAL.TITLE' | translate }}
               </h2>
             </div>
-            <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
+            <p class="subtitle loyalty-modal-subtitle">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <div class="modal-body loyalty-modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
             <!-- Prominent Add Card Button -->
             <button 
-              (click)="openAddLoyaltyCardView()" 
-              style="width: 100%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; padding: 13px 16px; border-radius: 14px; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: transform 0.15s ease;">
+              class="btn-add-loyalty-card"
+              (click)="openAddLoyaltyCardView()">
               <span style="font-size: 1.1rem; line-height: 1;">＋</span>
               <span>{{ 'LOYALTY_MODAL.ADD_NEW_BTN' | translate }}</span>
             </button>
 
             @if (loyaltyCards.length > 0) {
               <!-- Realistic Digital Wallet Cards Grid -->
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
+              <div class="loyalty-cards-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
                 @for (card of loyaltyCards; track card.id) {
                   <div 
                     (click)="openLoyaltyCardView(card)"
                     [style.background]="getCardGradient(card)" 
-                    style="position: relative; border-radius: 18px; color: white; cursor: pointer; padding: 14px 14px; height: 114px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; box-shadow: 0 8px 22px rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s ease;">
+                    class="loyalty-card-tile">
                     
                     <!-- Glass Gloss Curve -->
                     <div style="position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none; border-radius: 18px 18px 0 0;"></div>
@@ -966,7 +976,7 @@
                           <span style="width: 3px; height: 10px; background: white; display: inline-block;"></span>
                           <span style="width: 1.5px; height: 10px; background: white; display: inline-block;"></span>
                         </div>
-                        <span style="font-size: 0.62rem; font-weight: 700; text-transform: uppercase; background: rgba(0, 0, 0, 0.3); padding: 1.5px 5px; border-radius: 5px; backdrop-filter: blur(4px);">
+                        <span class="loyalty-card-tap-badge">
                           {{ 'LOYALTY_MODAL.TAP_TO_SCAN' | translate }}
                         </span>
                       </div>
@@ -978,10 +988,10 @@
                 }
               </div>
             } @else {
-              <div style="text-align: center; padding: 36px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; margin-bottom: 20px;">
+              <div class="loyalty-empty-state">
                 <span style="font-size: 2.2rem; display: block; margin-bottom: 8px;">💳</span>
-                <p style="margin: 0 0 6px 0; font-weight: 800; font-size: 1rem; color: #0f172a;">{{ 'LOYALTY_MODAL.NO_CARDS' | translate }}</p>
-                <span style="font-size: 0.8rem; color: #64748b;">{{ 'LOYALTY_MODAL.NO_CARDS_HINT' | translate }}</span>
+                <p class="loyalty-empty-title">{{ 'LOYALTY_MODAL.NO_CARDS' | translate }}</p>
+                <span class="loyalty-empty-hint">{{ 'LOYALTY_MODAL.NO_CARDS_HINT' | translate }}</span>
               </div>
             }
           </div>
@@ -989,13 +999,13 @@
 
         <!-- VIEW MODE: REALISTIC DIGITAL MEMBERSHIP PASS -->
         @if (loyaltyModalView === 'view' && selectedLoyaltyCard) {
-          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
-            <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
+          <div class="modal-hero loyalty-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+            <p class="subtitle loyalty-modal-subtitle">{{ 'LOYALTY_MODAL.SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 6px; text-align: center;">
+          <div class="modal-body loyalty-modal-body" style="flex: 1; overflow-y: auto; padding: 4px 6px; text-align: center;">
             <!-- Realistic Pass Card -->
-            <div style="background: white; border-radius: 22px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.18); border: 1px solid #e2e8f0; margin-bottom: 16px;">
+            <div class="loyalty-pass-card">
               <!-- Pass Header with Card Gradient -->
               <div [style.background]="getCardGradient(selectedLoyaltyCard)" style="padding: 22px 20px; color: white; position: relative; overflow: hidden; text-align: left;">
                 <div style="position: absolute; top: 0; left: 0; right: 0; height: 60%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none;"></div>
@@ -1006,19 +1016,19 @@
               </div>
 
               <!-- Barcode Scan Compartment -->
-              <div style="padding: 26px 16px 20px 16px; background: #ffffff;">
-                <div style="display: inline-block; width: 100%; max-width: 320px; margin: 0 auto;">
+              <div class="loyalty-barcode-compartment">
+                <div class="loyalty-barcode-plate">
                   <svg appBarcodeRender [value]="selectedLoyaltyCard.barcode_data" [format]="selectedLoyaltyCard.barcode_format || 'CODE128'"></svg>
                 </div>
 
                 <!-- Full Barcode Digits -->
-                <div style="margin-top: 10px; font-family: monospace; font-size: 1.2rem; font-weight: 800; color: #0f172a; letter-spacing: 2px;">
+                <div class="loyalty-barcode-digits">
                   {{ selectedLoyaltyCard.barcode_data }}
                 </div>
               </div>
 
               <!-- Screen Brightness Note -->
-              <div style="background: #f8fafc; padding: 10px 14px; border-top: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; font-weight: 600;">
+              <div class="loyalty-brightness-note">
                 {{ 'LOYALTY_MODAL.BRIGHTNESS_HINT' | translate }}
               </div>
             </div>
@@ -1026,13 +1036,13 @@
             <!-- Action Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 12px;">
               <button 
-                (click)="closeLoyaltySubView()" 
-                style="flex: 1; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
+                class="btn-loyalty-back"
+                (click)="closeLoyaltySubView()">
                 {{ 'LOYALTY_MODAL.BACK_BTN' | translate }}
               </button>
               <button 
-                (click)="deleteLoyaltyCard(selectedLoyaltyCard.id)" 
-                style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
+                class="btn-loyalty-delete"
+                (click)="deleteLoyaltyCard(selectedLoyaltyCard.id)">
                 {{ 'LOYALTY_MODAL.DELETE_BTN' | translate }}
               </button>
             </div>
@@ -1041,15 +1051,16 @@
 
         <!-- ADD MODE: CREATE PASS WITH PREVIEW & PRESETS -->
         @if (loyaltyModalView === 'add') {
-          <div class="modal-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
-            <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 4px 0; color: #0f172a;">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
-            <p class="subtitle" style="font-size: 0.82rem; color: #64748b; margin: 0;">{{ 'LOYALTY_MODAL.NEW_CARD_SUBTITLE' | translate }}</p>
+          <div class="modal-hero loyalty-hero" style="padding-bottom: 8px; text-align: center; margin-top: 8px;">
+            <h2 class="loyalty-modal-title">{{ 'LOYALTY_MODAL.NEW_CARD_TITLE' | translate }}</h2>
+            <p class="subtitle loyalty-modal-subtitle">{{ 'LOYALTY_MODAL.NEW_CARD_SUBTITLE' | translate }}</p>
           </div>
 
-          <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
+          <div class="modal-body loyalty-modal-body" style="flex: 1; overflow-y: auto; padding: 4px 0;">
             <!-- Real-time Live Wallet Card Preview -->
             <div 
               [style.background]="newCardColor" 
+              class="loyalty-preview-card"
               style="position: relative; border-radius: 20px; color: white; padding: 18px 18px; height: 118px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.25);">
               
               <div style="position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%); pointer-events: none; border-radius: 20px 20px 0 0;"></div>
@@ -1069,15 +1080,15 @@
 
             <!-- Quick Store Suggestions Carousel -->
             <div style="margin-bottom: 14px;">
-              <label style="font-size: 0.72rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <label class="loyalty-form-label">
                 {{ 'LOYALTY_MODAL.STORE_SUGGESTIONS' | translate }}
               </label>
               <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
                 @for (store of stores; track store.name) {
                   <button 
+                    class="loyalty-preset-chip"
                     (click)="selectStorePreset(store)" 
-                    type="button"
-                    style="display: inline-flex; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; padding: 7px 12px; border-radius: 10px; font-weight: 700; font-size: 0.78rem; color: #0f172a; white-space: nowrap; cursor: pointer; flex-shrink: 0;">
+                    type="button">
                     {{ store.name }}
                   </button>
                 }
@@ -1085,33 +1096,34 @@
             </div>
 
             <!-- Store Name Input -->
-            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
-              <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 2px; text-transform: uppercase;">
+            <div class="loyalty-input-card">
+              <label class="loyalty-form-label">
                 {{ 'LOYALTY_MODAL.STORE_NAME_LABEL' | translate }}
               </label>
               <input 
                 type="text" 
+                class="loyalty-text-input"
                 [(ngModel)]="newCustomStoreName" 
                 (input)="onStoreNameInput()"
-                [placeholder]="'LOYALTY_MODAL.STORE_NAME_PLACEHOLDER' | translate" 
-                style="width: 100%; border: none; background: transparent; font-size: 1rem; font-weight: 800; color: #0f172a; outline: none; padding: 2px 0;" />
+                [placeholder]="'LOYALTY_MODAL.STORE_NAME_PLACEHOLDER' | translate" />
             </div>
 
             <!-- Barcode Input + Scan Camera Button -->
-            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
-              <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 2px; text-transform: uppercase;">
+            <div class="loyalty-input-card">
+              <label class="loyalty-form-label">
                 {{ 'LOYALTY_MODAL.BARCODE_LABEL' | translate }}
               </label>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <input 
                   type="text" 
+                  class="loyalty-text-input"
                   [(ngModel)]="newBarcodeData" 
-                  [placeholder]="'LOYALTY_MODAL.BARCODE_PLACEHOLDER' | translate" 
-                  style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 0.95rem; font-weight: 800; color: #0f172a; outline: none; padding: 2px 0;" />
+                  [placeholder]="'LOYALTY_MODAL.BARCODE_PLACEHOLDER' | translate" />
                 <button 
+                  class="btn-loyalty-scan"
                   (click)="scanBarcode()" 
-                  type="button"
-                  style="background: #0f172a; color: white; border: none; padding: 8px 12px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                  type="button">
+                  <ion-icon name="qr-code-outline" style="font-size: 1rem;"></ion-icon>
                   {{ 'LOYALTY_MODAL.SCAN_BTN' | translate }}
                 </button>
               </div>
@@ -1119,7 +1131,7 @@
 
             <!-- Color Palette Selector -->
             <div style="margin-bottom: 16px;">
-              <label style="font-size: 0.72rem; font-weight: 800; color: #64748b; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <label class="loyalty-form-label">
                 {{ 'LOYALTY_MODAL.COLOR_LABEL' | translate }}
               </label>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -1129,7 +1141,7 @@
                     type="button"
                     [style.background]="pal.gradient"
                     [style.transform]="newCardColor === pal.gradient ? 'scale(1.15)' : 'scale(1)'"
-                    [style.box-shadow]="newCardColor === pal.gradient ? '0 0 0 2.5px #6366f1' : 'none'"
+                    [style.box-shadow]="newCardColor === pal.gradient ? '0 0 0 2.5px #10b981' : 'none'"
                     style="width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; transition: transform 0.15s ease;">
                   </button>
                 }
@@ -1139,17 +1151,17 @@
             <!-- Dialog Bottom Action Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 12px;">
               <button 
+                class="btn-loyalty-back"
                 (click)="closeLoyaltySubView()" 
-                type="button"
-                style="flex: 1; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">
+                type="button">
                 {{ 'HOME.CANCEL' | translate }}
               </button>
               <button 
+                class="btn-loyalty-save"
                 (click)="saveLoyaltyCard()" 
                 type="button"
                 [disabled]="!newBarcodeData.trim() || !newCustomStoreName.trim()" 
-                [style.opacity]="(!newBarcodeData.trim() || !newCustomStoreName.trim()) ? 0.45 : 1"
-                style="flex: 2; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 13px; border-radius: 14px; font-weight: 800; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
+                [style.opacity]="(!newBarcodeData.trim() || !newCustomStoreName.trim()) ? 0.45 : 1">
                 {{ 'LOYALTY_MODAL.SAVE_BTN' | translate }}
               </button>
             </div>
@@ -1179,9 +1191,9 @@
           </div>
 
           <!-- Selected Date Header & Add Event Button (Logged-in Only) -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 4px;">
-            <h3 style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #0f172a;">
-              📅 {{ selectedCalendarDate }}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px;">
+            <h3 class="calendar-selected-date-title" style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">
+              📅 {{ formatHolidayDateFull(selectedCalendarDate) || selectedCalendarDate }}
             </h3>
 
             @if (currentUser) {
@@ -1215,22 +1227,42 @@
           <!-- SECTION 1: Selected Date National / Religious Holiday Card -->
           @if (selectedHolidayDetail) {
             <div 
-              [style.border-left]="'4px solid ' + selectedHolidayDetail.color_code" 
-              style="background: #f8fafc; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #f1f5f9; border-left-width: 4px;">
+              class="selected-holiday-card"
+              [style.border-left-color]="selectedHolidayDetail.color_code || '#10b981'">
               
-              <span 
-                [style.color]="selectedHolidayDetail.color_code" 
-                style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 2px;">
-                🏷️ {{ selectedHolidayDetail['target_group_' + currentLang] || selectedHolidayDetail.target_group_mk }}
-              </span>
+              <div class="holiday-card-header">
+                <span 
+                  class="holiday-target-badge"
+                  [style.color]="selectedHolidayDetail.color_code || '#10b981'"
+                  [style.background]="(selectedHolidayDetail.color_code || '#10b981') + '1a'"
+                  [style.border]="'1px solid ' + (selectedHolidayDetail.color_code || '#10b981') + '33'">
+                  🏷️ {{ selectedHolidayDetail['target_group_' + currentLang] || selectedHolidayDetail.target_group_mk }}
+                </span>
 
-              <h3 style="margin: 2px 0 4px 0; font-size: 1rem; font-weight: 800; color: #0f172a;">
+                @if (selectedHolidayDetail.is_national) {
+                  <span class="holiday-type-pill">
+                    🏛️ {{ currentLang === 'en' ? 'Non-working day' : (currentLang === 'al' ? 'Ditë jopune' : 'Неработен ден') }}
+                  </span>
+                }
+              </div>
+
+              <h3 class="holiday-title" style="color: #0f172a !important; font-size: 1.15rem; font-weight: 800; line-height: 1.35; margin: 4px 0 8px 0;">
                 {{ selectedHolidayDetail['title_' + currentLang] || selectedHolidayDetail.title_mk }}
               </h3>
 
-              <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">
-                🗓️ {{ formatHolidayDateDDMMYYYY(selectedHolidayDetail.holiday_date) }}
-              </span>
+              <div class="holiday-card-footer">
+                <span class="holiday-date-text">
+                  🗓️ {{ formatHolidayDateFull(selectedHolidayDetail.holiday_date) }}
+                </span>
+
+                @if (getHolidayRelativeBadge(selectedHolidayDetail.holiday_date); as badge) {
+                  <span 
+                    class="holiday-countdown-badge"
+                    [class.is-today]="badge.isToday">
+                    {{ badge.text }}
+                  </span>
+                }
+              </div>
             </div>
           }
 
@@ -1781,6 +1813,152 @@
               <div id="pharmacy-leaflet-map" class="pharmacy-leaflet-container"></div>
               <div class="pharmacy-map-badge">
                 <span>🟢 {{ filteredPharmacies.length }} {{ 'PHARMACY_MODAL.TITLE' | translate }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ATMS (СИТЕ БАНКОМАТИ ВО МАКЕДОНИЈА) DETAILS -->
+      @if (activeDetailWidgetId === 'atms') {
+        <div class="modal-hero" style="padding-bottom: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+            <ion-icon name="atm" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+              {{ 'ATM_MODAL.TITLE' | translate }}
+            </h2>
+          </div>
+          <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.85rem;">{{ 'ATM_MODAL.SUBTITLE' | translate }}</p>
+
+          <!-- View Mode Switcher: List vs Leaflet Map -->
+          <div class="atm-view-switcher">
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="atmModalView === 'list'"
+              (click)="setAtmModalView('list')">
+              <ion-icon name="list"></ion-icon>
+              <span>{{ 'ATM_MODAL.LIST_VIEW' | translate }}</span>
+            </button>
+            <button 
+              type="button"
+              class="switcher-pill" 
+              [class.active]="atmModalView === 'map'"
+              (click)="setAtmModalView('map')">
+              <ion-icon name="map"></ion-icon>
+              <span>{{ 'ATM_MODAL.MAP_VIEW' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; max-width: 100%; box-sizing: border-box; padding: 4px 0;">
+          <!-- Filter Bar: Search Input -->
+          <div class="atm-search-box">
+            <ion-icon name="search" class="search-icon"></ion-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="atmSearchQuery" 
+              (input)="onAtmSearchChange()"
+              [placeholder]="'ATM_MODAL.SEARCH_PLACEHOLDER' | translate" 
+              class="atm-search-input" />
+            @if (atmSearchQuery) {
+              <button class="atm-search-clear" (click)="atmSearchQuery = ''; onAtmSearchChange()">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            }
+          </div>
+
+          <!-- Bank Filter Pills Scrollable Row -->
+          <div class="atm-bank-scroll">
+            @for (b of atmBanks; track b.id) {
+              <button 
+                type="button"
+                class="bank-chip" 
+                [class.active]="selectedAtmBank === b.id" 
+                (click)="selectAtmBank(b.id)">
+                {{ b.labelKey ? (b.labelKey | translate) : b.label }}
+              </button>
+            }
+          </div>
+
+          <!-- City Filter Pills Scrollable Row -->
+          <div class="atm-city-scroll">
+            <button 
+              type="button"
+              class="city-chip" 
+              [class.active]="selectedAtmCity === ''" 
+              (click)="selectAtmCity('')">
+              {{ 'ATM_MODAL.ALL_CITIES' | translate }}
+            </button>
+            @for (city of atmCities; track city) {
+              <button 
+                type="button"
+                class="city-chip" 
+                [class.active]="selectedAtmCity === city" 
+                (click)="selectAtmCity(city)">
+                {{ city }}
+              </button>
+            }
+          </div>
+
+          <!-- VIEW 1: LIST VIEW -->
+          @if (atmModalView === 'list') {
+            @if (isLoadingAtms) {
+              <div class="modal-loading-state">
+                <ion-spinner name="crescent" class="modal-loading-spinner"></ion-spinner>
+                <p>{{ 'COMMON.LOADING' | translate }}</p>
+              </div>
+            } @else if (filteredAtms.length === 0) {
+              <div class="atm-empty-state">
+                <ion-icon name="atm" style="font-size: 2.2rem; color: #94a3b8;"></ion-icon>
+                <p>{{ 'ATM_MODAL.NO_RESULTS' | translate }}</p>
+              </div>
+            } @else {
+              <div class="atm-cards-container">
+                @for (a of filteredAtms; track a.id) {
+                  <div class="atm-card">
+                    <div class="atm-card-top">
+                      <div class="atm-name-block">
+                        <div class="atm-name-row">
+                          <span class="atm-bank-name" [style.color]="getAtmBankColor(a.bank_slug)">{{ a.bank }}</span>
+                          @if (a.is_24_7) {
+                            <span class="atm-badge-open">24/7</span>
+                          }
+                          @if (a.has_deposit) {
+                            <span class="atm-badge-deposit">{{ 'ATM_MODAL.DEPOSIT' | translate }}</span>
+                          }
+                        </div>
+                        <div class="atm-address-row">
+                          <ion-icon name="location" class="addr-icon"></ion-icon>
+                          <span>{{ a.location_description || a.address || a.bank }}@if (a.city) { ({{ a.city }})}</span>
+                        </div>
+                      </div>
+
+                      @if (a.distanceKm != null) {
+                        <div class="atm-distance-tag">
+                          <span>📍 {{ formatAtmDistance(a.distanceKm) }}</span>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="atm-card-actions">
+                      <button class="atm-action-btn btn-directions" (click)="openAtmDirections(a)">
+                        <ion-icon name="navigate"></ion-icon>
+                        <span>{{ 'ATM_MODAL.DIRECTIONS' | translate }}</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- VIEW 2: LEAFLET MAP VIEW -->
+          @if (atmModalView === 'map') {
+            <div class="atm-map-wrapper">
+              <div id="atm-leaflet-map" class="atm-leaflet-container"></div>
+              <div class="atm-map-badge">
+                <span>💳 {{ filteredAtms.length }} {{ 'ATM_MODAL.TITLE' | translate }}</span>
               </div>
             </div>
           }
@@ -2706,49 +2884,51 @@
   <ion-modal [isOpen]="isAddWidgetModalOpen" 
     (didDismiss)="closeAddWidgetModal()" 
     class="premium-modal add-widget-modal"
-    [initialBreakpoint]="0.6"
-    [breakpoints]="[0, 0.6, 0.9]"
+    [initialBreakpoint]="0.85"
+    [breakpoints]="[0, 0.5, 0.85, 1]"
     [handle]="true">
     <ng-template>
-      <div class="add-widget-sheet-wrapper">
-        <div class="modal-hero" style="text-align: center; padding-bottom: 12px;">
-          <h2 style="font-size: 1.2rem; font-weight: 700; margin: 0 0 4px 0; color: #0f172a;">
-            ➕ {{ 'WIDGETS.AVAILABLE_WIDGETS' | translate }}
-          </h2>
-          <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
-            {{ visibleWidgets.length }}/{{ MAX_WIDGET_COUNT }} • {{ 'WIDGETS.ADD_WIDGET' | translate }}
-          </p>
-        </div>
+      <ion-content class="add-widget-content">
+        <div class="add-widget-sheet-wrapper">
+          <div class="modal-hero" style="text-align: center; padding-bottom: 14px;">
+            <h2 class="add-widget-modal-title">
+              ➕ {{ 'WIDGETS.AVAILABLE_WIDGETS' | translate }}
+            </h2>
+            <p class="add-widget-modal-sub">
+              {{ visibleWidgets.length }}/{{ MAX_WIDGET_COUNT }} • {{ 'WIDGETS.ADD_WIDGET' | translate }}
+            </p>
+          </div>
 
-        <div class="available-widgets-list">
-          @if (getAvailableWidgets().length === 0) {
-            <div class="no-available-widgets">
-              <ion-icon name="checkmark-circle-outline"></ion-icon>
-              <p>{{ 'WIDGETS.NO_AVAILABLE_WIDGETS' | translate }}</p>
-            </div>
-          } @else {
-            @for (w of getAvailableWidgets(); track w.id) {
-              <div class="available-widget-item" (click)="addWidget(w.id)">
-                <div class="item-icon-box">
-                  @if (w.id === 'weather' && w.weatherEmoji) {
-                    <span style="font-size: 1.6rem;">{{ w.weatherEmoji }}</span>
-                  } @else {
-                    <ion-icon [name]="w.icon" [style.color]="w.customColor || '#10b981'"></ion-icon>
-                  }
-                </div>
-                <div class="item-text-info">
-                  <div class="item-name">{{ w.translationKey | translate }}</div>
-                  <div class="item-preview-value">{{ w.value }} <span *ngIf="w.unit && w.unit !== '...'">{{ w.unit }}</span></div>
-                </div>
-                <button class="btn-add-item" (click)="addWidget(w.id); $event.stopPropagation()">
-                  <ion-icon name="add"></ion-icon>
-                  {{ 'STOCK_MODAL.ADD_BTN' | translate }}
-                </button>
+          <div class="available-widgets-list">
+            @if (getAvailableWidgets().length === 0) {
+              <div class="no-available-widgets">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                <p>{{ 'WIDGETS.NO_AVAILABLE_WIDGETS' | translate }}</p>
               </div>
+            } @else {
+              @for (w of getAvailableWidgets(); track w.id) {
+                <div class="available-widget-item" (click)="addWidget(w.id)">
+                  <div class="item-icon-box">
+                    @if (w.id === 'weather' && w.weatherEmoji) {
+                      <span style="font-size: 1.6rem;">{{ w.weatherEmoji }}</span>
+                    } @else {
+                      <ion-icon [name]="w.icon" [style.color]="w.customColor || '#10b981'"></ion-icon>
+                    }
+                  </div>
+                  <div class="item-text-info">
+                    <div class="item-name">{{ w.translationKey | translate }}</div>
+                    <div class="item-preview-value">{{ w.value }} <span *ngIf="w.unit && w.unit !== '...' && w.unit !== 'CARD_UNIT'">{{ w.unit }}</span></div>
+                  </div>
+                  <button class="btn-add-item" (click)="addWidget(w.id); $event.stopPropagation()">
+                    <ion-icon name="add"></ion-icon>
+                    {{ 'STOCK_MODAL.ADD_BTN' | translate }}
+                  </button>
+                </div>
+              }
             }
-          }
+          </div>
         </div>
-      </div>
+      </ion-content>
     </ng-template>
   </ion-modal>
 

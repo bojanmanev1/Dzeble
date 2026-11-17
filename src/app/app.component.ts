@@ -54,6 +54,11 @@ export class AppComponent implements OnInit {
     });
 
     // 4. Ensure user stays logged in continuously until they manually choose to log out
+
+    // 5. Signal that Angular application is ready to transition out the splash screen
+    if (typeof (window as any).signalAppReady === 'function') {
+      (window as any).signalAppReady();
+    }
   }
 
   private async setupDeepLinks() {

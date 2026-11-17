@@ -84,6 +84,7 @@ import { Capacitor } from '@capacitor/core';
 import { StockService, StockTicker } from '../services/stock';
 import { LoyaltyService, LoyaltyCard } from '../services/loyalty';
 import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
+import { AtmService, BankAtm } from '../services/atm';
 import { GasStationService, GasStation } from '../services/gas-station';
 import { UtilityAlertService, UtilityAlert } from '../services/utility-alert';
 import { TransitService, JspLine, JspStop, TrainRoute, JspDirectionSchedule } from '../services/transit';
@@ -96,6 +97,8 @@ import { AnalyticsService } from '../services/analytics';
 import * as L from 'leaflet';
 
 const GAS_PUMP_ICON = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' class='ionicon' viewBox='0 0 24 24'><path fill='currentColor' d='M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11c-.94.36-1.61 1.26-1.61 2.33 0 1.38 1.12 2.5 2.5 2.5.36 0 .69-.08 1-.21v7.21c0 .55-.45 1-1 1s-1-.45-1-1V14c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v16h10v-7.5h1.5v5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5zm6 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z'/></svg>`;
+
+const ATM_MACHINE_ICON = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' class='ionicon' viewBox='0 0 512 512'><path fill='currentColor' d='M96 32h320a48 48 0 0 1 48 48v352a48 48 0 0 1-48 48H96a48 48 0 0 1-48-48V80a48 48 0 0 1 48-48zm32 64a16 16 0 0 0-16 16v96a16 16 0 0 0 16 16h256a16 16 0 0 0 16-16v-96a16 16 0 0 0-16-16H128zm24 32h208v64H152v-64zm-24 160a16 16 0 0 0 0 32h256a16 16 0 1 0 0-32H128zm32 80a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm96 0a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm96 0a24 24 0 1 0 0 48 24 24 0 0 0 0-48z'/></svg>`;
 
 interface Widget {
   id: string;
@@ -165,10 +168,12 @@ export class HomePage implements OnInit, OnDestroy {
   private cryptoSub: Subscription | null = null;
   private tickerIntervalSub: any = null;
   private widgetRotationIntervalSub: any = null;
+  private deferredInitTimeout1: any = null;
+  private deferredInitTimeout2: any = null;
 
   currentYear = new Date().getFullYear();
   minCalendarDate = `${this.currentYear}-01-01`;
-  maxCalendarDate = `${this.currentYear + 1}-12-31`;
+  maxCalendarDate = `${this.currentYear + 4}-12-31`;
 
   selectedCalendarDate: string = new Date().toISOString().split('T')[0];
   selectedHolidayDetail: any = null;
@@ -205,6 +210,7 @@ export class HomePage implements OnInit, OnDestroy {
   isLoadingAlerts = false;
   isLoadingPharmacies = false;
   isLoadingGasStations = false;
+  isLoadingAtms = false;
 
   showActionLoader(messageKey: string) {
     this.actionLoadingMessage = this.translate.instant(messageKey) || messageKey;
@@ -332,6 +338,41 @@ export class HomePage implements OnInit, OnDestroy {
   private gasLeafletMarkers: L.Marker[] = [];
   private gasLeafletTileLayer: L.TileLayer | null = null;
 
+  // ATMs (Банкомати) State
+  public atmService = inject(AtmService);
+  atmsList: BankAtm[] = [];
+  filteredAtms: BankAtm[] = [];
+  nearestAtm: BankAtm | null = null;
+  atmModalView: 'list' | 'map' = 'list';
+  atmSearchQuery: string = '';
+  selectedAtmCity: string = '';
+  selectedAtmBank: string = 'all';
+  atmCities: string[] = [
+    'Скопје', 'Битола', 'Куманово', 'Прилеп', 'Тетово', 'Охрид', 'Штип', 'Велес',
+    'Струмица', 'Кавадарци', 'Гостивар', 'Кочани', 'Кичево', 'Гевгелија', 'Струга',
+    'Радовиш', 'Крива Паланка', 'Неготино', 'Свети Николе', 'Делчево', 'Виница',
+    'Пробиштип', 'Ресен', 'Берово', 'Кратово', 'Крушево', 'Македонски Брод',
+    'Демир Хисар', 'Дебар', 'Валандово', 'Богданци'
+  ];
+  readonly atmBanks = [
+    { id: 'all', labelKey: 'ATM_MODAL.ALL_BANKS' },
+    { id: 'stopanska', label: 'Стопанска Банка Скопје' },
+    { id: 'komercijalna', label: 'Комерцијална Банка' },
+    { id: 'nlb', label: 'НЛБ Банка' },
+    { id: 'sparkasse', label: 'Шпаркасе Банка' },
+    { id: 'halk', label: 'Халкбанк' },
+    { id: 'unibanka', label: 'УНИБанка' },
+    { id: 'procredit', label: 'ПроКредит Банка' },
+    { id: 'ttk', label: 'ТТК Банка' },
+    { id: 'ckb', label: 'ЦКБ Банка' },
+    { id: 'silkroad', label: 'Силк Роуд Банка' },
+    { id: 'stopanska-bt', label: 'Стопанска Банка Битола' },
+    { id: 'other', label: 'Останати' }
+  ];
+  private atmLeafletMap: L.Map | null = null;
+  private atmLeafletMarkers: L.Marker[] = [];
+  private atmLeafletTileLayer: L.TileLayer | null = null;
+
   // Utility Alerts State
   public utilityAlertService = inject(UtilityAlertService);
   alertsList: UtilityAlert[] = [];
@@ -365,25 +406,29 @@ export class HomePage implements OnInit, OnDestroy {
     { id: 'crypto', translationKey: '--', value: 'BTC', unit: 'BTC', icon: 'stats-chart' },
     { id: 'stock', translationKey: 'WIDGETS.STOCK', value: 'AAPL', unit: 'AAPL', icon: 'trending-up' },
     { id: 'holidays', translationKey: 'WIDGETS.CALENDAR', value: '--.--', unit: 'Календар', icon: 'calendar-number' },
-    { id: 'uv', translationKey: 'WIDGETS.UV', value: '-', unit: 'UV', icon: 'sunny' },
-    { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: 'CARD_UNIT', icon: 'card' },
+    { id: 'loyalty', translationKey: 'WIDGETS.LOYALTY', value: '0', unit: '', icon: 'card', customColor: '#10b981' },
     { id: 'pharmacy', translationKey: 'WIDGETS.PHARMACY', value: '24/7', unit: 'Отворено', icon: 'medkit' },
+    { id: 'atms', translationKey: 'WIDGETS.ATMS', value: '400+', unit: 'Банкомати', icon: 'atm', customColor: '#10b981' },
     { id: 'gas_stations', translationKey: 'WIDGETS.GAS_STATIONS', value: '⛽', unit: 'Пумпа', icon: 'gas-pump' },
     { id: 'alerts', translationKey: 'WIDGETS.ALERTS', value: '0', unit: 'Прекини', icon: 'warning' },
-    { id: 'transport', translationKey: 'WIDGETS.TRANSPORT', value: 'ЈСП', unit: 'Превоз', icon: 'bus' }
+    { id: 'transport', translationKey: 'WIDGETS.TRANSPORT', value: '110+', unit: 'Линии', icon: 'bus' }
   ];
 
   readonly DEFAULT_WIDGET_IDS: string[] = [
-    'aqi', 'fuel', 'weather',
-    'crypto', 'transport', 'holidays',
-    'pharmacy', 'gas_stations', 'alerts'
+    'aqi', 'weather', 'transport',
+    'alerts', 'holidays', 'stock',
+    'atms', 'fuel', 'currency'
   ];
   readonly MAX_WIDGET_COUNT = 9;
   readonly STORAGE_WIDGET_ORDER_KEY = 'dzeble_user_widget_ids';
+  readonly WIDGET_ORDER_VERSION_KEY = 'dzeble_user_widget_order_version';
+  readonly CURRENT_WIDGET_ORDER_VERSION = 'v4_atms_default';
 
   currentUserCoords: { latitude: number; longitude: number } | null = null;
-  activeWidgetIds: string[] = [];
+  activeWidgetIds: (string | null)[] = [];
+  gridSlots: (Widget | null)[] = [];
   visibleWidgets: Widget[] = [];
+  selectedSlotForAdd: number | null = null;
 
   // Widget Edit & Drag-and-Drop State
   isWidgetEditMode: boolean = false;
@@ -459,6 +504,8 @@ export class HomePage implements OnInit, OnDestroy {
       'pulse': pulse,
       'gas-pump': GAS_PUMP_ICON,
       'pump': GAS_PUMP_ICON,
+      'atm': ATM_MACHINE_ICON,
+      'cash': ATM_MACHINE_ICON,
       'create-outline': createOutline,
       'bus': bus,
       'train': train,
@@ -482,6 +529,10 @@ export class HomePage implements OnInit, OnDestroy {
         this.applyGasLeafletTileLayer();
         this.renderGasLeafletMarkers();
       }
+      if (this.atmLeafletMap && this.atmModalView === 'map') {
+        this.applyAtmLeafletTileLayer();
+        this.renderAtmLeafletMarkers();
+      }
       this.cdr.markForCheck();
     });
 
@@ -489,6 +540,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.userCalendarEvents = localEvents;
     this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
     this.pharmacyCities = this.sortCitiesWithSkopjeFirst(this.pharmacyCities);
+    this.atmCities = this.sortCitiesWithSkopjeFirst(this.atmCities);
     this.updateCurrencyWidgetDisplay();
 
     // Hydrate cached weather metrics immediately so frame 1 has city and weather
@@ -512,6 +564,103 @@ export class HomePage implements OnInit, OnDestroy {
       if (!isNaN(lat) && !isNaN(lng)) {
         this.currentUserCoords = { latitude: lat, longitude: lng };
       }
+    }
+
+    // Hydrate cached fuel prices immediately
+    const cachedFuel = localStorage.getItem('cached_fuel_prices');
+    if (cachedFuel) {
+      try {
+        const parsedFuel = JSON.parse(cachedFuel);
+        if (Array.isArray(parsedFuel) && parsedFuel.length > 0) {
+          this.rawDatabaseFuel = parsedFuel;
+          this.updateFuelWidgetDisplay();
+        }
+      } catch {}
+    }
+
+    // Hydrate cached currency rates immediately
+    const cachedRates = localStorage.getItem('cached_currency_rates');
+    if (cachedRates) {
+      try {
+        const parsedRates = JSON.parse(cachedRates);
+        if (parsedRates && typeof parsedRates === 'object') {
+          this.rawDatabaseRates = parsedRates;
+          this.updateCurrencyWidgetDisplay();
+        }
+      } catch {}
+    }
+
+    // Hydrate cached holidays immediately
+    const cachedHolidays = localStorage.getItem('cached_holidays_list');
+    if (cachedHolidays) {
+      try {
+        const parsedHolidays = JSON.parse(cachedHolidays);
+        if (Array.isArray(parsedHolidays) && parsedHolidays.length > 0) {
+          this.holidaysList = parsedHolidays;
+          this.updateHolidayWidgetDisplay();
+          this.highlightedHolidayDates = this.holidaysList.map(h => ({
+            date: h.holiday_date,
+            textColor: '#ffffff',
+            backgroundColor: h.color_code || '#ef4444'
+          }));
+        }
+      } catch {}
+    }
+
+    // Hydrate cached crypto map immediately
+    const cachedCrypto = localStorage.getItem('cached_crypto_map');
+    if (cachedCrypto) {
+      try {
+        const parsedCrypto = JSON.parse(cachedCrypto);
+        if (Array.isArray(parsedCrypto) && parsedCrypto.length > 0) {
+          this.cryptoMap = new Map(parsedCrypto);
+          this.updateCryptoWidgetDisplay();
+        }
+      } catch {}
+    }
+
+    // Hydrate cached stock map immediately
+    const cachedStock = localStorage.getItem('cached_stock_map');
+    if (cachedStock) {
+      try {
+        const parsedStock = JSON.parse(cachedStock);
+        if (Array.isArray(parsedStock) && parsedStock.length > 0) {
+          this.stockMap = new Map(parsedStock);
+          this.updateStockWidgetDisplay();
+        }
+      } catch {}
+    }
+
+    // Hydrate cached pharmacies & gas stations immediately for 0ms frame 0 render
+    const cachedPharmacies = this.pharmacyService.getCachedPharmacies();
+    if (cachedPharmacies && cachedPharmacies.length > 0) {
+      this.pharmaciesList = cachedPharmacies;
+      this.updateNearestPharmacy();
+      this.updateFilteredPharmacies();
+      this.updatePharmacyWidgetDisplay();
+    }
+
+    const cachedGas = this.gasStationService.getCachedGasStations();
+    if (cachedGas && cachedGas.length > 0) {
+      this.gasStationsList = cachedGas;
+      this.updateNearestGasStation();
+      this.updateFilteredGasStations();
+      this.updateGasWidgetDisplay();
+    }
+
+    const cachedAlerts = this.utilityAlertService.getCachedAlerts();
+    if (cachedAlerts && cachedAlerts.length > 0) {
+      this.alertsList = cachedAlerts;
+      this.updateFilteredAlerts();
+      this.updateAlertsWidgetDisplay();
+    }
+
+    const cachedAtms = this.atmService.getCachedAtms();
+    if (cachedAtms && cachedAtms.length > 0) {
+      this.atmsList = cachedAtms;
+      this.updateNearestAtm();
+      this.updateFilteredAtms();
+      this.updateAtmWidgetDisplay();
     }
 
     this.supabaseService.currentUser$.subscribe(async (user) => {
@@ -569,18 +718,28 @@ export class HomePage implements OnInit, OnDestroy {
       }
     });
 
-    this.fetchHolidays();
+    // Phase 1: High Priority (Visible on primary viewport)
     this.fetchLiveMetrics();
     this.fetchDatabaseCurrencyRates();
     this.fetchDatabaseFuelPrices();
     this.initLiveCrypto();
-    this.initLiveStock();
-    this.startMultiFavoritesSlider();
-    this.loadDutyPharmacies();
-    this.loadGasStations();
-    this.loadUtilityAlerts();
-    this.loadTickerData();
-    this.initTransitData();
+
+    // Phase 2: Deferred (400ms - fast secondary metrics & widget rotator)
+    this.deferredInitTimeout1 = setTimeout(() => {
+      this.fetchHolidays();
+      this.initLiveStock();
+      this.loadUtilityAlerts();
+      this.startMultiFavoritesSlider();
+    }, 400);
+
+    // Phase 3: Background Idle (1200ms - heavier transit data, pharmacy/gas lists, and RSS ticker news)
+    this.deferredInitTimeout2 = setTimeout(() => {
+      this.loadDutyPharmacies();
+      this.loadGasStations();
+      this.loadAtms();
+      this.initTransitData();
+      this.loadTickerData();
+    }, 1200);
   }
 
   // --- 5-SECOND MULTI-FAVORITE WIDGET ROTATOR ---
@@ -611,6 +770,11 @@ export class HomePage implements OnInit, OnDestroy {
       this.zone.run(() => {
         this.cryptoMap = map;
         this.updateCryptoWidgetDisplay();
+        try {
+          if (map && map.size > 0) {
+            localStorage.setItem('cached_crypto_map', JSON.stringify(Array.from(map.entries())));
+          }
+        } catch {}
       });
     });
   }
@@ -666,6 +830,11 @@ export class HomePage implements OnInit, OnDestroy {
       this.zone.run(() => {
         this.stockMap = map;
         this.updateStockWidgetDisplay();
+        try {
+          if (map && map.size > 0) {
+            localStorage.setItem('cached_stock_map', JSON.stringify(Array.from(map.entries())));
+          }
+        } catch {}
       });
     });
   }
@@ -762,6 +931,10 @@ export class HomePage implements OnInit, OnDestroy {
       this.applyGasLeafletTileLayer();
       this.renderGasLeafletMarkers();
     }
+    if (this.atmLeafletMap && this.atmModalView === 'map') {
+      this.applyAtmLeafletTileLayer();
+      this.renderAtmLeafletMarkers();
+    }
   }
 
 async handleLogout() {
@@ -784,7 +957,7 @@ async handleLogout() {
   updateLoyaltyWidgetValue() {
     this.allWidgets = this.allWidgets.map(widget => {
       if (widget.id === 'loyalty') {
-        return { ...widget, value: `${this.loyaltyCards.length}`, unit: 'CARD_UNIT' };
+        return { ...widget, value: `${this.loyaltyCards.length}`, unit: '', customColor: '#10b981' };
       }
       return widget;
     });
@@ -801,7 +974,7 @@ async handleLogout() {
   openAddLoyaltyCardView() {
     this.newBarcodeData = '';
     this.newCustomStoreName = '';
-    this.newCardColor = '#1e293b';
+    this.newCardColor = 'linear-gradient(135deg, #10b981 0%, #047857 100%)';
     this.loyaltyModalView = 'add';
   }
 
@@ -1022,6 +1195,9 @@ async handleLogout() {
       const fuelData = await this.supabaseService.getLatestFuelPrices();
       this.rawDatabaseFuel = fuelData || [];
       if (this.rawDatabaseFuel.length === 0) return;
+      try {
+        localStorage.setItem('cached_fuel_prices', JSON.stringify(this.rawDatabaseFuel));
+      } catch {}
       this.updateFuelWidgetDisplay();
     } catch (err) {
       console.error('Failed to resolve local fuel matrices.', err);
@@ -1158,6 +1334,9 @@ async handleLogout() {
         this.updateNearestGasStation();
         this.updateFilteredGasStations();
         this.updateGasWidgetDisplay();
+        this.updateNearestAtm();
+        this.updateFilteredAtms();
+        this.updateAtmWidgetDisplay();
         this.updateFilteredAlerts();
         this.updateAlertsWidgetDisplay();
 
@@ -1541,33 +1720,28 @@ async handleLogout() {
 
   loadSavedWidgetOrder() {
     try {
+      const currentVer = localStorage.getItem(this.WIDGET_ORDER_VERSION_KEY);
+      if (currentVer !== this.CURRENT_WIDGET_ORDER_VERSION) {
+        localStorage.setItem(this.WIDGET_ORDER_VERSION_KEY, this.CURRENT_WIDGET_ORDER_VERSION);
+        localStorage.removeItem(this.STORAGE_WIDGET_ORDER_KEY);
+      }
       const saved = localStorage.getItem(this.STORAGE_WIDGET_ORDER_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const validIds = parsed.filter(id => this.allWidgets.some(w => w.id === id));
-          let uniqueIds = Array.from(new Set(validIds));
-          // Fill up to MAX_WIDGET_COUNT with any missing default widgets
-          for (const defaultId of this.DEFAULT_WIDGET_IDS) {
-            if (uniqueIds.length >= this.MAX_WIDGET_COUNT) break;
-            if (!uniqueIds.includes(defaultId) && this.allWidgets.some(w => w.id === defaultId)) {
-              uniqueIds.push(defaultId);
+          const slots: (string | null)[] = [];
+          for (let i = 0; i < this.MAX_WIDGET_COUNT; i++) {
+            const val = parsed[i];
+            if (val && this.allWidgets.some(w => w.id === val)) {
+              slots.push(val);
+            } else {
+              slots.push(null);
             }
           }
-          // Ensure new transport widget is active if not present
-          if (!uniqueIds.includes('transport') && this.allWidgets.some(w => w.id === 'transport')) {
-            const replaceIdx = uniqueIds.indexOf('stock');
-            if (replaceIdx !== -1) {
-              uniqueIds[replaceIdx] = 'transport';
-            } else if (uniqueIds.length < this.MAX_WIDGET_COUNT) {
-              uniqueIds.push('transport');
-            } else if (uniqueIds.length > 4) {
-              uniqueIds[4] = 'transport';
-            }
-          }
-          uniqueIds = uniqueIds.slice(0, this.MAX_WIDGET_COUNT);
-          if (uniqueIds.length > 0) {
-            this.activeWidgetIds = uniqueIds;
+
+          // If at least one valid slot exists, use it
+          if (slots.some(s => s !== null)) {
+            this.activeWidgetIds = slots;
             this.saveWidgetOrder();
             return;
           }
@@ -1577,6 +1751,9 @@ async handleLogout() {
 
     // Default widgets layout
     this.activeWidgetIds = [...this.DEFAULT_WIDGET_IDS];
+    while (this.activeWidgetIds.length < this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds.push(null);
+    }
     this.saveWidgetOrder();
   }
 
@@ -1590,10 +1767,19 @@ async handleLogout() {
     if (!this.activeWidgetIds || this.activeWidgetIds.length === 0) {
       this.loadSavedWidgetOrder();
     }
-    this.visibleWidgets = this.activeWidgetIds
-      .slice(0, this.MAX_WIDGET_COUNT)
-      .map(id => this.allWidgets.find(w => w.id === id)!)
-      .filter(Boolean);
+    while (this.activeWidgetIds.length < this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds.push(null);
+    }
+    if (this.activeWidgetIds.length > this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds = this.activeWidgetIds.slice(0, this.MAX_WIDGET_COUNT);
+    }
+
+    this.gridSlots = this.activeWidgetIds.map(id => {
+      if (!id) return null;
+      return this.allWidgets.find(w => w.id === id) || null;
+    });
+
+    this.visibleWidgets = this.gridSlots.filter(Boolean) as Widget[];
   }
 
   filterWidgets() {
@@ -1605,7 +1791,7 @@ async handleLogout() {
   }
 
   getEmptySlotsCount(): number[] {
-    const emptyCount = Math.max(0, this.MAX_WIDGET_COUNT - this.visibleWidgets.length);
+    const emptyCount = this.activeWidgetIds.filter(id => !id).length;
     return Array(emptyCount).fill(0);
   }
 
@@ -1632,35 +1818,55 @@ async handleLogout() {
     }
   }
 
-  removeWidget(widgetId: string, event?: Event) {
+  removeWidget(widgetId: string, event?: Event, slotIndex?: number) {
     if (event) event.stopPropagation();
-    this.activeWidgetIds = this.activeWidgetIds.filter(id => id !== widgetId);
+
+    if (slotIndex !== undefined && slotIndex >= 0 && slotIndex < this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds[slotIndex] = null;
+    } else {
+      const idx = this.activeWidgetIds.indexOf(widgetId);
+      if (idx !== -1) {
+        this.activeWidgetIds[idx] = null;
+      }
+    }
+
     this.saveWidgetOrder();
     this.syncVisibleWidgets();
     this.triggerHaptic(35);
     this.cdr.markForCheck();
   }
 
-  openAddWidgetModal() {
-    if (this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) return;
+  openAddWidgetModal(slotIndex?: number) {
+    if (this.getAvailableWidgets().length === 0) return;
+    this.selectedSlotForAdd = slotIndex !== undefined ? slotIndex : null;
     this.isAddWidgetModalOpen = true;
     this.cdr.markForCheck();
   }
 
   closeAddWidgetModal() {
     this.isAddWidgetModalOpen = false;
+    this.selectedSlotForAdd = null;
     this.cdr.markForCheck();
   }
 
   addWidget(widgetId: string) {
-    if (this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) return;
-    if (!this.activeWidgetIds.includes(widgetId)) {
-      this.activeWidgetIds.push(widgetId);
-      this.saveWidgetOrder();
-      this.syncVisibleWidgets();
-      this.triggerHaptic(30);
+    if (this.activeWidgetIds.includes(widgetId)) return;
+
+    if (this.selectedSlotForAdd !== null && this.selectedSlotForAdd >= 0 && this.selectedSlotForAdd < this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds[this.selectedSlotForAdd] = widgetId;
+    } else {
+      const emptyIdx = this.activeWidgetIds.findIndex(id => id === null || id === '');
+      if (emptyIdx !== -1) {
+        this.activeWidgetIds[emptyIdx] = widgetId;
+      }
     }
-    if (this.getAvailableWidgets().length === 0 || this.activeWidgetIds.length >= this.MAX_WIDGET_COUNT) {
+
+    this.selectedSlotForAdd = null;
+    this.saveWidgetOrder();
+    this.syncVisibleWidgets();
+    this.triggerHaptic(30);
+
+    if (this.getAvailableWidgets().length === 0 || !this.activeWidgetIds.some(id => id === null)) {
       this.isAddWidgetModalOpen = false;
     }
     this.cdr.markForCheck();
@@ -1668,6 +1874,9 @@ async handleLogout() {
 
   resetWidgetsToDefault() {
     this.activeWidgetIds = [...this.DEFAULT_WIDGET_IDS];
+    while (this.activeWidgetIds.length < this.MAX_WIDGET_COUNT) {
+      this.activeWidgetIds.push(null);
+    }
     this.saveWidgetOrder();
     this.syncVisibleWidgets();
     this.triggerHaptic(40);
@@ -1751,15 +1960,15 @@ async handleLogout() {
     if (!elem) return;
 
     const targetWrapper = elem.closest('.widget-card-wrapper') as HTMLElement;
-    if (!targetWrapper || targetWrapper.classList.contains('empty-slot-card')) return;
+    if (!targetWrapper) return;
 
-    const targetWidgetId = targetWrapper.getAttribute('data-widget-id');
-    if (!targetWidgetId || targetWidgetId === this.draggedWidgetId) return;
+    const targetIndexAttr = targetWrapper.getAttribute('data-slot-index');
+    if (targetIndexAttr === null) return;
+    const toIndex = parseInt(targetIndexAttr, 10);
 
     const fromIndex = this.activeWidgetIds.indexOf(this.draggedWidgetId);
-    const toIndex = this.activeWidgetIds.indexOf(targetWidgetId);
 
-    if (fromIndex !== -1 && toIndex !== -1) {
+    if (fromIndex !== -1 && toIndex >= 0 && toIndex < this.MAX_WIDGET_COUNT && fromIndex !== toIndex) {
       const draggedElem = document.querySelector(`[data-widget-id="${this.draggedWidgetId}"]`) as HTMLElement;
       const fromRect = draggedElem ? draggedElem.getBoundingClientRect() : null;
       const toRect = targetWrapper.getBoundingClientRect();
@@ -1773,10 +1982,12 @@ async handleLogout() {
         this.dragCurrentY -= deltaY;
       }
 
-      const moved = this.activeWidgetIds.splice(fromIndex, 1)[0];
-      this.activeWidgetIds.splice(toIndex, 0, moved);
+      const temp = this.activeWidgetIds[fromIndex];
+      this.activeWidgetIds[fromIndex] = this.activeWidgetIds[toIndex];
+      this.activeWidgetIds[toIndex] = temp;
 
       this.lastSwapTime = now;
+      this.saveWidgetOrder();
       this.syncVisibleWidgets();
       this.triggerHaptic(25);
       this.cdr.detectChanges();
@@ -2063,6 +2274,7 @@ async handleLogout() {
       this.closeLoyaltySubView();
       this.destroyLeafletMap();
       this.destroyGasLeafletMap();
+      this.destroyAtmLeafletMap();
     }
   }
 
@@ -2071,6 +2283,9 @@ async handleLogout() {
       const ratesData = await this.supabaseService.getLatestCurrencyRates();
       if (!ratesData) return;
       this.rawDatabaseRates = ratesData;
+      try {
+        localStorage.setItem('cached_currency_rates', JSON.stringify(ratesData));
+      } catch {}
       this.updateCurrencyWidgetDisplay();
     } catch (err) {
       console.error('Failed to resolve currency rates.', err);
@@ -2162,6 +2377,22 @@ async handleLogout() {
       }
       this.loadGasStations();
     }
+    if (widgetId === 'atms') {
+      this.atmModalView = 'list';
+      if (!this.currentUserCoords) {
+        this.weatherService.getDeviceCoordinates().subscribe(coords => {
+          this.currentUserCoords = coords;
+          this.updateNearestAtm();
+          this.updateFilteredAtms();
+          this.updateAtmWidgetDisplay();
+          if (this.atmLeafletMap && this.atmModalView === 'map') {
+            this.centerAtmLeafletMap();
+          }
+          this.cdr.markForCheck();
+        });
+      }
+      this.loadAtms();
+    }
     if (widgetId === 'alerts') {
       if (!this.currentUserCoords && !this.selectedAlertCity && this.currentCityName) {
         const norm = this.currentCityName.toLowerCase();
@@ -2187,6 +2418,12 @@ async handleLogout() {
         });
       }
     }
+    if (widgetId === 'holidays') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (!this.selectedCalendarDate) this.selectedCalendarDate = todayStr;
+      this.selectedHolidayDetail = this.holidaysList?.find(h => h.holiday_date === this.selectedCalendarDate) || null;
+      this.selectedDateEvents = this.userCalendarEvents.filter(e => e.event_date === this.selectedCalendarDate);
+    }
     this.isDetailModalOpen = true;
   }
 
@@ -2208,6 +2445,8 @@ async handleLogout() {
   }
 
   ngOnDestroy() {
+    if (this.deferredInitTimeout1) clearTimeout(this.deferredInitTimeout1);
+    if (this.deferredInitTimeout2) clearTimeout(this.deferredInitTimeout2);
     if (this.weatherSub) this.weatherSub.unsubscribe();
     if (this.cryptoSub) this.cryptoSub.unsubscribe();
     if (this.stockSub) this.stockSub.unsubscribe();
@@ -2359,10 +2598,79 @@ async handleLogout() {
     return `${day}/${month}/${year}`;
   }
 
+  formatHolidayDateFull(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const dayIndex = date.getDay();
+      const monthIndex = month - 1;
+      const lang = (this.currentLang || 'mk').toLowerCase();
+
+      const daysMap: Record<string, string[]> = {
+        mk: ['Недела', 'Понеделник', 'Вторник', 'Среда', 'Четврток', 'Петок', 'Сабота'],
+        al: ['E diel', 'E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë'],
+        en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      };
+
+      const monthsMap: Record<string, string[]> = {
+        mk: ['Ноември', 'Февруари', 'Март', 'Април', 'Мај', 'Јуни', 'Јули', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'],
+        al: ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'],
+        en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      };
+
+      // Ensure Macedonian January is correct
+      monthsMap['mk'][0] = 'Јануари';
+
+      const selectedDays = daysMap[lang] || daysMap['mk'];
+      const selectedMonths = monthsMap[lang] || monthsMap['mk'];
+
+      const dayName = selectedDays[dayIndex] || '';
+      const monthName = selectedMonths[monthIndex] || '';
+
+      return `${day} ${monthName} ${year} (${dayName})`;
+    } catch {
+      return this.formatHolidayDateDDMMYYYY(dateStr);
+    }
+  }
+
+  getHolidayRelativeBadge(dateStr?: string): { text: string; isToday: boolean } | null {
+    if (!dateStr) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const target = new Date(year, month - 1, day);
+    target.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const lang = this.currentLang || 'mk';
+
+    if (diffDays === 0) {
+      const text = lang === 'en' ? '⭐ Today!' : (lang === 'al' ? '⭐ Sot!' : '⭐ Денес!');
+      return { text, isToday: true };
+    }
+    if (diffDays === 1) {
+      const text = lang === 'en' ? '⏰ Tomorrow' : (lang === 'al' ? '⏰ Nesër' : '⏰ Утре');
+      return { text, isToday: false };
+    }
+    if (diffDays > 1 && diffDays <= 60) {
+      const text = lang === 'en' ? `⏳ In ${diffDays} days` : (lang === 'al' ? `⏳ Për ${diffDays} ditë` : `⏳ За ${diffDays} дена`);
+      return { text, isToday: false };
+    }
+    if (diffDays < 0 && diffDays >= -30) {
+      const text = lang === 'en' ? `Passed ${Math.abs(diffDays)}d ago` : (lang === 'al' ? `Kaluar para ${Math.abs(diffDays)} ditësh` : `Помина пред ${Math.abs(diffDays)} дена`);
+      return { text, isToday: false };
+    }
+    return null;
+  }
+
   async fetchHolidays() {
     try {
       this.holidaysList = await this.supabaseService.getHolidays();
       if (this.holidaysList && this.holidaysList.length > 0) {
+        try {
+          localStorage.setItem('cached_holidays_list', JSON.stringify(this.holidaysList));
+        } catch {}
         this.updateHolidayWidgetDisplay();
         this.loadTickerData();
         this.highlightedHolidayDates = this.holidaysList.map(h => ({
@@ -2510,15 +2818,26 @@ async handleLogout() {
       });
     }
 
+    // Hydrate ticker immediately with cached news if present so ticker does not sit blank
+    try {
+      const cachedNews = localStorage.getItem('cached_latest_news');
+      if (cachedNews && this.tickerItems.length === 0) {
+        const parsed = JSON.parse(cachedNews);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.allNewsItems = parsed;
+          this.tickerItems = [...combinedItems, ...parsed];
+          this.startTickerRotation();
+        }
+      }
+    } catch {}
+
     // 2. Real RSS News from reputable Macedonian portals (Nova Makedonija, Faktor, Fokus, etc.)
     const newsFromDb = await this.fetchLatestNewsFromDatabase();
-    this.allNewsItems = newsFromDb;
     if (newsFromDb.length > 0) {
-      combinedItems.push(...newsFromDb);
+      this.allNewsItems = newsFromDb;
+      this.tickerItems = [...combinedItems, ...newsFromDb];
+      this.startTickerRotation();
     }
-
-    this.tickerItems = combinedItems;
-    this.startTickerRotation();
   }
 
   async fetchLatestNewsFromDatabase(): Promise<TickerItem[]> {
@@ -2526,7 +2845,7 @@ async handleLogout() {
       const rawNews = await this.supabaseService.getLatestNews(30);
       if (!rawNews || rawNews.length === 0) return [];
 
-      return rawNews.map((item: any) => ({
+      const mapped: TickerItem[] = rawNews.map((item: any) => ({
         id: item.id,
         type: 'news' as const,
         rawHeader: `📰 ${item.source_name || 'Вести'}`,
@@ -2536,8 +2855,16 @@ async handleLogout() {
         summary: item.summary,
         publishedAt: item.published_at || item.created_at
       }));
+      try {
+        localStorage.setItem('cached_latest_news', JSON.stringify(mapped));
+      } catch {}
+      return mapped;
     } catch (e) {
       console.warn('Failed to load RSS news for ticker:', e);
+      try {
+        const cached = localStorage.getItem('cached_latest_news');
+        if (cached) return JSON.parse(cached);
+      } catch {}
       return [];
     }
   }
@@ -2653,6 +2980,19 @@ async handleLogout() {
     if (fullName && fullName.trim().length > 0) return fullName.trim().charAt(0).toUpperCase();
     if (this.currentUser.email && this.currentUser.email.length > 0) return this.currentUser.email.charAt(0).toUpperCase();
     return 'U';
+  }
+
+  getUserFirstName(): string {
+    if (!this.currentUser) return 'Dzeble';
+    const fullName = this.currentUser.user_metadata?.['full_name'] || this.currentUser.user_metadata?.['name'];
+    if (fullName && fullName.trim().length > 0) {
+      return fullName.trim().split(' ')[0];
+    }
+    if (this.currentUser.email && this.currentUser.email.length > 0) {
+      const emailPrefix = this.currentUser.email.split('@')[0];
+      return emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+    }
+    return 'Dzeble';
   }
 
   getCryptoPriceInSelectedCurrency(priceInUsd: number): string {
@@ -2932,6 +3272,14 @@ isNotificationActive(widgetId: string): boolean {
       zoomControl: true,
       attributionControl: false
     });
+
+    const mapContainer = this.leafletMap.getContainer();
+    if (mapContainer) {
+      const stopProp = (e: Event) => e.stopPropagation();
+      mapContainer.addEventListener('touchstart', stopProp, { passive: true });
+      mapContainer.addEventListener('pointerdown', stopProp, { passive: true });
+      mapContainer.addEventListener('mousedown', stopProp);
+    }
 
     this.applyLeafletTileLayer();
 
@@ -3423,6 +3771,14 @@ isNotificationActive(widgetId: string): boolean {
       attributionControl: false
     });
 
+    const mapContainer = this.gasLeafletMap.getContainer();
+    if (mapContainer) {
+      const stopProp = (e: Event) => e.stopPropagation();
+      mapContainer.addEventListener('touchstart', stopProp, { passive: true });
+      mapContainer.addEventListener('pointerdown', stopProp, { passive: true });
+      mapContainer.addEventListener('mousedown', stopProp);
+    }
+
     this.applyGasLeafletTileLayer();
 
     if (this.currentUserCoords) {
@@ -3571,6 +3927,322 @@ isNotificationActive(widgetId: string): boolean {
 
   getGasBrandBadgeStyle(chain: string) {
     return this.gasStationService.getBrandBadgeStyle(chain);
+  }
+
+  // --- ATMS (СИТЕ БАНКОМАТИ ВО МАКЕДОНИЈА) METHODS ---
+
+  async loadAtms() {
+    this.isLoadingAtms = true;
+    this.cdr.markForCheck();
+    try {
+      const data = await this.atmService.fetchAtms();
+      this.atmsList = data || [];
+      this.updateNearestAtm();
+      this.updateFilteredAtms();
+      this.updateAtmWidgetDisplay();
+    } catch (err) {
+      console.warn('Error loading ATMs in home page:', err);
+    } finally {
+      this.isLoadingAtms = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  updateNearestAtm() {
+    if (!this.atmsList || this.atmsList.length === 0) return;
+
+    if (this.currentUserCoords) {
+      for (const a of this.atmsList) {
+        if (a.latitude && a.longitude) {
+          a.distanceKm = this.atmService.calculateDistanceKm(
+            this.currentUserCoords.latitude,
+            this.currentUserCoords.longitude,
+            a.latitude,
+            a.longitude
+          );
+        }
+      }
+
+      const sorted = [...this.atmsList]
+        .filter(a => a.distanceKm != null)
+        .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+
+      this.nearestAtm = sorted.length > 0 ? sorted[0] : null;
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      const cityMatch = this.atmsList.find(a => a.city.toLowerCase().includes(userCity));
+      this.nearestAtm = cityMatch || this.atmsList[0] || null;
+    } else {
+      this.nearestAtm = this.atmsList[0] || null;
+    }
+  }
+
+  updateAtmWidgetDisplay() {
+    const w = this.allWidgets.find(item => item.id === 'atms');
+    if (w) {
+      if (this.nearestAtm && this.nearestAtm.distanceKm != null) {
+        w.value = this.atmService.formatDistance(this.nearestAtm.distanceKm);
+        const bankName = this.nearestAtm.bank || this.nearestAtm.bank_name || 'Банкомат';
+        w.unit = bankName.length > 12 ? bankName.slice(0, 10) + '..' : bankName;
+      } else {
+        w.value = this.atmsList.length > 0 ? `${this.atmsList.length}` : '400+';
+        w.unit = this.translate.instant('WIDGETS.ATMS_UNIT') || 'Банкомати';
+      }
+      w.customColor = '#10b981';
+    }
+    this.filterWidgets();
+  }
+
+  updateFilteredAtms() {
+    let list = [...this.atmsList];
+
+    if (this.selectedAtmCity) {
+      const cityFilter = this.selectedAtmCity.toLowerCase().trim();
+      list = list.filter(a =>
+        a.city.toLowerCase().includes(cityFilter) ||
+        (a.city_slug && a.city_slug.toLowerCase() === cityFilter)
+      );
+    }
+
+    if (this.selectedAtmBank && this.selectedAtmBank !== 'all') {
+      if (this.selectedAtmBank === 'other') {
+        const standardSlugs = ['sparkasse', 'stopanska', 'komercijalna', 'nlb', 'halk', 'unibanka', 'ttk', 'procredit', 'ckb', 'silkroad', 'stopanska-bt'];
+        list = list.filter(a => !standardSlugs.includes(a.bank_slug));
+      } else {
+        list = list.filter(a => a.bank_slug === this.selectedAtmBank);
+      }
+    }
+
+    if (this.atmSearchQuery && this.atmSearchQuery.trim()) {
+      const q = this.atmSearchQuery.toLowerCase().trim();
+      list = list.filter(a =>
+        (a.bank && a.bank.toLowerCase().includes(q)) ||
+        (a.city && a.city.toLowerCase().includes(q)) ||
+        (a.location_description && a.location_description.toLowerCase().includes(q)) ||
+        (a.address && a.address.toLowerCase().includes(q))
+      );
+    }
+
+    if (this.currentUserCoords) {
+      list.sort((a, b) => (a.distanceKm ?? 999999) - (b.distanceKm ?? 999999));
+    } else if (this.currentCityName) {
+      const userCity = this.currentCityName.toLowerCase();
+      list.sort((a, b) => {
+        const aMatch = a.city.toLowerCase().includes(userCity) ? 0 : 1;
+        const bMatch = b.city.toLowerCase().includes(userCity) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    this.filteredAtms = list;
+
+    if (this.atmModalView === 'map' && this.atmLeafletMap) {
+      this.renderAtmLeafletMarkers();
+    }
+  }
+
+  selectAtmCity(city: string) {
+    if (this.selectedAtmCity === city) {
+      this.selectedAtmCity = '';
+    } else {
+      this.selectedAtmCity = city;
+    }
+    this.updateFilteredAtms();
+    if (this.atmModalView === 'map' && this.atmLeafletMap) {
+      this.centerAtmLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  selectAtmBank(bankId: string) {
+    this.selectedAtmBank = bankId;
+    this.updateFilteredAtms();
+    if (this.atmModalView === 'map' && this.atmLeafletMap) {
+      this.centerAtmLeafletMap();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onAtmSearchChange() {
+    this.updateFilteredAtms();
+    this.cdr.markForCheck();
+  }
+
+  setAtmModalView(view: 'list' | 'map') {
+    this.atmModalView = view;
+    if (view === 'map') {
+      setTimeout(() => {
+        this.initAtmLeafletMap();
+      }, 100);
+    }
+    this.cdr.markForCheck();
+  }
+
+  private applyAtmLeafletTileLayer() {
+    if (!this.atmLeafletMap) return;
+    if (this.atmLeafletTileLayer) {
+      this.atmLeafletMap.removeLayer(this.atmLeafletTileLayer);
+      this.atmLeafletTileLayer = null;
+    }
+
+    this.atmLeafletTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.atmLeafletMap);
+  }
+
+  initAtmLeafletMap() {
+    const container = document.getElementById('atm-leaflet-map');
+    if (!container) return;
+
+    if (this.atmLeafletMap) {
+      this.atmLeafletMap.remove();
+      this.atmLeafletMap = null;
+      this.atmLeafletMarkers = [];
+      this.atmLeafletTileLayer = null;
+    }
+
+    const initialLat = this.currentUserCoords?.latitude ?? 41.9981;
+    const initialLng = this.currentUserCoords?.longitude ?? 21.4254;
+
+    this.atmLeafletMap = L.map('atm-leaflet-map', {
+      center: [initialLat, initialLng],
+      zoom: 13,
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    const mapContainer = this.atmLeafletMap.getContainer();
+    if (mapContainer) {
+      const stopProp = (e: Event) => e.stopPropagation();
+      mapContainer.addEventListener('touchstart', stopProp, { passive: true });
+      mapContainer.addEventListener('pointerdown', stopProp, { passive: true });
+      mapContainer.addEventListener('mousedown', stopProp);
+    }
+
+    this.applyAtmLeafletTileLayer();
+
+    if (this.currentUserCoords) {
+      const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `<div style="background: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(37,99,235,0.85);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([this.currentUserCoords.latitude, this.currentUserCoords.longitude], { icon: userIcon })
+        .addTo(this.atmLeafletMap)
+        .bindPopup(`<b>${this.translate.instant('AQI_MODAL.YOUR_LOCATION') || 'Ваша локација'}</b>`);
+    }
+
+    this.renderAtmLeafletMarkers();
+
+    setTimeout(() => {
+      if (this.atmLeafletMap) {
+        this.atmLeafletMap.invalidateSize();
+        this.centerAtmLeafletMap();
+      }
+    }, 250);
+  }
+
+  renderAtmLeafletMarkers() {
+    if (!this.atmLeafletMap) return;
+
+    for (const marker of this.atmLeafletMarkers) {
+      this.atmLeafletMap.removeLayer(marker);
+    }
+    this.atmLeafletMarkers = [];
+
+    const pinBorderColor = '#ffffff';
+
+    for (const a of this.filteredAtms) {
+      if (!a.latitude || !a.longitude) continue;
+
+      const bankColor = this.atmService.getBankColor(a.bank_slug);
+      const atmSvg = `<svg viewBox="0 0 24 24" width="16" height="16" fill="white" fill-rule="evenodd" style="display:block;"><path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2 3h12v6H6V5zm1 8h10v2H7v-2zm0 4h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z"/></svg>`;
+      const atmIcon = L.divIcon({
+        className: 'atm-leaflet-pin',
+        html: `<div style="background: ${bankColor}; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid ${pinBorderColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">${atmSvg}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+
+      const marker = L.marker([a.latitude, a.longitude], { icon: atmIcon });
+
+      const distHtml = a.distanceKm != null ? `<div class="map-popup-dist">📍 ${this.atmService.formatDistance(a.distanceKm)}</div>` : '';
+      const directionsUrl = a.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${a.latitude},${a.longitude}`;
+      const directionsLabel = this.translate.instant('ATM_MODAL.DIRECTIONS') || 'Насоки';
+
+      const depositBadge = (a.has_deposit || a.cash_in) ? `<div class="map-popup-badge-deposit">💵 Депозитен (Cash-in)</div>` : '';
+      const hoursBadge = a.is_24_7 ? `<div class="map-popup-badge-open">24/7 Достапен</div>` : '';
+
+      const popupContent = `
+        <div class="pharmacy-leaflet-popup">
+          <div class="map-popup-title" style="color: ${bankColor};">${a.bank || a.bank_name}</div>
+          <div class="map-popup-subtitle">${a.location_description || a.address || ''}${a.city ? ` (${a.city})` : ''}</div>
+          ${hoursBadge}
+          ${depositBadge}
+          ${distHtml}
+          <div style="margin-top: 10px;">
+            <a href="${directionsUrl}" target="_blank" class="map-popup-directions-btn">${directionsLabel} 🧭</a>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      marker.addTo(this.atmLeafletMap);
+      this.atmLeafletMarkers.push(marker);
+    }
+  }
+
+  centerAtmLeafletMap() {
+    if (!this.atmLeafletMap) return;
+    if (this.filteredAtms.length === 0) return;
+
+    if (this.selectedAtmCity) {
+      const firstInCity = this.filteredAtms.find(a => a.latitude && a.longitude);
+      if (firstInCity) {
+        this.atmLeafletMap.setView([firstInCity.latitude, firstInCity.longitude], 13);
+        return;
+      }
+    }
+
+    if (this.currentUserCoords) {
+      this.atmLeafletMap.setView([this.currentUserCoords.latitude, this.currentUserCoords.longitude], 14);
+    } else {
+      const first = this.filteredAtms.find(a => a.latitude && a.longitude);
+      if (first) {
+        this.atmLeafletMap.setView([first.latitude, first.longitude], 13);
+      }
+    }
+  }
+
+  destroyAtmLeafletMap() {
+    if (this.atmLeafletMap) {
+      this.atmLeafletMap.remove();
+      this.atmLeafletMap = null;
+      this.atmLeafletMarkers = [];
+      this.atmLeafletTileLayer = null;
+    }
+  }
+
+  openAtmDirections(atm: BankAtm) {
+    this.analyticsService.track(
+      'atm',
+      'route_clicked',
+      atm.bank || atm.bank_name || 'Банкомат',
+      { city: atm.city, address: atm.address }
+    );
+    const url = atm.google_maps_url || `https://www.google.com/maps/dir/?api=1&destination=${atm.latitude},${atm.longitude}`;
+    window.open(url, '_blank');
+  }
+
+  formatAtmDistance(distanceKm?: number): string {
+    return this.atmService.formatDistance(distanceKm);
+  }
+
+  getAtmBankColor(bankSlug?: string): string {
+    return this.atmService.getBankColor(bankSlug);
   }
 
   // --- UTILITY ALERTS (ПРЕКИНИ ЗА СТРУЈА & ВОДА) METHODS ---
@@ -3901,25 +4573,8 @@ isNotificationActive(widgetId: string): boolean {
     const w = this.visibleWidgets.find(x => x.id === 'transport');
     if (!w) return;
 
-    if (this.nextTrainDeparture && this.nextTrainDeparture.inMinutes <= 90 && this.nextTrainDeparture.inMinutes > 0) {
-      w.value = this.nextTrainDeparture.route.departureTime;
-      w.unit = `Воз (${this.nextTrainDeparture.route.toCity})`;
-    } else if (this.nearestJspStops.length > 0 && this.nearestJspStops[0].lines.length > 0) {
-      const topStop = this.nearestJspStops[0];
-      const topLine = topStop.lines[0];
-      const lineObj = this.transitService.getJspLineById(topLine);
-      const nextDep = lineObj ? this.transitService.getNextDeparture(lineObj) : null;
-      if (nextDep && nextDep.inMinutes < 60) {
-        w.value = `Линија ${topLine}`;
-        w.unit = `за ${nextDep.inMinutes}м`;
-      } else {
-        w.value = `Линија ${topLine}`;
-        w.unit = 'ЈСП';
-      }
-    } else {
-      w.value = 'ЈСП';
-      w.unit = 'Превоз';
-    }
+    w.value = '110+';
+    w.unit = 'Линии';
     w.icon = this.transitWidgetCurrentIcon;
   }
 

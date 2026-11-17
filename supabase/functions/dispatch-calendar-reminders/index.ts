@@ -48,15 +48,22 @@ async function sendFcmPush(
       body: JSON.stringify({
         message: {
           token: fcmToken,
-          notification: { title, body },
+          notification: {
+            title,
+            body,
+            image: "https://pvxnzqpbdizhyneiyzlf.supabase.co/storage/v1/object/public/public-assets/Dzeble_new_transparent_512x512.png"
+          },
           data: dataPayload,
           android: {
             priority: "high",
             notification: {
+              icon: "ic_stat_dzeble_notification",
+              color: "#10b981",
               channel_id: "default",
               sound: "default",
               default_sound: true,
               default_vibrate_timings: true,
+              image: "https://pvxnzqpbdizhyneiyzlf.supabase.co/storage/v1/object/public/public-assets/Dzeble_new_transparent_512x512.png"
             },
           },
         },
@@ -107,6 +114,23 @@ serve(async (_req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const fcmAccessToken = await getFcmAccessToken(serviceAccount);
     const projectId = serviceAccount.project_id;
+
+    // Background holiday self-healing check: ensure current and upcoming year holidays are seeded
+    try {
+      const curYear = now.getFullYear();
+      const nextYear = curYear + 1;
+      const { count } = await supabase
+        .from("macedonian_holidays")
+        .select("*", { count: "exact", head: true })
+        .gte("holiday_date", `${nextYear}-01-01`)
+        .lte("holiday_date", `${nextYear}-12-31`);
+
+      if (!count || count < 20) {
+        fetch(`${supabaseUrl}/functions/v1/sync-macedonian-holidays?years=${curYear},${nextYear},${nextYear + 1}`, {
+          headers: { Authorization: `Bearer ${supabaseServiceKey}` }
+        }).catch(() => {});
+      }
+    } catch {}
 
     // 1. Fetch active devices whose users have calendar notifications enabled
     const { data: devices, error: devError } = await supabase

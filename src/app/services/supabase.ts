@@ -797,8 +797,8 @@ async addUserWidget(userId: string, title: string, eventDate: string, icon: stri
 
   async getHolidays(): Promise<any[]> {
     const currentYear = new Date().getFullYear();
-    const startDate = `${currentYear}-01-01`;
-    const endDate = `${currentYear + 1}-12-31`;
+    const startDate = `${currentYear - 1}-01-01`;
+    const endDate = `${currentYear + 4}-12-31`;
 
     const { data, error } = await this.client
       .from('macedonian_holidays')

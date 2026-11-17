@@ -6,6 +6,10 @@ import { Directive, ElementRef, OnInit, OnDestroy } from '@angular/core';
 })
 export class LockSheetDragDirective implements OnInit, OnDestroy {
   private stopMove = (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('.leaflet-container, [class*="leaflet"], .pharmacy-map-wrapper, .gas-map-wrapper, .atm-map-wrapper')) {
+      return;
+    }
     e.stopPropagation();
   };
 

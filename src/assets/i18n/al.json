@@ -18,6 +18,7 @@
     "SENDING": "Po dërgohet..."
   },
   "HOME": {
+    "WELCOME": "Mirëseerdhët",
     "CITY": "Shkup",
     "TODAY": "Sot",
     "LOGIN": "Hyni",
@@ -46,6 +47,8 @@
     "STOCK": "Bursa",
     "PHARMACY": "Barnatore kujdestare",
     "GAS_STATIONS": "Pompa benzine",
+    "ATMS": "Bankomatet",
+    "ATMS_UNIT": "Bankomatet",
     "ALERTS": "Ndërprerjet",
     "TRANSPORT": "Transporti publik",
     "NOTIF_ON": "Aktivizo njoftimet",
@@ -76,6 +79,23 @@
     "WORKING_HOURS": "Orari i punës",
     "OPEN": "Hapur",
     "CLOSED": "Mbyllur",
+    "BACK": "← Kthehu"
+  },
+  "ATM_MODAL": {
+    "TITLE": "Bankomatet",
+    "SUBTITLE": "Vendndodhjet e bankomateve nga të gjitha bankat në Maqedoni",
+    "SEARCH_PLACEHOLDER": "Kërko bankë, lokacion ose adresë...",
+    "ALL_BANKS": "Të gjitha bankat",
+    "ALL_CITIES": "Të gjitha qytetet",
+    "DIRECTIONS": "Udhëzime",
+    "MAP_VIEW": "Harta",
+    "LIST_VIEW": "Lista",
+    "NO_RESULTS": "Nuk u gjetën bankomate për filtrat e zgjedhur.",
+    "DISTANCE": "distanca",
+    "DEPOSIT_CASH_IN": "Depozitë (Cash-in)",
+    "HOURS_24_7": "24/7 në dispozicion",
+    "WORKING_HOURS": "Orari i punës",
+    "TOTAL_COUNT": "bankomate",
     "BACK": "← Kthehu"
   },
   "GAS_MODAL": {
@@ -458,6 +478,8 @@
   "CONFIRMATION_RESENT": "Email-i i konfirmimit u dërgua përsëri me sukses!",
   "FORGOT_PASSWORD_EMAIL_REQUIRED": "Ju lutemi shënoni email-in tuaj për të rivendosur fjalëkalimin.",
   "PASSWORD_RESET_SENT": "Një lidhje për rivendosjen e fjalëkalimit është dërguar në email-in tuaj!",
+  "PASSWORD_RESET_SUBTITLE": "Kemi dërguar një lidhje rivendosjeje në:",
+  "PASSWORD_RESET_NOTE": "Nëse ekziston një llogari aktive me këtë adresë emaili, do t'ju dërgohet një mesazh me udhëzime për rivendosjen e fjalëkalimit.",
   "GENERIC_ERROR": "Ndodhi një gabim. Ju lutemi provoni përsëri.",
   "GOOGLE_ERROR": "Hyrja me Google dështoi. Ju lutemi provoni përsëri.",
   "RATE_LIMIT_SECONDS": "Për arsye sigurie, mund ta kërkoni përsëri pas {{ seconds }} sekondash.",

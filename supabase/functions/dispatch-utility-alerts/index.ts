@@ -57,8 +57,24 @@ async function sendFcmPush(
         body: JSON.stringify({
           message: {
             token: fcmToken,
-            notification: { title, body },
+            notification: {
+              title,
+              body,
+              image: "https://pvxnzqpbdizhyneiyzlf.supabase.co/storage/v1/object/public/public-assets/Dzeble_new_transparent_512x512.png"
+            },
             data: dataPayload,
+            android: {
+              priority: "high",
+              notification: {
+                icon: "ic_stat_dzeble_notification",
+                color: "#10b981",
+                channel_id: "default",
+                sound: "default",
+                default_sound: true,
+                default_vibrate_timings: true,
+                image: "https://pvxnzqpbdizhyneiyzlf.supabase.co/storage/v1/object/public/public-assets/Dzeble_new_transparent_512x512.png"
+              },
+            },
           },
         }),
       }

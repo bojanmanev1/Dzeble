@@ -3,10 +3,10 @@
 }
 
 .back-btn-container {
-  padding-top: max(26px, calc(env(safe-area-inset-top, 0px) + 16px));
+  padding-top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
   padding-left: 20px;
   padding-right: 20px;
-  padding-bottom: 8px;
+  padding-bottom: 0px;
   display: flex;
   align-items: center;
 
@@ -52,29 +52,33 @@
 .auth-wrapper {
   max-width: 400px;
   margin: 0 auto;
-  padding: 4px 24px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  padding: 0 24px calc(env(safe-area-inset-bottom, 0px) + 32px);
 }
 
 .auth-header {
   text-align: center;
-  margin-bottom: 26px;
+  margin-top: -24px;
+  margin-bottom: 20px;
 
   .auth-logo-badge {
-    width: 68px;
-    height: 68px;
-    border-radius: 22px;
-    margin: 0 auto 14px;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    margin: 0 auto 25px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-    border: 1.5px solid #a7f3d0;
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.15);
-    transition: transform 0.25s ease;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 
-    .auth-logo {
-      font-size: 32px;
-      line-height: 1;
+    .auth-app-logo {
+      height: 92px;
+      width: auto;
+      max-width: 90px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.45));
+      transition: transform 0.25s ease;
     }
   }
 

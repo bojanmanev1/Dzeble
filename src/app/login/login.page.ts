@@ -322,8 +322,8 @@ export class LoginPage implements OnInit, OnDestroy {
       this.loadingMessage = this.translate.instant('COMMON.SENDING') || 'Се испраќа...';
       await this.supabaseService.resetPasswordForEmail(this.email.trim());
       this.popupTitle = this.translate.instant('AUTH.PASSWORD_RESET_SENT');
-      this.popupSubtitle = this.translate.instant('AUTH.SIGNUP_SUCCESS_SUBTITLE');
-      this.popupNote = this.translate.instant('AUTH.PASSWORD_RESET_SENT');
+      this.popupSubtitle = this.translate.instant('AUTH.PASSWORD_RESET_SUBTITLE');
+      this.popupNote = this.translate.instant('AUTH.PASSWORD_RESET_NOTE');
       this.popupEmail = this.email.trim();
       this.isVerificationModal = false;
       this.resendFeedbackMessage = '';

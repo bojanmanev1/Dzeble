@@ -18,6 +18,7 @@
     "SENDING": "Sending..."
   },
   "HOME": {
+    "WELCOME": "Welcome",
     "CITY": "Skopje",
     "TODAY": "Today",
     "LOGIN": "Login",
@@ -46,6 +47,8 @@
     "STOCK": "Stocks",
     "PHARMACY": "Duty Pharmacies",
     "GAS_STATIONS": "Gas Stations",
+    "ATMS": "ATMs",
+    "ATMS_UNIT": "ATMs",
     "ALERTS": "Outages",
     "TRANSPORT": "Public Transit",
     "NOTIF_ON": "Enable notifications",
@@ -76,6 +79,23 @@
     "WORKING_HOURS": "Working Hours",
     "OPEN": "Open",
     "CLOSED": "Closed",
+    "BACK": "← Back"
+  },
+  "ATM_MODAL": {
+    "TITLE": "Bank ATMs",
+    "SUBTITLE": "Live ATM locations from all banks in Macedonia",
+    "SEARCH_PLACEHOLDER": "Search bank, location or address...",
+    "ALL_BANKS": "All Banks",
+    "ALL_CITIES": "All Cities",
+    "DIRECTIONS": "Directions",
+    "MAP_VIEW": "Map",
+    "LIST_VIEW": "List",
+    "NO_RESULTS": "No ATMs found for the selected filter.",
+    "DISTANCE": "distance",
+    "DEPOSIT_CASH_IN": "Cash-in Deposit",
+    "HOURS_24_7": "24/7 Available",
+    "WORKING_HOURS": "Working Hours",
+    "TOTAL_COUNT": "ATMs",
     "BACK": "← Back"
   },
   "GAS_MODAL": {
@@ -458,6 +478,8 @@
   "CONFIRMATION_RESENT": "Confirmation email has been resent!",
   "FORGOT_PASSWORD_EMAIL_REQUIRED": "Please enter your email to reset your password.",
   "PASSWORD_RESET_SENT": "A password reset link has been sent to your email!",
+  "PASSWORD_RESET_SUBTITLE": "We sent a reset link to:",
+  "PASSWORD_RESET_NOTE": "If an active account exists with this email address, you will receive an email with instructions to reset your password.",
   "GENERIC_ERROR": "An error occurred. Please try again.",
   "GOOGLE_ERROR": "Google sign-in failed. Please try again.",
   "RATE_LIMIT_SECONDS": "For security purposes, you can only request this after {{ seconds }} seconds.",

@@ -161,22 +161,30 @@ html.dark {
 
   /* 2. Top Utility Bar */
   .utility-bar {
-    .app-brand-title {
-      color: #f1f5f9 !important;
+    .greeting-sub {
+      color: #94a3b8 !important;
+    }
+
+    .greeting-name {
+      color: #f8fafc !important;
+    }
+
+    .header-pocket-logo {
+      filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.6)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)) !important;
     }
   }
 
   .user-avatar-btn {
-    background: #1c2824 !important;
-    border: 1px solid rgba(52, 211, 153, 0.25) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    background: #141c18 !important;
+    border: 1.5px solid rgba(52, 211, 153, 0.5) !important;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 
     .avatar-initial {
       color: #34d399 !important;
     }
 
     .guest-avatar-icon {
-      color: #9bb0a7 !important;
+      color: #34d399 !important;
     }
   }
 
@@ -484,7 +492,7 @@ html.dark {
   /* Universal headings, subtitles and cards across any modal */
   .modal-wrapper,
   .detail-modal-container {
-    h1, h2, h3, h4, h5 {
+    h1, h2, h3:not(.holiday-title), h4, h5 {
       color: #f1f5f9 !important;
     }
 
@@ -498,9 +506,9 @@ html.dark {
     div[style*="background: #f7f7f5"],
     div[style*="background: #f8f9fa"],
     div[style*="background: #f1f5f9"],
-    div[style*="background: #ffffff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
-    div[style*="background: #fff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
-    div[style*="background-color: #ffffff"]:not(:has(svg[appBarcodeRender])):not(:has(svg)),
+    div[style*="background: #ffffff"]:not(.loyalty-barcode-plate),
+    div[style*="background: #fff"]:not(.loyalty-barcode-plate),
+    div[style*="background-color: #ffffff"]:not(.loyalty-barcode-plate),
     div[style*="background-color: #f8f9fa"],
     ul[style*="background: #f8fafc"],
     div[style*="box-shadow: 0 4px 12px"] {
@@ -673,13 +681,163 @@ html.dark {
       color: #f1f5f9 !important;
     }
 
-    /* Keep Loyalty Barcode Scanner Container clean white */
-    div:has(svg[appBarcodeRender]),
+    /* Keep Only the Inner Barcode Sticker Plate Clean White for Optical Cashier Scanners */
+    .loyalty-barcode-plate,
     .loyalty-barcode-box,
     .barcode-svg-container {
       background: #ffffff !important;
       background-color: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
+      border: 1px solid rgba(255, 255, 255, 0.7) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .loyalty-modal-body {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    .loyalty-pass-card {
+      background: #1c2824 !important;
+      background-color: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .loyalty-barcode-compartment {
+      background: #172420 !important;
+      background-color: #172420 !important;
+    }
+
+    .loyalty-barcode-digits {
+      color: #f1f5f9 !important;
+    }
+
+    .loyalty-brightness-note {
+      background: #121a16 !important;
+      border-top-color: rgba(52, 211, 153, 0.22) !important;
+      color: #9bb0a7 !important;
+    }
+
+    /* Loyalty Cards Dark & Green Theme */
+    .loyalty-hero-icon {
+      color: #34d399 !important;
+    }
+
+    .loyalty-modal-title {
+      color: #f8fafc !important;
+    }
+
+    .loyalty-modal-subtitle {
+      color: #9bb0a7 !important;
+    }
+
+    .btn-add-loyalty-card {
+      background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+      border: 1px solid rgba(52, 211, 153, 0.35) !important;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45) !important;
+      color: #ffffff !important;
+
+      &:active {
+        background: #047857 !important;
+      }
+    }
+
+    .loyalty-card-tile {
+      border: 1px solid rgba(52, 211, 153, 0.28) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .loyalty-card-tap-badge {
+      background: rgba(0, 0, 0, 0.55) !important;
+      border: 1px solid rgba(52, 211, 153, 0.3) !important;
+      color: #6ee7b7 !important;
+    }
+
+    .loyalty-empty-state {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+
+      .loyalty-empty-title {
+        color: #f8fafc !important;
+      }
+
+      .loyalty-empty-hint {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    .loyalty-pass-card {
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .loyalty-brightness-note {
+      background: #172420 !important;
+      border-top: 1px dashed rgba(52, 211, 153, 0.25) !important;
+      color: #9bb0a7 !important;
+    }
+
+    .btn-loyalty-back {
+      background: #1c2824 !important;
+      color: #ecfdf5 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+      &:active {
+        background: #23342f !important;
+      }
+    }
+
+    .btn-loyalty-delete {
+      background: rgba(239, 68, 68, 0.15) !important;
+      color: #f87171 !important;
+      border: 1px solid rgba(239, 68, 68, 0.3) !important;
+
+      &:active {
+        background: rgba(239, 68, 68, 0.25) !important;
+      }
+    }
+
+    .loyalty-form-label {
+      color: #9bb0a7 !important;
+    }
+
+    .loyalty-preset-chip {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+      color: #ecfdf5 !important;
+
+      &:active {
+        background: #23342f !important;
+      }
+    }
+
+    .loyalty-input-card {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.2) !important;
+    }
+
+    .loyalty-text-input {
+      color: #f1f5f9 !important;
+
+      &::placeholder {
+        color: #4b6358 !important;
+      }
+    }
+
+    .btn-loyalty-scan {
+      background: #10b981 !important;
+      color: #042f2e !important;
+      border: none !important;
+
+      &:active {
+        background: #059669 !important;
+      }
+    }
+
+    .btn-loyalty-save {
+      background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45) !important;
+      border: 1px solid rgba(52, 211, 153, 0.3) !important;
     }
 
     /* Pharmacy Modal Dark Theme matching Stocks Design */
@@ -873,6 +1031,7 @@ html.dark {
 
     .gas-leaflet-pin,
     .pharmacy-leaflet-pin,
+    .atm-leaflet-pin,
     .user-location-marker {
       background: transparent !important;
       border: none !important;
@@ -926,6 +1085,12 @@ html.dark {
         background: rgba(239, 68, 68, 0.18) !important;
         color: #f87171 !important;
         border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      }
+
+      .map-popup-badge-deposit {
+        background: rgba(59, 130, 246, 0.18) !important;
+        color: #60a5fa !important;
+        border: 1px solid rgba(96, 165, 250, 0.3) !important;
       }
 
       .map-popup-dist {
@@ -1164,6 +1329,156 @@ html.dark {
     }
 
     .gas-empty-state {
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #34d399 !important;
+      }
+
+      p {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    /* ATMs Modal Dark Theme (Matching Pharmacy, Gas & Stocks Design) */
+    .atm-view-switcher {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .switcher-pill {
+        color: #9bb0a7 !important;
+        background: transparent !important;
+
+        ion-icon {
+          color: #9bb0a7 !important;
+        }
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          font-weight: 800 !important;
+
+          ion-icon {
+            color: #042f2e !important;
+          }
+        }
+      }
+    }
+
+    .atm-search-box {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+
+      .search-icon {
+        color: #9bb0a7 !important;
+      }
+
+      .atm-search-input {
+        background: transparent !important;
+        color: #f1f5f9 !important;
+
+        &::placeholder {
+          color: #9bb0a7 !important;
+        }
+      }
+
+      .atm-search-clear {
+        color: #9bb0a7 !important;
+      }
+    }
+
+    .atm-bank-scroll,
+    .atm-city-scroll {
+      .bank-chip,
+      .city-chip {
+        background: #1c2824 !important;
+        border: 1px solid rgba(52, 211, 153, 0.18) !important;
+        color: #9bb0a7 !important;
+
+        &.active {
+          background: #10b981 !important;
+          color: #042f2e !important;
+          border-color: #10b981 !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .atm-card {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+
+      .atm-name-block {
+        .atm-name-row {
+          .atm-badge-open {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+            border: 1px solid rgba(52, 211, 153, 0.35) !important;
+          }
+
+          .atm-badge-deposit {
+            background: rgba(59, 130, 246, 0.2) !important;
+            color: #60a5fa !important;
+            border: 1px solid rgba(96, 165, 250, 0.35) !important;
+          }
+        }
+
+        .atm-address-row {
+          color: #9bb0a7 !important;
+
+          .addr-icon {
+            color: #6ee7b7 !important;
+          }
+
+          span {
+            color: #9bb0a7 !important;
+          }
+        }
+      }
+
+      .atm-distance-tag {
+        background: #121514 !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+        color: #ffffff !important;
+
+        span {
+          color: #34d399 !important;
+        }
+      }
+
+      .atm-card-actions {
+        border-top: none !important;
+        padding-top: 0 !important;
+
+        .atm-action-btn.btn-directions {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+          color: #ffffff !important;
+          border: none !important;
+        }
+      }
+    }
+
+    .atm-map-wrapper {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+      border-radius: 16px !important;
+      overflow: hidden !important;
+
+      .atm-leaflet-container {
+        border-radius: 16px !important;
+      }
+
+      .atm-map-badge {
+        background: rgba(24, 36, 32, 0.95) !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(52, 211, 153, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+      }
+    }
+
+    .atm-empty-state {
       color: #9bb0a7 !important;
 
       ion-icon {
@@ -1713,9 +2028,14 @@ html.dark {
 
   .auth-header {
     .auth-logo-badge {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.24)) !important;
-      border-color: rgba(52, 211, 153, 0.35) !important;
-      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2) !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+
+      .auth-app-logo {
+        height: 92px;
+        filter: drop-shadow(0 0 22px rgba(52, 211, 153, 0.55)) drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)) !important;
+      }
     }
 
     h1 {
@@ -2752,6 +3072,17 @@ body.dark,
     margin-top: 5px;
   }
 
+  .map-popup-badge-deposit {
+    display: inline-block;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+
   .map-popup-dist {
     color: #64748b;
     font-size: 12px;
@@ -3437,6 +3768,184 @@ html.dark,
     ion-icon {
       color: #4b6358 !important;
     }
+  }
+}
+
+/* ==========================================================================
+   CALENDAR WIDGET & HOLIDAY CARD ENHANCEMENTS
+   ========================================================================== */
+.selected-holiday-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid #e2e8f0;
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  .holiday-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+
+    .holiday-target-badge {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .holiday-type-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+  }
+
+  .holiday-title {
+    margin: 4px 0 8px 0 !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.2px;
+  }
+
+  .holiday-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    flex-wrap: wrap;
+
+    .holiday-date-text {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #475569;
+    }
+
+    .holiday-countdown-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: #334155;
+
+      &.is-today {
+        background: #fef08a !important;
+        color: #854d0e !important;
+        font-weight: 800 !important;
+      }
+    }
+  }
+}
+
+body.dark,
+html.dark,
+.dark,
+body.dark-theme,
+.dark-theme {
+  .selected-holiday-card {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+
+    .holiday-title {
+      color: #0f172a !important;
+    }
+
+    .holiday-card-footer {
+      color: #64748b !important;
+
+      .holiday-date-text {
+        color: #475569 !important;
+      }
+
+      .holiday-countdown-badge {
+        background: #f1f5f9 !important;
+        color: #334155 !important;
+
+        &.is-today {
+          background: #fef08a !important;
+          color: #854d0e !important;
+        }
+      }
+    }
+
+    .holiday-card-header .holiday-type-pill {
+      background: rgba(16, 185, 129, 0.12) !important;
+      color: #059669 !important;
+      border-color: rgba(16, 185, 129, 0.25) !important;
+    }
+  }
+
+  .calendar-selected-date-title {
+    color: #f8fafc !important;
+  }
+
+  .add-widget-modal {
+    --background: #121514 !important;
+
+    .add-widget-content {
+      --background: #121514 !important;
+    }
+
+    .add-widget-modal-title {
+      color: #f8fafc !important;
+    }
+
+    .add-widget-modal-sub {
+      color: #34d399 !important;
+    }
+
+    .modal-hero {
+      h2, .add-widget-modal-title {
+        color: #f8fafc !important;
+      }
+      p, .add-widget-modal-sub {
+        color: #34d399 !important;
+      }
+    }
+  }
+}
+
+.add-widget-modal {
+  --background: #ffffff;
+
+  .add-widget-modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+  }
+
+  .add-widget-modal-sub {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 }
 
