@@ -9,6 +9,7 @@ import { SessionTrackerService } from './services/session-tracker';
 import { SupabaseService } from './services/supabase';
 import { PushNotificationService } from './services/push-notification';
 import { PermissionService } from './services/permission';
+import { AppUpdateService } from './services/app-update';
 
 import { ThemeService } from './services/theme';
 
@@ -24,6 +25,7 @@ export class AppComponent implements OnInit {
   private supabaseService = inject(SupabaseService);
   private pushService = inject(PushNotificationService);
   private permissionService = inject(PermissionService);
+  private appUpdateService = inject(AppUpdateService);
   private router = inject(Router);
   private navCtrl = inject(NavController);
   private translate = inject(TranslateService);
@@ -53,9 +55,12 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // 4. Ensure user stays logged in continuously until they manually choose to log out
+    // 4. Check for remote app updates (Pop-up if new version on Play Store exists)
+    this.appUpdateService.init().catch(err => console.warn('AppUpdate init error:', err));
 
-    // 5. Signal that Angular application is ready to transition out the splash screen
+    // 5. Ensure user stays logged in continuously until they manually choose to log out
+
+    // 6. Signal that Angular application is ready to transition out the splash screen
     if (typeof (window as any).signalAppReady === 'function') {
       (window as any).signalAppReady();
     }

@@ -2303,6 +2303,156 @@ html.dark {
         }
       }
     }
+
+    /* Smart Bus Arrivals (ETA) in Dark Theme */
+    .stop-arrivals-container {
+      border-top: 1px solid rgba(52, 211, 153, 0.15) !important;
+
+      .arrivals-subhead {
+        .subhead-label {
+          color: #cbd5e1 !important;
+        }
+
+        .subhead-tag {
+          background: rgba(16, 185, 129, 0.2) !important;
+          color: #34d399 !important;
+          border: 1px solid rgba(52, 211, 153, 0.3) !important;
+        }
+      }
+
+      .arrival-card {
+        background: #14221c !important;
+        background-color: #14221c !important;
+        border: 1px solid rgba(52, 211, 153, 0.22) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+
+        &:active {
+          background: #1b2e26 !important;
+        }
+
+        .arr-left {
+          .arr-dest {
+            color: #f1f5f9 !important;
+            font-weight: 600 !important;
+          }
+        }
+
+        .arr-right {
+          .arr-in-min {
+            color: #34d399 !important;
+
+            &.urgent {
+              color: #f87171 !important;
+            }
+          }
+
+          .arr-clock {
+            color: #9bb0a7 !important;
+          }
+        }
+      }
+
+      .eta-disclaimer-note {
+        color: #8da499 !important;
+
+        ion-icon {
+          color: #10b981 !important;
+        }
+      }
+    }
+  }
+
+  /* Transit Mode Switcher (List vs Map) in Dark Theme */
+  .transit-mode-switcher {
+    background: #1c2824 !important;
+    background-color: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+
+    .transit-mode-btn {
+      color: #9bb0a7 !important;
+      background: transparent !important;
+      border: none !important;
+
+      ion-icon {
+        color: #9bb0a7 !important;
+      }
+
+      &.active {
+        background: #10b981 !important;
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35) !important;
+
+        ion-icon {
+          color: #ffffff !important;
+        }
+      }
+    }
+  }
+
+  /* Transit Map Container in Dark Theme */
+  .transit-map-wrapper {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+
+    .transit-map-hint {
+      background: #14221c !important;
+      border-top: 1px solid rgba(52, 211, 153, 0.15) !important;
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #10b981 !important;
+      }
+    }
+  }
+
+  /* Transit Map Popup (Stop Info) */
+  .transit-leaflet-popup {
+    .transit-popup-title {
+      color: #10b981 !important;
+      font-weight: 800 !important;
+    }
+
+    .transit-popup-dir {
+      color: #9bb0a7 !important;
+    }
+
+    .transit-popup-box {
+      background: #14221c !important;
+      border: 1px solid rgba(52, 211, 153, 0.22) !important;
+    }
+
+    .transit-popup-disclaimer {
+      color: #8da499 !important;
+    }
+  }
+
+  /* Green Search Prompt Card in Dark Theme */
+  .transit-search-prompt-card {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+
+    .prompt-icon-wrap {
+      background: rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
+
+      ion-icon {
+        color: #ffffff !important;
+      }
+    }
+
+    .prompt-content {
+      .prompt-title {
+        color: #ffffff !important;
+        font-weight: 800 !important;
+      }
+
+      .prompt-desc {
+        color: rgba(255, 255, 255, 0.95) !important;
+      }
+    }
   }
 
   /* JSP Line Cards */
@@ -2354,6 +2504,20 @@ html.dark {
 
     .line-chevron {
       color: #4b6358 !important;
+    }
+  }
+
+  .empty-transit-state {
+    .empty-icon {
+      color: #64748b !important;
+    }
+
+    .empty-title {
+      color: #f1f5f9 !important;
+    }
+
+    .empty-desc {
+      color: #9bb0a7 !important;
     }
   }
 
@@ -3458,6 +3622,20 @@ html.dark,
     }
   }
 
+  .empty-transit-state {
+    .empty-icon {
+      color: #64748b !important;
+    }
+
+    .empty-title {
+      color: #f1f5f9 !important;
+    }
+
+    .empty-desc {
+      color: #9bb0a7 !important;
+    }
+  }
+
   /* Line Detail View */
   .selected-line-view {
     .btn-transit-back,
@@ -3864,6 +4042,7 @@ html.dark,
 body.dark,
 html.dark,
 .dark,
+.ion-palette-dark,
 body.dark-theme,
 .dark-theme {
   .selected-holiday-card {
@@ -3907,24 +4086,89 @@ body.dark-theme,
   .add-widget-modal {
     --background: #121514 !important;
 
-    .add-widget-content {
-      --background: #121514 !important;
+    &::part(content) {
+      background: #121514 !important;
+      background-color: #121514 !important;
+      border-top: 1px solid rgba(52, 211, 153, 0.25) !important;
     }
 
-    .add-widget-modal-title {
+    .add-widget-content {
+      --background: #121514 !important;
+      background: #121514 !important;
+    }
+
+    .add-widget-sheet-wrapper {
+      background: #121514 !important;
+    }
+
+    .add-widget-modal-title,
+    .modal-hero h2 {
       color: #f8fafc !important;
     }
 
-    .add-widget-modal-sub {
+    .add-widget-modal-sub,
+    .modal-hero p {
       color: #34d399 !important;
     }
 
-    .modal-hero {
-      h2, .add-widget-modal-title {
-        color: #f8fafc !important;
+    .available-widgets-list {
+      padding-bottom: 24px;
+    }
+
+    .available-widget-item {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.22) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+
+      &:hover,
+      &:active {
+        background: #243530 !important;
+        border-color: rgba(52, 211, 153, 0.4) !important;
       }
-      p, .add-widget-modal-sub {
-        color: #34d399 !important;
+
+      .item-icon-box {
+        background: #141d1a !important;
+        border: 1px solid rgba(52, 211, 153, 0.25) !important;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      .item-text-info {
+        .item-name {
+          color: #f8fafc !important;
+          font-weight: 700 !important;
+        }
+
+        .item-preview-value {
+          color: #9bb0a7 !important;
+
+          span {
+            color: #34d399 !important;
+          }
+        }
+      }
+
+      .btn-add-item {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.45) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+        &:active {
+          background: #059669 !important;
+          transform: scale(0.96);
+        }
+      }
+    }
+
+    .no-available-widgets {
+      color: #9bb0a7 !important;
+
+      ion-icon {
+        color: #10b981 !important;
+      }
+
+      p {
+        color: #9bb0a7 !important;
       }
     }
   }
@@ -3948,5 +4192,149 @@ body.dark-theme,
     font-weight: 600;
   }
 }
+
+/* ==========================================================================
+   App Version Update Alert Styling
+   ========================================================================== */
+.app-update-alert {
+  --backdrop-opacity: 0.7;
+
+  .alert-wrapper {
+    border-radius: 24px !important;
+    padding: 16px 12px 14px !important;
+    max-width: 360px !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45) !important;
+    background: #141d1a !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+  }
+
+  .alert-title {
+    font-size: 19px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.2px;
+    margin-bottom: 6px !important;
+    color: #f8fafc !important;
+    text-align: center !important;
+  }
+
+  .alert-message {
+    font-size: 13.5px !important;
+    line-height: 1.55 !important;
+    white-space: pre-line !important;
+    padding-top: 4px !important;
+    padding-bottom: 12px !important;
+    color: #cbd5e1 !important;
+    text-align: center !important;
+  }
+
+  .alert-button-group {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 6px 4px 2px !important;
+    gap: 10px !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .alert-button {
+    flex: 1 1 0 !important;
+    border-radius: 14px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    padding: 12px 14px !important;
+    height: 46px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+
+    .alert-button-inner {
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+  }
+
+  .app-update-confirm-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+    .alert-button-inner {
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    &:active {
+      background: #059669 !important;
+    }
+  }
+
+  .app-update-cancel-btn {
+    background: #1c2824 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    color: #ffffff !important;
+
+    .alert-button-inner {
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    &:active {
+      background: #243530 !important;
+    }
+  }
+}
+
+body.dark,
+html.dark,
+.ion-palette-dark {
+  .app-update-alert {
+    .alert-wrapper {
+      background: #141d1a !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    }
+
+    .alert-title {
+      color: #f8fafc !important;
+    }
+
+    .alert-message {
+      color: #cbd5e1 !important;
+    }
+
+    .app-update-cancel-btn {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #ffffff !important;
+
+      .alert-button-inner {
+        color: #ffffff !important;
+        justify-content: center !important;
+        text-align: center !important;
+      }
+    }
+
+    .app-update-confirm-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      color: #ffffff !important;
+
+      .alert-button-inner {
+        color: #ffffff !important;
+        justify-content: center !important;
+        text-align: center !important;
+      }
+    }
+  }
+}
+
 
 

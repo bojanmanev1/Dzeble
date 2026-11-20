@@ -2411,58 +2411,124 @@
                 }
               </div>
 
-              <!-- Nearest Stops Section (5 Nearest Stops by default) -->
-              @if (nearestJspStops.length > 0 && !transportJspSearchQuery) {
-                <div class="transit-section-header">
-                  <div class="transit-section-title">
-                    <ion-icon name="location" class="section-icon"></ion-icon>
-                    <span>{{ 'TRANSPORT_MODAL.NEAREST_STOPS' | translate }} ({{ nearestJspStops.length }})</span>
-                  </div>
+              <!-- View Switcher: List vs Map -->
+              <div class="transit-subnav-row">
+                <div class="transit-mode-switcher">
+                  <button 
+                    type="button" 
+                    class="transit-mode-btn" 
+                    [class.active]="transitViewMode === 'list'" 
+                    (click)="setTransitViewMode('list')">
+                    <ion-icon [icon]="listOutlineIcon"></ion-icon>
+                    <span>Листа</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    class="transit-mode-btn" 
+                    [class.active]="transitViewMode === 'map'" 
+                    (click)="setTransitViewMode('map')">
+                    <ion-icon [icon]="mapOutlineIcon"></ion-icon>
+                    <span>Мапа</span>
+                  </button>
                 </div>
+              </div>
 
-                <div class="nearest-stops-list">
-                  @for (stop of nearestJspStops; track stop.id) {
-                    <div class="nearest-stop-card">
-                      <div class="stop-info-row">
-                        <div class="stop-name-group">
-                          <span class="stop-name">{{ stop.name }}</span>
-                          <span class="stop-direction">{{ stop.direction }}</span>
-                        </div>
-                        @if (stop.distanceKm != null) {
-                          <span class="stop-distance-badge">
-                            {{ transitService.formatDistance(stop.distanceKm) }}
-                          </span>
-                        }
-                      </div>
-                      <div class="stop-lines-row">
-                        <span class="stop-lines-label">{{ 'TRANSPORT_MODAL.LINES_LABEL' | translate }}</span>
-                        @for (ln of stop.lines; track ln) {
-                          <span 
-                            class="line-tag-pill" 
-                            (click)="selectJspLine(transitService.getJspLineById(ln) || null)">
-                            {{ ln }}
-                          </span>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <!-- Search Prompt Card when not searching -->
-                <div class="transit-search-prompt-card" (click)="jspSearchInput.focus()">
-                  <div class="prompt-icon-wrap">
-                    <ion-icon name="search"></ion-icon>
-                  </div>
-                  <div class="prompt-content">
-                    <span class="prompt-title">{{ 'TRANSPORT_MODAL.PROMPT_TITLE' | translate }}</span>
-                    <span class="prompt-desc">{{ 'TRANSPORT_MODAL.PROMPT_DESC' | translate }}</span>
+              <!-- MAP VIEW -->
+              @if (transitViewMode === 'map') {
+                <div class="transit-map-wrapper">
+                  <div id="transit-leaflet-map" class="transit-leaflet-map"></div>
+                  <div class="transit-map-hint">
+                    <ion-icon [icon]="infoCircleOutlineIcon"></ion-icon>
+                    <span>Допрете постојка за пристигнувања • Времето е проценето според возен ред</span>
                   </div>
                 </div>
               }
 
-              <!-- JSP Bus Lines List (ONLY SHOWN WHEN SEARCHING) -->
-              @if (transportJspSearchQuery && transportJspSearchQuery.trim().length > 0) {
-                <div class="transit-section-header" style="margin-top: 10px;">
+              <!-- LIST VIEW: Nearest Stops Section -->
+              @if (transitViewMode === 'list') {
+                @if (nearestJspStops.length > 0 && !transportJspSearchQuery) {
+                  <div class="transit-section-header">
+                    <div class="transit-section-title">
+                      <ion-icon name="location" class="section-icon"></ion-icon>
+                      <span>{{ 'TRANSPORT_MODAL.NEAREST_STOPS' | translate }} ({{ nearestJspStops.length }})</span>
+                    </div>
+                  </div>
+
+                  <div class="nearest-stops-list">
+                    @for (stop of nearestJspStops; track stop.id) {
+                      <div class="nearest-stop-card">
+                        <div class="stop-info-row">
+                          <div class="stop-name-group">
+                            <span class="stop-name">{{ stop.name }}</span>
+                            <span class="stop-direction">{{ stop.direction }}</span>
+                          </div>
+                          @if (stop.distanceKm != null) {
+                            <span class="stop-distance-badge">
+                              {{ transitService.formatDistance(stop.distanceKm) }}
+                            </span>
+                          }
+                        </div>
+
+                        <!-- Smart Bus Arrivals (ETA) for this Stop -->
+                        @let arrivals = getStopArrivals(stop);
+                        @if (arrivals.length > 0) {
+                          <div class="stop-arrivals-container">
+                            <div class="arrivals-subhead">
+                              <span class="subhead-label">Следни автобуси:</span>
+                              <span class="subhead-tag">⏱ Проценето</span>
+                            </div>
+                            <div class="arrivals-grid">
+                              @for (arr of arrivals; track arr.lineNumber + arr.destination) {
+                                <div class="arrival-card" (click)="selectJspLine(transitService.getJspLineById(arr.lineNumber) || null)">
+                                  <div class="arr-left">
+                                    <span class="arr-badge" [style.background]="arr.badgeColor">{{ arr.lineNumber }}</span>
+                                    <span class="arr-dest">{{ arr.destination }}</span>
+                                  </div>
+                                  <div class="arr-right">
+                                    <span class="arr-in-min" [class.urgent]="arr.inMinutes <= 5">
+                                      {{ arr.inMinutes <= 1 ? 'сега' : 'за ' + arr.inMinutes + ' мин' }}
+                                    </span>
+                                    <span class="arr-clock">({{ arr.nextArrival }})</span>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                            <div class="eta-disclaimer-note">
+                              <ion-icon [icon]="infoCircleOutlineIcon"></ion-icon>
+                              <span>Времето е израчунато според возниот ред на ЈСП (не е реален GPS во живо, можни се отстапувања во сообраќај)</span>
+                            </div>
+                          </div>
+                        } @else {
+                          <div class="stop-lines-row">
+                            <span class="stop-lines-label">{{ 'TRANSPORT_MODAL.LINES_LABEL' | translate }}</span>
+                            @for (ln of stop.lines; track ln) {
+                              <span 
+                                class="line-tag-pill" 
+                                (click)="selectJspLine(transitService.getJspLineById(ln) || null)">
+                                {{ ln }}
+                              </span>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Search Prompt Card when not searching -->
+                  <div class="transit-search-prompt-card" (click)="jspSearchInput.focus()">
+                    <div class="prompt-icon-wrap">
+                      <ion-icon name="search"></ion-icon>
+                    </div>
+                    <div class="prompt-content">
+                      <span class="prompt-title">{{ 'TRANSPORT_MODAL.PROMPT_TITLE' | translate }}</span>
+                      <span class="prompt-desc">{{ 'TRANSPORT_MODAL.PROMPT_DESC' | translate }}</span>
+                    </div>
+                  </div>
+                }
+
+                <!-- JSP Bus Lines List (ONLY SHOWN WHEN SEARCHING) -->
+                @if (transportJspSearchQuery && transportJspSearchQuery.trim().length > 0) {
+                  <div class="transit-section-header" style="margin-top: 10px;">
                   <div class="transit-section-title">
                     <ion-icon name="bus" class="section-icon"></ion-icon>
                     <span>{{ 'TRANSPORT_MODAL.SEARCH_RESULTS' | translate }} ({{ jspLinesList.length }})</span>
@@ -2505,31 +2571,42 @@
                     }
                   </div>
                 } @else {
-                  <div class="empty-transit-state" style="padding: 32px 16px; text-align: center;">
-                    <ion-icon name="search-outline" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 8px; display: block;"></ion-icon>
-                    <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">
+                  <div class="empty-transit-state">
+                    <ion-icon name="search-outline" class="empty-icon"></ion-icon>
+                    <div class="empty-title">
                       {{ 'TRANSPORT_MODAL.NO_RESULTS' | translate }}
                     </div>
-                    <div style="font-size: 0.8rem; color: #64748b;">
+                    <div class="empty-desc">
                       {{ 'TRANSPORT_MODAL.NO_LINES_MATCH' | translate }} „{{ transportJspSearchQuery }}“.
                     </div>
                   </div>
                 }
               }
-            } @else {
-              <!-- VIEW: SELECTED JSP LINE DETAIL -->
+            }
+          } @else {
+            <!-- VIEW: SELECTED JSP LINE DETAIL -->
               <div class="selected-line-view">
-                <!-- Top Nav Row: Back button (single arrow) + Swap Direction button -->
+                <!-- Top Nav Row: Back button + View Map + Swap Direction -->
                 <div class="transit-detail-top-row">
                   <button type="button" class="btn-transit-back" (click)="selectJspLine(null)">
                     <ion-icon name="chevron-back"></ion-icon>
                     <span>{{ 'TRANSPORT_MODAL.BACK' | translate }}</span>
                   </button>
 
-                  <button type="button" class="btn-transit-swap-dir" (click)="toggleJspLineDirection()">
-                    <ion-icon name="swap-horizontal"></ion-icon>
-                    <span>{{ 'TRANSPORT_MODAL.SWAP_DIRECTION' | translate }}</span>
-                  </button>
+                  <div class="transit-detail-actions" style="display: flex; gap: 8px;">
+                    <button 
+                      type="button" 
+                      class="btn-transit-swap-dir" 
+                      [class.active]="selectedLineViewMode === 'map'"
+                      (click)="toggleSelectedLineViewMode()">
+                      <ion-icon [icon]="selectedLineViewMode === 'map' ? listOutlineIcon : mapOutlineIcon"></ion-icon>
+                      <span>{{ selectedLineViewMode === 'map' ? 'Листа' : 'Мапа' }}</span>
+                    </button>
+                    <button type="button" class="btn-transit-swap-dir" (click)="toggleJspLineDirection()">
+                      <ion-icon name="swap-horizontal"></ion-icon>
+                      <span>{{ 'TRANSPORT_MODAL.SWAP_DIRECTION' | translate }}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Hero Card -->
@@ -2573,27 +2650,62 @@
                   </button>
                 </div>
 
-                <!-- Stops Timeline -->
-                <div class="transit-section-header">
-                  <div class="transit-section-title">
-                    <ion-icon name="location"></ion-icon>
-                    <span>{{ 'TRANSPORT_MODAL.STOPS' | translate }} ({{ getJspLineCurrentSchedule()?.stops?.length || 0 }})</span>
+                <!-- Subtab Switcher: Stops Timeline vs Route Map -->
+                <div class="transit-subnav-row" style="margin-top: 10px; margin-bottom: 12px;">
+                  <div class="transit-mode-switcher">
+                    <button 
+                      type="button" 
+                      class="transit-mode-btn" 
+                      [class.active]="selectedLineViewMode === 'list'" 
+                      (click)="setSelectedLineViewMode('list')">
+                      <ion-icon [icon]="listOutlineIcon"></ion-icon>
+                      <span>{{ 'TRANSPORT_MODAL.STOPS' | translate }} ({{ getJspLineCurrentSchedule()?.stops?.length || 0 }})</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      class="transit-mode-btn" 
+                      [class.active]="selectedLineViewMode === 'map'" 
+                      (click)="setSelectedLineViewMode('map')">
+                      <ion-icon [icon]="mapOutlineIcon"></ion-icon>
+                      <span>Траса на мапа</span>
+                    </button>
                   </div>
                 </div>
 
-                <div class="line-stops-timeline">
-                  @for (stop of (getJspLineCurrentSchedule()?.stops || []); track $index; let first = $first; let last = $last) {
-                    <div class="timeline-stop-item" [class.first-stop]="first" [class.last-stop]="last">
-                      <div class="timeline-dot-wrapper">
-                        <span class="timeline-dot"></span>
-                        @if (!last) {
-                          <span class="timeline-line"></span>
-                        }
-                      </div>
-                      <span class="timeline-stop-name">{{ stop }}</span>
+                <!-- ROUTE MAP VIEW -->
+                @if (selectedLineViewMode === 'map') {
+                  <div class="transit-map-wrapper">
+                    <div id="transit-line-leaflet-map" class="transit-leaflet-map"></div>
+                    <div class="transit-map-hint">
+                      <ion-icon [icon]="infoCircleOutlineIcon"></ion-icon>
+                      <span>Траса: {{ (selectedJspDirection === 'A' ? selectedJspLine.directionA.origin + ' → ' + selectedJspLine.directionA.destination : selectedJspLine.directionB.origin + ' → ' + selectedJspLine.directionB.destination) }} • Допрете постојка за детали</span>
                     </div>
-                  }
-                </div>
+                  </div>
+                }
+
+                <!-- STOPS TIMELINE (when in list mode) -->
+                @if (selectedLineViewMode === 'list') {
+                  <div class="transit-section-header">
+                    <div class="transit-section-title">
+                      <ion-icon name="location"></ion-icon>
+                      <span>{{ 'TRANSPORT_MODAL.STOPS' | translate }} ({{ getJspLineCurrentSchedule()?.stops?.length || 0 }})</span>
+                    </div>
+                  </div>
+
+                  <div class="line-stops-timeline">
+                    @for (stop of (getJspLineCurrentSchedule()?.stops || []); track $index; let first = $first; let last = $last) {
+                      <div class="timeline-stop-item" [class.first-stop]="first" [class.last-stop]="last">
+                        <div class="timeline-dot-wrapper">
+                          <span class="timeline-dot"></span>
+                          @if (!last) {
+                            <span class="timeline-line"></span>
+                          }
+                        </div>
+                        <span class="timeline-stop-name">{{ stop }}</span>
+                      </div>
+                    }
+                  </div>
+                }
 
                 <!-- Timetable with 3-Day Switcher -->
                 <div class="transit-section-header" style="margin-top: 14px;">
@@ -2884,8 +2996,9 @@
   <ion-modal [isOpen]="isAddWidgetModalOpen" 
     (didDismiss)="closeAddWidgetModal()" 
     class="premium-modal add-widget-modal"
-    [initialBreakpoint]="0.85"
-    [breakpoints]="[0, 0.5, 0.85, 1]"
+    [canDismiss]="true"
+    [initialBreakpoint]="1.0"
+    [breakpoints]="[0, 1.0]"
     [handle]="true">
     <ng-template>
       <ion-content class="add-widget-content">
@@ -2926,6 +3039,16 @@
                 </div>
               }
             }
+          </div>
+
+          <div style="margin-top: 14px; padding-bottom: 24px;">
+            <button 
+              type="button" 
+              class="btn-modal-cancel" 
+              (click)="closeAddWidgetModal()" 
+              style="width: 100%; border-radius: 14px; padding: 13px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease;">
+              {{ 'HOME.CLOSE' | translate }}
+            </button>
           </div>
         </div>
       </ion-content>

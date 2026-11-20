@@ -65,7 +65,16 @@ import {
   train,
   swapHorizontal,
   arrowForward,
-  arrowBack
+  arrowBack,
+  openOutline,
+  newspaperOutline,
+  arrowForwardOutline,
+  searchOutline,
+  chevronForwardOutline,
+  qrCodeOutline,
+  mapOutline,
+  listOutline,
+  informationCircleOutline
 } from 'ionicons/icons';
 
 import { 
@@ -87,7 +96,7 @@ import { PharmacyService, DutyPharmacy } from '../services/pharmacy';
 import { AtmService, BankAtm } from '../services/atm';
 import { GasStationService, GasStation } from '../services/gas-station';
 import { UtilityAlertService, UtilityAlert } from '../services/utility-alert';
-import { TransitService, JspLine, JspStop, TrainRoute, JspDirectionSchedule } from '../services/transit';
+import { TransitService, JspLine, JspStop, TrainRoute, JspDirectionSchedule, StationBusArrival } from '../services/transit';
 import { BarcodeRenderDirective } from '../directives/barcode-render';
 import { LockSheetDragDirective } from '../directives/lock-sheet-drag.directive';
 import { MACEDONIAN_STORES, StorePreset, CARD_GRADIENT_PALETTE } from '../config/loyalty-stores.config';
@@ -397,6 +406,17 @@ export class HomePage implements OnInit, OnDestroy {
   nextTrainDeparture: { route: TrainRoute; inMinutes: number } | null = null;
   transitWidgetCurrentIcon: 'bus' | 'train' = 'bus';
   transitIconIntervalSub: any;
+  transitViewMode: 'list' | 'map' = 'list';
+  transitLeafletMap: L.Map | null = null;
+  transitLeafletMarkers: L.Marker[] = [];
+  transitRoutePolyline: L.Polyline | null = null;
+  selectedLineViewMode: 'list' | 'map' = 'list';
+  transitLineLeafletMap: L.Map | null = null;
+  transitLineMarkers: L.Marker[] = [];
+  transitLinePolyline: L.Polyline | null = null;
+  readonly mapOutlineIcon = mapOutline;
+  readonly listOutlineIcon = listOutline;
+  readonly infoCircleOutlineIcon = informationCircleOutline;
 
   allWidgets: Widget[] = [
     { id: 'aqi', translationKey: 'WIDGETS.AQI', value: '--', unit: 'AQI', icon: 'leaf' },
@@ -511,7 +531,19 @@ export class HomePage implements OnInit, OnDestroy {
       'train': train,
       'swap-horizontal': swapHorizontal,
       'arrow-forward': arrowForward,
-      'arrow-back': arrowBack
+      'arrow-back': arrowBack,
+      'open-outline': openOutline,
+      'newspaper-outline': newspaperOutline,
+      'arrow-forward-outline': arrowForwardOutline,
+      'search-outline': searchOutline,
+      'chevron-forward-outline': chevronForwardOutline,
+      'qr-code-outline': qrCodeOutline,
+      'map-outline': mapOutline,
+      'mapOutline': mapOutline,
+      'list-outline': listOutline,
+      'listOutline': listOutline,
+      'information-circle-outline': informationCircleOutline,
+      'informationCircleOutline': informationCircleOutline
     });
 
     this.loadSavedWidgetOrder();
@@ -2275,6 +2307,8 @@ async handleLogout() {
       this.destroyLeafletMap();
       this.destroyGasLeafletMap();
       this.destroyAtmLeafletMap();
+      this.destroyTransitLeafletMap();
+      this.destroySelectedLineLeafletMap();
     }
   }
 
@@ -2456,6 +2490,10 @@ async handleLogout() {
     this.cryptoService.disconnect();
     this.stockService.disconnect();
     this.destroyLeafletMap();
+    this.destroyGasLeafletMap();
+    this.destroyAtmLeafletMap();
+    this.destroyTransitLeafletMap();
+    this.destroySelectedLineLeafletMap();
   }
 
   async onAddStockSubmit() {
@@ -4514,9 +4552,15 @@ isNotificationActive(widgetId: string): boolean {
     this.cdr.markForCheck();
   }
 
+  getStopArrivals(stop: JspStop): StationBusArrival[] {
+    return this.transitService.getStationArrivals(stop, 4);
+  }
+
   selectJspLine(line: JspLine | null) {
+    this.destroySelectedLineLeafletMap();
     this.selectedJspLine = line;
     this.selectedJspDirection = 'A';
+    this.selectedLineViewMode = 'list';
     const day = new Date().getDay();
     if (day === 6) {
       this.selectedScheduleDay = 'saturday';
@@ -4529,16 +4573,348 @@ isNotificationActive(widgetId: string): boolean {
     this.cdr.markForCheck();
   }
 
+  setSelectedLineViewMode(mode: 'list' | 'map') {
+    if (this.selectedLineViewMode === mode) return;
+    this.selectedLineViewMode = mode;
+    this.triggerHaptic(20);
+    this.cdr.markForCheck();
+    if (mode === 'map') {
+      setTimeout(() => {
+        this.initSelectedLineLeafletMap();
+      }, 150);
+    } else {
+      this.destroySelectedLineLeafletMap();
+    }
+  }
+
+  toggleSelectedLineViewMode() {
+    this.setSelectedLineViewMode(this.selectedLineViewMode === 'map' ? 'list' : 'map');
+  }
+
   toggleJspLineDirection() {
     this.selectedJspDirection = this.selectedJspDirection === 'A' ? 'B' : 'A';
     this.triggerHaptic(25);
     this.cdr.markForCheck();
+
+    if (this.selectedLineViewMode === 'map') {
+      this.renderSelectedLineRouteOnMap();
+    }
   }
 
   setJspLineDirection(dir: 'A' | 'B') {
     this.selectedJspDirection = dir;
     this.triggerHaptic(25);
     this.cdr.markForCheck();
+
+    if (this.selectedLineViewMode === 'map') {
+      this.renderSelectedLineRouteOnMap();
+    }
+  }
+
+  setTransitViewMode(mode: 'list' | 'map') {
+    this.transitViewMode = mode;
+    this.triggerHaptic(20);
+    this.cdr.markForCheck();
+    if (mode === 'map') {
+      setTimeout(() => {
+        this.initTransitLeafletMap();
+      }, 150);
+    } else {
+      this.destroyTransitLeafletMap();
+    }
+  }
+
+  destroyTransitLeafletMap() {
+    if (this.transitLeafletMap) {
+      this.transitLeafletMap.remove();
+      this.transitLeafletMap = null;
+    }
+    this.transitLeafletMarkers = [];
+    this.transitRoutePolyline = null;
+  }
+
+  destroySelectedLineLeafletMap() {
+    if (this.transitLineLeafletMap) {
+      this.transitLineLeafletMap.remove();
+      this.transitLineLeafletMap = null;
+    }
+    this.transitLineMarkers = [];
+    this.transitLinePolyline = null;
+  }
+
+  initTransitLeafletMap() {
+    const mapEl = document.getElementById('transit-leaflet-map');
+    if (!mapEl) return;
+
+    this.destroyTransitLeafletMap();
+
+    const initialLat = this.currentUserCoords?.latitude ?? 41.9961;
+    const initialLng = this.currentUserCoords?.longitude ?? 21.4314;
+
+    this.transitLeafletMap = L.map('transit-leaflet-map', {
+      center: [initialLat, initialLng],
+      zoom: 14,
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    const mapContainer = this.transitLeafletMap.getContainer();
+    if (mapContainer) {
+      const stopProp = (e: Event) => e.stopPropagation();
+      mapContainer.addEventListener('touchstart', stopProp, { passive: true });
+      mapContainer.addEventListener('pointerdown', stopProp, { passive: true });
+      mapContainer.addEventListener('mousedown', stopProp);
+    }
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.transitLeafletMap);
+
+    if (this.currentUserCoords) {
+      const userIcon = L.divIcon({
+        className: 'transit-user-marker',
+        html: `<div style="background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(59,130,246,0.9);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([this.currentUserCoords.latitude, this.currentUserCoords.longitude], { icon: userIcon })
+        .addTo(this.transitLeafletMap)
+        .bindPopup('<b>Ваша локација</b>');
+    }
+
+    this.renderTransitMapMarkers();
+
+    setTimeout(() => {
+      if (this.transitLeafletMap) {
+        this.transitLeafletMap.invalidateSize();
+      }
+    }, 250);
+  }
+
+  renderTransitMapMarkers() {
+    if (!this.transitLeafletMap) return;
+
+    this.transitLeafletMarkers.forEach(m => m.remove());
+    this.transitLeafletMarkers = [];
+
+    const stopsToShow = this.nearestJspStops.length > 0 
+      ? this.nearestJspStops 
+      : this.transitService.getAllJspStops().slice(0, 35);
+
+    for (const stop of stopsToShow) {
+      if (!stop.latitude || !stop.longitude) continue;
+
+      const arrivals = this.transitService.getStationArrivals(stop, 3);
+      let arrivalHtml = '';
+      if (arrivals.length > 0) {
+        arrivalHtml = arrivals.map(a => 
+          `<div style="font-size: 11px; margin-top: 3px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="background: ${a.badgeColor}; color: white; border-radius: 4px; padding: 1px 5px; font-weight: 700;">${a.lineNumber}</span>
+            <span style="color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px;">${a.destination}</span>
+            <strong style="color: #10b981;">за ${a.inMinutes}м</strong>
+          </div>`
+        ).join('');
+      } else {
+        arrivalHtml = `<div style="font-size: 11px; color: #9bb0a7; margin-top: 4px;">Линии: ${stop.lines.join(', ')}</div>`;
+      }
+
+      const popupHtml = `
+        <div class="transit-leaflet-popup" style="min-width: 190px; font-family: -apple-system, sans-serif;">
+          <div class="transit-popup-title" style="font-weight: 800; font-size: 13.5px; color: #10b981; margin-bottom: 2px;">${stop.name}</div>
+          <div class="transit-popup-dir" style="font-size: 10px; color: #9bb0a7; margin-bottom: 6px;">${stop.direction || ''}</div>
+          <div class="transit-popup-box" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(52, 211, 153, 0.25); border-radius: 8px; padding: 6px; margin-bottom: 6px;">
+            ${arrivalHtml}
+          </div>
+          <div class="transit-popup-disclaimer" style="font-size: 9px; color: #8da499; line-height: 1.3;">
+            ⏱ Проценето време според возен ред (не е GPS во живо)
+          </div>
+        </div>
+      `;
+
+      const stopIcon = L.divIcon({
+        className: 'transit-stop-pin',
+        html: `
+          <div style="background: #0f172a; border: 2px solid #10b981; width: 26px; height: 26px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-size: 12px;">
+            🚏
+          </div>
+        `,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -13]
+      });
+
+      const marker = L.marker([stop.latitude, stop.longitude], { icon: stopIcon })
+        .addTo(this.transitLeafletMap)
+        .bindPopup(popupHtml);
+
+      this.transitLeafletMarkers.push(marker);
+    }
+  }
+
+  initSelectedLineLeafletMap() {
+    const mapEl = document.getElementById('transit-line-leaflet-map');
+    if (!mapEl) return;
+
+    this.destroySelectedLineLeafletMap();
+
+    const initialLat = this.currentUserCoords?.latitude ?? 41.9961;
+    const initialLng = this.currentUserCoords?.longitude ?? 21.4314;
+
+    this.transitLineLeafletMap = L.map('transit-line-leaflet-map', {
+      center: [initialLat, initialLng],
+      zoom: 13,
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    const mapContainer = this.transitLineLeafletMap.getContainer();
+    if (mapContainer) {
+      const stopProp = (e: Event) => e.stopPropagation();
+      mapContainer.addEventListener('touchstart', stopProp, { passive: true });
+      mapContainer.addEventListener('pointerdown', stopProp, { passive: true });
+      mapContainer.addEventListener('mousedown', stopProp);
+    }
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.transitLineLeafletMap);
+
+    if (this.currentUserCoords) {
+      const userIcon = L.divIcon({
+        className: 'transit-user-marker',
+        html: `<div style="background: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(59,130,246,0.9);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      L.marker([this.currentUserCoords.latitude, this.currentUserCoords.longitude], { icon: userIcon })
+        .addTo(this.transitLineLeafletMap)
+        .bindPopup('<b>Ваша локација</b>');
+    }
+
+    this.renderSelectedLineRouteOnMap();
+
+    setTimeout(() => {
+      if (this.transitLineLeafletMap) {
+        this.transitLineLeafletMap.invalidateSize();
+      }
+    }, 250);
+  }
+
+  renderSelectedLineRouteOnMap() {
+    if (!this.transitLineLeafletMap || !this.selectedJspLine) return;
+
+    if (this.transitLinePolyline) {
+      this.transitLinePolyline.remove();
+      this.transitLinePolyline = null;
+    }
+    this.transitLineMarkers.forEach(m => m.remove());
+    this.transitLineMarkers = [];
+
+    const line = this.selectedJspLine;
+    const routeStops = this.transitService.getLineRouteStopsWithCoords(line, this.selectedJspDirection);
+    const color = line.badgeColor || '#10b981';
+
+    if (routeStops.length > 0) {
+      const latlngs: L.LatLngExpression[] = routeStops.map(s => [s.latitude, s.longitude]);
+      this.transitLinePolyline = L.polyline(latlngs, {
+        color: color,
+        weight: 5,
+        opacity: 0.9
+      }).addTo(this.transitLineLeafletMap);
+
+      routeStops.forEach((stopCoord, idx) => {
+        const isStart = idx === 0;
+        const isEnd = idx === routeStops.length - 1;
+        const stopNum = stopCoord.index || (idx + 1);
+
+        let pinHtml = '';
+        if (isStart) {
+          pinHtml = `<div style="background: #10b981; color: white; border: 2.5px solid #ffffff; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">A</div>`;
+        } else if (isEnd) {
+          pinHtml = `<div style="background: #ef4444; color: white; border: 2.5px solid #ffffff; width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">B</div>`;
+        } else {
+          pinHtml = `<div style="background: #0f172a; color: #10b981; border: 2px solid ${color}; width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">${stopNum}</div>`;
+        }
+
+        const stopIcon = L.divIcon({
+          className: 'transit-line-stop-pin',
+          html: pinHtml,
+          iconSize: [isStart || isEnd ? 28 : 24, isStart || isEnd ? 28 : 24],
+          iconAnchor: [isStart || isEnd ? 14 : 12, isStart || isEnd ? 14 : 12],
+          popupAnchor: [0, isStart || isEnd ? -14 : -12]
+        });
+
+        let arrivalInfo = '';
+        if (stopCoord.stop) {
+          const arrivals = this.transitService.getStationArrivals(stopCoord.stop, 3);
+          if (arrivals.length > 0) {
+            arrivalInfo = arrivals.map(a => 
+              `<div style="font-size: 11px; margin-top: 3px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span style="background: ${a.badgeColor}; color: white; border-radius: 4px; padding: 1px 5px; font-weight: 700;">${a.lineNumber}</span>
+                <span style="color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px;">${a.destination}</span>
+                <strong style="color: #10b981;">за ${a.inMinutes}м</strong>
+              </div>`
+            ).join('');
+          }
+        }
+
+        const popupHtml = `
+          <div class="transit-leaflet-popup" style="min-width: 190px; font-family: -apple-system, sans-serif;">
+            <div style="font-size: 10px; color: ${color}; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
+              Линија ${line.number} • Постојка #${stopNum}
+            </div>
+            <div class="transit-popup-title" style="font-weight: 800; font-size: 13.5px; color: #10b981; margin-bottom: 4px;">
+              ${stopCoord.name}
+            </div>
+            ${arrivalInfo ? `
+              <div class="transit-popup-box" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(52, 211, 153, 0.25); border-radius: 8px; padding: 6px; margin-bottom: 6px;">
+                ${arrivalInfo}
+              </div>
+            ` : ''}
+            <div class="transit-popup-disclaimer" style="font-size: 9px; color: #8da499; line-height: 1.3;">
+              ⏱ Проценето време според возен ред (не е GPS во живо)
+            </div>
+          </div>
+        `;
+
+        const marker = L.marker([stopCoord.latitude, stopCoord.longitude], { icon: stopIcon })
+          .addTo(this.transitLineLeafletMap!)
+          .bindPopup(popupHtml);
+
+        this.transitLineMarkers.push(marker);
+      });
+
+      if (routeStops.length > 1) {
+        this.transitLineLeafletMap.fitBounds(this.transitLinePolyline.getBounds(), { padding: [35, 35] });
+      } else {
+        this.transitLineLeafletMap.setView([routeStops[0].latitude, routeStops[0].longitude], 14);
+      }
+    } else {
+      this.transitLineLeafletMap.setView([41.9961, 21.4314], 13);
+    }
+  }
+
+  drawSelectedLineRouteOnMap(line: JspLine) {
+    if (!this.transitLeafletMap) return;
+
+    if (this.transitRoutePolyline) {
+      this.transitRoutePolyline.remove();
+      this.transitRoutePolyline = null;
+    }
+
+    const routeStops = this.transitService.getLineRouteStopsWithCoords(line, this.selectedJspDirection);
+    if (routeStops.length > 1) {
+      const latlngs: L.LatLngExpression[] = routeStops.map(s => [s.latitude, s.longitude]);
+      this.transitRoutePolyline = L.polyline(latlngs, {
+        color: line.badgeColor || '#10b981',
+        weight: 5,
+        opacity: 0.85
+      }).addTo(this.transitLeafletMap);
+
+      this.transitLeafletMap.fitBounds(this.transitRoutePolyline.getBounds(), { padding: [30, 30] });
+    }
   }
 
   getJspLineCurrentSchedule(): JspDirectionSchedule | null {
@@ -4576,6 +4952,7 @@ isNotificationActive(widgetId: string): boolean {
     w.value = '110+';
     w.unit = 'Линии';
     w.icon = this.transitWidgetCurrentIcon;
+    w.customColor = undefined;
   }
 
   getNextJspDepartureLabel(line: JspLine): string {

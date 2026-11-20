@@ -16,6 +16,18 @@ export interface JspStop {
   distanceKm?: number;
 }
 
+export interface StationBusArrival {
+  lineId: string;
+  lineNumber: string;
+  lineTitle: string;
+  badgeColor: string;
+  directionName: string;
+  destination: string;
+  nextArrival: string; // e.g. "13:25"
+  inMinutes: number;   // e.g. 5
+  isEstimated: boolean; // true (calculated from official timetable)
+}
+
 
 export interface TrainStopSchedule {
   station: string;
@@ -437,28 +449,84 @@ export class TransitService {
     if (type && type !== 'all') {
       result = result.filter(l => l.type === type);
     }
-    if (query && query.trim().length > 0) {
-      const q = query.trim().toLowerCase();
-      const qClean = q.replace(/\s+/g, '');
-      result = result.filter(l => {
-        const numLower = l.number.toLowerCase();
-        const numClean = numLower.replace(/\s+/g, '');
-        return (
-          numLower.includes(q) ||
-          numClean.includes(qClean) ||
-          numClean.replace(/п$/i, '').includes(qClean) ||
-          l.title.toLowerCase().includes(q) ||
-          l.title.toLowerCase().replace(/\s+/g, '').includes(qClean) ||
-          l.route.toLowerCase().includes(q) ||
-          l.directionA.origin.toLowerCase().includes(q) ||
-          l.directionA.destination.toLowerCase().includes(q) ||
-          l.directionB.origin.toLowerCase().includes(q) ||
-          l.directionB.destination.toLowerCase().includes(q) ||
-          l.stops.some(s => s.toLowerCase().includes(q))
-        );
-      });
+
+    if (!query || query.trim().length === 0) {
+      return result.sort((a, b) => this.compareLineNumbers(a.number, b.number));
     }
-    return result;
+
+    const q = query.trim().toLowerCase();
+    const qClean = q.replace(/\s+/g, '');
+    const qNoP = qClean.replace(/п$/i, '');
+
+    const scored: Array<{ line: JspLine; score: number }> = [];
+
+    for (const l of result) {
+      const numLower = (l.number || '').toLowerCase();
+      const numClean = numLower.replace(/\s+/g, '');
+      const numNoP = numClean.replace(/п$/i, '');
+      const titleLower = (l.title || '').toLowerCase();
+      const routeLower = (l.route || '').toLowerCase();
+      const dirAOrig = (l.directionA?.origin || '').toLowerCase();
+      const dirADest = (l.directionA?.destination || '').toLowerCase();
+      const dirBOrig = (l.directionB?.origin || '').toLowerCase();
+      const dirBDest = (l.directionB?.destination || '').toLowerCase();
+
+      let score = 99999;
+
+      // 1. EXACT match on line number (e.g. searching "4" matches "4" or "4П")
+      if (numClean === qClean || numNoP === qNoP || numClean === qNoP || numNoP === qClean) {
+        score = 1;
+      }
+      // 2. Line number starts with query (e.g. "4" -> "4А", "41", "42", "43")
+      else if (numClean.startsWith(qClean) || numNoP.startsWith(qNoP)) {
+        score = 10 + (numClean.length - qClean.length);
+      }
+      // 3. Line number contains query (e.g. "4" -> "14", "24", "54")
+      else if (numClean.includes(qClean) || numNoP.includes(qNoP)) {
+        score = 50 + (numClean.length - qClean.length);
+      }
+      // 4. Title starts with query
+      else if (titleLower.startsWith(q) || titleLower.replace(/\s+/g, '').startsWith(qClean)) {
+        score = 100;
+      }
+      // 5. Title contains query
+      else if (titleLower.includes(q) || titleLower.replace(/\s+/g, '').includes(qClean)) {
+        score = 120;
+      }
+      // 6. Origin or Destination starts with query
+      else if (dirAOrig.startsWith(q) || dirADest.startsWith(q) || dirBOrig.startsWith(q) || dirBDest.startsWith(q)) {
+        score = 150;
+      }
+      // 7. Origin or Destination contains query
+      else if (dirAOrig.includes(q) || dirADest.includes(q) || dirBOrig.includes(q) || dirBDest.includes(q)) {
+        score = 200;
+      }
+      // 8. Route description contains query
+      else if (routeLower.includes(q)) {
+        score = 300;
+      }
+      // 9. Stops contain query
+      else if (l.stops && l.stops.some(s => s.toLowerCase().includes(q))) {
+        score = 400;
+      }
+
+      if (score < 99999) {
+        scored.push({ line: l, score });
+      }
+    }
+
+    scored.sort((a, b) => {
+      if (a.score !== b.score) {
+        return a.score - b.score;
+      }
+      return this.compareLineNumbers(a.line.number, b.line.number);
+    });
+
+    return scored.map(s => s.line);
+  }
+
+  private compareLineNumbers(a: string, b: string): number {
+    return (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
   }
 
   public getJspLineById(id: string): JspLine | undefined {
@@ -543,8 +611,203 @@ export class TransitService {
     return null;
   }
 
+  /**
+   * Calculates smart estimated bus arrivals (ETA) for a specific bus stop.
+   * Traverses all lines passing through the stop, adjusts travel time for traffic conditions,
+   * and calculates when each bus will reach this stop.
+   */
+  public getStationArrivals(stop: JspStop, maxResults: number = 4): StationBusArrival[] {
+    if (!stop || !stop.lines || stop.lines.length === 0) return [];
 
-  // --- PUBLIC TRAIN METHODS ---
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Day type determination
+    const day = now.getDay();
+    let dayType: 'workday' | 'saturday' | 'sunday' = 'workday';
+    if (day === 6) dayType = 'saturday';
+    else if (day === 0) dayType = 'sunday';
+
+    // Traffic congestion weight (Скопје сообраќајни услови):
+    // Утрински шпиц (07:30 - 09:15) и попладневен шпиц (16:00 - 17:45) -> 2.4 мин по постојка
+    // Навечер после 20:30 -> 1.6 мин по постојка
+    // Стандардно време -> 2.0 мин по постојка
+    let minutesPerStop = 2.0;
+    if ((currentMinutes >= 450 && currentMinutes <= 555) || (currentMinutes >= 960 && currentMinutes <= 1065)) {
+      minutesPerStop = 2.4;
+    } else if (currentMinutes >= 1230 || currentMinutes < 360) {
+      minutesPerStop = 1.6;
+    }
+
+    const arrivals: StationBusArrival[] = [];
+    const stopNameNorm = this.normalizeStopName(stop.name);
+    const stopDirNorm = this.normalizeStopName(stop.direction || '');
+
+    for (const rawLineNum of stop.lines) {
+      const line = this.getJspLineById(rawLineNum);
+      if (!line) continue;
+
+      const directionsToCheck: Array<{ dir: 'A' | 'B'; schedule: JspDirectionSchedule }> = [
+        { dir: 'A', schedule: line.directionA },
+        { dir: 'B', schedule: line.directionB }
+      ];
+
+      for (const { dir, schedule } of directionsToCheck) {
+        if (!schedule || !schedule.stops || schedule.stops.length === 0) continue;
+
+        // Find stop index along the route
+        let stopIdx = -1;
+        for (let idx = 0; idx < schedule.stops.length; idx++) {
+          const sName = this.normalizeStopName(schedule.stops[idx]);
+          if (sName === stopNameNorm || sName.includes(stopNameNorm) || stopNameNorm.includes(sName)) {
+            stopIdx = idx;
+            break;
+          }
+        }
+
+        // Direction match fallback if precise name varies slightly
+        if (stopIdx === -1) {
+          const destNorm = this.normalizeStopName(schedule.destination || '');
+          if (stopDirNorm && (destNorm.includes(stopDirNorm) || stopDirNorm.includes(destNorm))) {
+            stopIdx = Math.floor(schedule.stops.length / 2);
+          } else {
+            continue;
+          }
+        }
+
+        const transitMinutes = Math.round(stopIdx * minutesPerStop);
+
+        // Timetable for current day
+        let timetable: string[];
+        if (dayType === 'saturday') {
+          timetable = schedule.departuresSaturday?.length ? schedule.departuresSaturday : (line.departuresWeekend || schedule.departuresWorkday);
+        } else if (dayType === 'sunday') {
+          timetable = schedule.departuresSunday?.length ? schedule.departuresSunday : (line.departuresWeekend || schedule.departuresWorkday);
+        } else {
+          timetable = schedule.departuresWorkday?.length ? schedule.departuresWorkday : line.departuresWorkday;
+        }
+
+        if (!timetable || timetable.length === 0) continue;
+
+        let bestArrivalDiff = 9999;
+        let bestArrivalFormatted = '';
+
+        for (const dep of timetable) {
+          const [h, m] = dep.split(':').map(Number);
+          const depMinutes = h * 60 + m;
+          const estArrivalMinutes = depMinutes + transitMinutes;
+
+          if (estArrivalMinutes >= currentMinutes) {
+            const diff = estArrivalMinutes - currentMinutes;
+            if (diff < bestArrivalDiff) {
+              bestArrivalDiff = diff;
+              const arrH = Math.floor(estArrivalMinutes / 60) % 24;
+              const arrM = estArrivalMinutes % 60;
+              bestArrivalFormatted = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+            }
+          }
+        }
+
+        // If today's departures finished, check tomorrow morning's first run
+        if (bestArrivalDiff === 9999 && timetable.length > 0) {
+          const [h, m] = timetable[0].split(':').map(Number);
+          const depMinutes = h * 60 + m + (24 * 60);
+          const estArrivalMinutes = depMinutes + transitMinutes;
+          bestArrivalDiff = estArrivalMinutes - currentMinutes;
+          const arrH = Math.floor((h * 60 + m + transitMinutes) / 60) % 24;
+          const arrM = (h * 60 + m + transitMinutes) % 60;
+          bestArrivalFormatted = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+        }
+
+        if (bestArrivalDiff !== 9999) {
+          arrivals.push({
+            lineId: line.id,
+            lineNumber: String(line.number || '').replace(/\s+/g, ''),
+            lineTitle: line.title,
+            badgeColor: line.badgeColor || '#10b981',
+            directionName: dir === 'A' ? 'Правец А' : 'Правец Б',
+            destination: schedule.destination || line.route,
+            nextArrival: bestArrivalFormatted,
+            inMinutes: bestArrivalDiff,
+            isEstimated: true
+          });
+        }
+      }
+    }
+
+    // Sort by earliest arrival
+    arrivals.sort((a, b) => a.inMinutes - b.inMinutes);
+
+    // Deduplicate by line number so each bus appears once with its next upcoming arrival
+    const uniqueArrivals: StationBusArrival[] = [];
+    const seen = new Set<string>();
+    for (const a of arrivals) {
+      const key = `${a.lineNumber}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueArrivals.push(a);
+      }
+      if (uniqueArrivals.length >= maxResults) break;
+    }
+
+    return uniqueArrivals;
+  }
+
+  /**
+   * Retrieves ordered GPS coordinates for all stops of a line direction to plot the route on a map
+   */
+  public getLineRouteStopsWithCoords(line: JspLine, direction: 'A' | 'B' = 'A'): Array<{ name: string; latitude: number; longitude: number; stop?: JspStop; index: number }> {
+    const sched = this.getJspLineSchedule(line, direction);
+    if (!sched || !sched.stops) return [];
+
+    const result: Array<{ name: string; latitude: number; longitude: number; stop?: JspStop; index: number }> = [];
+
+    let idx = 0;
+    for (const stopName of sched.stops) {
+      idx++;
+      const norm = this.normalizeStopName(stopName);
+      let match = this.jspStops.find(s => {
+        const sNorm = this.normalizeStopName(s.name);
+        return sNorm === norm || sNorm.includes(norm) || norm.includes(sNorm);
+      });
+
+      // Word-level fallback if precise substring does not match
+      if (!match) {
+        const words = norm.split(' ').filter(w => w.length >= 4);
+        if (words.length > 0) {
+          match = this.jspStops.find(s => {
+            const sNorm = this.normalizeStopName(s.name);
+            return words.every(w => sNorm.includes(w)) || (words.length >= 2 && words.filter(w => sNorm.includes(w)).length >= 2);
+          });
+        }
+      }
+
+      if (match && match.latitude && match.longitude) {
+        result.push({
+          name: stopName,
+          latitude: match.latitude,
+          longitude: match.longitude,
+          stop: match,
+          index: idx
+        });
+      }
+    }
+
+    return result;
+  }
+
+  public getStopById(id: string): JspStop | undefined {
+    return this.jspStops.find(s => s.id === id);
+  }
+
+  private normalizeStopName(str: string): string {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .replace(/[\(\)\-\/\,\.]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   public getTrainRoutes(fromCity?: string, toCity?: string, query?: string): TrainRoute[] {
     let list = [...this.trainRoutes];
     if (fromCity && fromCity.trim().length > 0) {
