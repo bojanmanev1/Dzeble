@@ -130,7 +130,7 @@ export class AppUpdateService {
     const fullMessage = `${cleanMessage}${cleanNotes}${versionDiff}`;
 
     const alert = await this.alertCtrl.create({
-      header: config.title || 'Достапна е нова верзија! 🚀',
+      header: config.title || 'Достапна е нова верзија!',
       message: fullMessage,
       backdropDismiss: !isForce,
       cssClass: 'app-update-alert',
@@ -172,21 +172,16 @@ export class AppUpdateService {
   }
 
   /**
-   * Opens Google Play Store / App Store
+   * Opens Google Play Store / App Store directly without triggering OS store choosers (e.g. Xiaomi GetApps)
    */
   private openStore(storeUrl: string) {
     const playStoreId = 'com.dzeble.app';
-    const fallbackUrl = storeUrl || `https://play.google.com/store/apps/details?id=${playStoreId}`;
+    const targetUrl = storeUrl || `https://play.google.com/store/apps/details?id=${playStoreId}`;
 
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-      try {
-        // Attempt native market:// intent first (directly launches Play Store app)
-        window.open(`market://details?id=${playStoreId}`, '_system');
-      } catch {
-        window.open(fallbackUrl, '_system');
-      }
-    } else {
-      window.open(fallbackUrl, '_system');
+    try {
+      window.open(targetUrl, '_system');
+    } catch (err) {
+      console.warn('[AppUpdateService] Failed to launch store URL:', err);
     }
   }
 }

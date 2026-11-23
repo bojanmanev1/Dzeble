@@ -153,8 +153,8 @@ serve(async (_req) => {
       return new Response(JSON.stringify({ success: true, message: "No devices found." }), { status: 200 });
     }
 
-    // Filter devices where user explicitly disabled crypto notifications
-    const activeDevices = devices.filter((d: any) => d.notify_crypto !== false);
+    // Only notify devices where user explicitly enabled crypto notifications (default is false)
+    const activeDevices = devices.filter((d: any) => d.notify_crypto === true);
     if (activeDevices.length === 0) {
       return new Response(JSON.stringify({ success: true, message: "No devices with crypto alerts enabled." }), { status: 200 });
     }

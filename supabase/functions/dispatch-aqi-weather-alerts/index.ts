@@ -134,10 +134,10 @@ function getLocalizedCityName(city: string, lang: string): string {
   return match[lang as 'mk' | 'en' | 'al'] || match.mk || city;
 }
 
-function getWeatherConditionText(code: number, lang: string): string {
+function getWeatherConditionText(code: number, lang: string, isNight: boolean = false): string {
   if (lang === "en") {
-    if (code === 0) return "Sunny and clear";
-    if (code === 1) return "Mostly sunny";
+    if (code === 0) return isNight ? "Clear" : "Sunny and clear";
+    if (code === 1) return isNight ? "Mostly clear" : "Mostly sunny";
     if (code === 2) return "Partly cloudy";
     if (code === 3) return "Overcast";
     if (code === 45 || code === 48) return "Foggy";
@@ -149,8 +149,8 @@ function getWeatherConditionText(code: number, lang: string): string {
     if (code >= 95 && code <= 99) return "Thunderstorms";
     return "Partly cloudy";
   } else if (lang === "al") {
-    if (code === 0) return "Me diell dhe kthjellët";
-    if (code === 1) return "Kryesisht me diell";
+    if (code === 0) return isNight ? "Kthjellët" : "Me diell dhe kthjellët";
+    if (code === 1) return isNight ? "Kryesisht kthjellët" : "Kryesisht me diell";
     if (code === 2) return "Pjesërisht me re";
     if (code === 3) return "Me vranësira";
     if (code === 45 || code === 48) return "Mjegull";
@@ -163,8 +163,8 @@ function getWeatherConditionText(code: number, lang: string): string {
     return "Pjesërisht me re";
   }
   // Default Macedonian
-  if (code === 0) return "Сончево и ведро";
-  if (code === 1) return "Претежно сончево";
+  if (code === 0) return isNight ? "Ведро" : "Сончево";
+  if (code === 1) return isNight ? "Претежно ведро" : "Претежно сончево";
   if (code === 2) return "Делумно облачно";
   if (code === 3) return "Облачно";
   if (code === 45 || code === 48) return "Магла";
@@ -236,6 +236,7 @@ export interface UpcomingDisturbance {
   hour: number;
   icon: string;
   windSpeed?: number;
+  hoursAhead?: number;
 }
 
 function findUpcomingWeatherDisturbance(
@@ -246,6 +247,11 @@ function findUpcomingWeatherDisturbance(
   if (!Array.isArray(hourly) || hourly.length === 0) return null;
 
   for (let i = 0; i < hourly.length; i++) {
+    // Skip current hour
+    if (i === 0) continue;
+    // Don't look further than 16 hours ahead
+    if (i > 16) break;
+
     const item = hourly[i];
     let itemHour = item.hour;
     if (itemHour === undefined && item.rawTime) {
@@ -254,70 +260,67 @@ function findUpcomingWeatherDisturbance(
     if (itemHour === undefined && item.time && item.time.includes(":")) {
       itemHour = parseInt(item.time.split(":")[0], 10);
     }
-
-    // Only look ahead for future hours today (itemHour > currentHour)
-    if (itemHour === undefined || itemHour <= currentHour) continue;
-    // Don't look further than 16 hours ahead
-    if (i > 16) break;
+    if (itemHour === undefined) continue;
 
     const code = item.weather_code != null ? Number(item.weather_code) : null;
     const pop = Number(item.pop || 0);
     const icon = item.icon || "";
     const wind = Number(item.wind || 0);
+    const timeStr = `${String(itemHour).padStart(2, "0")}:00`;
 
     // 1. Hail (Невреме со град)
     if (code === 96 || code === 99) {
-      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "hail", hour: itemHour, icon: "⛈️" };
+      return { timeStr, type: "hail", hour: itemHour, icon: "⛈️", hoursAhead: i };
     }
 
     // 2. Thunderstorm (Грмотевици / невреме)
     if (code === 95 || icon === "⛈️") {
       if (currentCategory !== "THUNDER") {
-        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "thunder", hour: itemHour, icon: "⛈️" };
+        return { timeStr, type: "thunder", hour: itemHour, icon: "⛈️", hoursAhead: i };
       }
     }
 
     // 3. Freezing rain / Glaze (Леден дожд / голомразица)
     if (code === 56 || code === 57 || code === 66 || code === 67) {
-      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "freezing_rain", hour: itemHour, icon: "🧊" };
+      return { timeStr, type: "freezing_rain", hour: itemHour, icon: "🧊", hoursAhead: i };
     }
 
     // 4. Heavy snow (Пороен снег / вејавица)
     if (code === 85 || code === 86) {
       if (currentCategory !== "SNOW") {
-        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "snow_heavy", hour: itemHour, icon: "🌨️" };
+        return { timeStr, type: "snow_heavy", hour: itemHour, icon: "🌨️", hoursAhead: i };
       }
     }
 
     // 5. Snow (Снег)
     if ((code != null && code >= 71 && code <= 77) || icon === "❄️") {
       if (currentCategory !== "SNOW") {
-        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "snow", hour: itemHour, icon: "❄️" };
+        return { timeStr, type: "snow", hour: itemHour, icon: "❄️", hoursAhead: i };
       }
     }
 
     // 6. Strong gale winds (Силен ветер >= 50 km/h)
     if (wind >= 50) {
-      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "wind", hour: itemHour, icon: "💨", windSpeed: wind };
+      return { timeStr, type: "wind", hour: itemHour, icon: "💨", windSpeed: wind, hoursAhead: i };
     }
 
     // 7. Heavy rain showers (Пороен дожд / плускови)
     if (code != null && code >= 80 && code <= 82) {
       if (currentCategory !== "RAIN") {
-        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "rain_heavy", hour: itemHour, icon: "🌧️" };
+        return { timeStr, type: "rain_heavy", hour: itemHour, icon: "🌧️", hoursAhead: i };
       }
     }
 
     // 8. Rain / Drizzle (Дожд)
     if ((code != null && code >= 51 && code <= 65) || icon === "🌧️" || icon === "🌦️" || pop >= 50) {
       if (currentCategory !== "RAIN") {
-        return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "rain", hour: itemHour, icon: "🌧️" };
+        return { timeStr, type: "rain", hour: itemHour, icon: "🌧️", hoursAhead: i };
       }
     }
 
     // 9. Dense fog (Густа магла)
     if (code === 45 || code === 48 || icon === "🌫️") {
-      return { timeStr: `${String(itemHour).padStart(2, "0")}:00`, type: "fog", hour: itemHour, icon: "🌫️" };
+      return { timeStr, type: "fog", hour: itemHour, icon: "🌫️", hoursAhead: i };
     }
   }
 
@@ -478,8 +481,25 @@ serve(async (req) => {
       const currentTemp = Math.round(cityMetric.current_temp);
       const weatherCode = Number(cityMetric.weather_code ?? 0);
       const category = classifyWeatherCode(weatherCode);
-      const conditionText = getWeatherConditionText(weatherCode, devLang);
+      const isNight = cityMetric.is_day === 0 || (skopjeHour < 6 || skopjeHour >= 20);
+      const conditionText = getWeatherConditionText(weatherCode, devLang, isNight);
       const aqiText = getAqiStatusText(Number(cityMetric.aqi_value || 40), devLang);
+
+      // --- 🌙 NIGHT QUIET HOURS (22:00 - 07:00 Skopje time) ---
+      // Users must not be disturbed by routine push notifications while sleeping.
+      const bypassQuietHours = modeParam === "force" || modeParam === "test";
+      const isQuietHours = (skopjeHour >= 22 || skopjeHour < 7) && !bypassQuietHours;
+
+      if (isQuietHours && !isMorningRun) {
+        // Silently update device category if changed so stale transition alerts don't fire at 7 AM
+        if (dev.last_weather_category !== category) {
+          await supabase
+            .from("user_devices")
+            .update({ last_weather_category: category })
+            .eq("device_id", dev.device_id);
+        }
+        continue;
+      }
 
       // Extract daily maximum temperature from weekly forecast
       let maxTemp: number | null = null;
@@ -646,7 +666,7 @@ serve(async (req) => {
 
           // Advance Weather Disturbance Alert: If disturbance is expected in 1 to 4 hours
           if (!shouldSend && upcomingDist) {
-            const hoursAhead = upcomingDist.hour - skopjeHour;
+            const hoursAhead = upcomingDist.hoursAhead ?? (upcomingDist.hour >= skopjeHour ? upcomingDist.hour - skopjeHour : upcomingDist.hour + 24 - skopjeHour);
             if (hoursAhead >= 1 && hoursAhead <= 4) {
               const weatherHoursSince = dev.last_weather_alert_at
                 ? (now.getTime() - new Date(dev.last_weather_alert_at).getTime()) / (1000 * 60 * 60)

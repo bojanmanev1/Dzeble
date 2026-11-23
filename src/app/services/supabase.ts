@@ -566,10 +566,10 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
     }
     const resolvedPushToken = pushToken || localStorage.getItem('app_fcm_push_token') || null;
 
-    // 2. Parse notification preferences
+    // 2. Parse notification preferences (stock and crypto default to FALSE)
     const notifPrefs = JSON.parse(
       localStorage.getItem('widget_notification_prefs') || 
-      '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true}'
+      '{"weather":true,"fuel":true,"stock":false,"crypto":false,"holidays":true,"aqi":true,"alerts":true}'
     );
 
     // 3. Parse Stock favorites with legacy fallback
@@ -619,8 +619,8 @@ async syncDeviceRecord(userId?: string, userEmail?: string, pushToken?: string) 
       payload.notify_weather = notifPrefs.weather ?? true;
       payload.notify_aqi = notifPrefs.aqi ?? true;
       payload.notify_fuel = notifPrefs.fuel ?? true;
-      payload.notify_stock = notifPrefs.stock ?? true;
-      payload.notify_crypto = notifPrefs.crypto ?? true;
+      payload.notify_stock = notifPrefs.stock === true;
+      payload.notify_crypto = notifPrefs.crypto === true;
       payload.notify_calendar = notifPrefs.holidays ?? true;
       payload.notify_utility = notifPrefs.utility ?? true;
     } else {

@@ -2903,13 +2903,13 @@ ion-alert {
 
     /* Primary Action Button (Sign In / Confirm / OK) */
     &:not([role="cancel"]) {
-      background: #0f172a !important;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
       color: #ffffff !important;
-      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
 
       &:active {
         transform: scale(0.96) !important;
-        background: #1e293b !important;
+        background: #059669 !important;
       }
     }
 
@@ -4194,7 +4194,7 @@ body.dark-theme,
 }
 
 /* ==========================================================================
-   App Version Update Alert Styling
+   App Version Update Alert Styling (Light & Dark Theme)
    ========================================================================== */
 .app-update-alert {
   --backdrop-opacity: 0.7;
@@ -4203,9 +4203,9 @@ body.dark-theme,
     border-radius: 24px !important;
     padding: 16px 12px 14px !important;
     max-width: 360px !important;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45) !important;
-    background: #141d1a !important;
-    border: 1px solid rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
   }
 
   .alert-title {
@@ -4213,7 +4213,7 @@ body.dark-theme,
     font-weight: 800 !important;
     letter-spacing: -0.2px;
     margin-bottom: 6px !important;
-    color: #f8fafc !important;
+    color: #0f172a !important;
     text-align: center !important;
   }
 
@@ -4223,7 +4223,7 @@ body.dark-theme,
     white-space: pre-line !important;
     padding-top: 4px !important;
     padding-bottom: 12px !important;
-    color: #cbd5e1 !important;
+    color: #334155 !important;
     text-align: center !important;
   }
 
@@ -4261,8 +4261,8 @@ body.dark-theme,
   .app-update-confirm-btn {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
 
     .alert-button-inner {
       color: #ffffff !important;
@@ -4277,23 +4277,84 @@ body.dark-theme,
   }
 
   .app-update-cancel-btn {
-    background: #1c2824 !important;
-    border: 1px solid rgba(52, 211, 153, 0.25) !important;
-    color: #ffffff !important;
+    background: #ecfdf5 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: #047857 !important;
 
     .alert-button-inner {
-      color: #ffffff !important;
+      color: #047857 !important;
       font-weight: 700 !important;
       justify-content: center !important;
       text-align: center !important;
     }
 
     &:active {
-      background: #243530 !important;
+      background: #d1fae5 !important;
     }
   }
 }
 
+/* Base Light Mode for App Exit Alert */
+.app-exit-alert {
+  .alert-wrapper {
+    background: #ffffff !important;
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .alert-title {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    text-align: center !important;
+  }
+
+  .alert-message {
+    color: #475569 !important;
+    font-size: 14.5px !important;
+    text-align: center !important;
+    padding-top: 6px !important;
+  }
+
+  .app-exit-cancel-btn {
+    background: #ecfdf5 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: #047857 !important;
+    border-radius: 12px !important;
+
+    .alert-button-inner {
+      color: #047857 !important;
+      justify-content: center !important;
+      text-align: center !important;
+      font-weight: 600 !important;
+    }
+
+    &:active {
+      background: #d1fae5 !important;
+    }
+  }
+
+  .app-exit-confirm-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+
+    .alert-button-inner {
+      color: #ffffff !important;
+      justify-content: center !important;
+      text-align: center !important;
+      font-weight: 700 !important;
+    }
+
+    &:active {
+      background: #047857 !important;
+    }
+  }
+}
+
+/* Dark Mode Overrides for App Alerts */
 body.dark,
 html.dark,
 .ion-palette-dark {
@@ -4301,6 +4362,7 @@ html.dark,
     .alert-wrapper {
       background: #141d1a !important;
       border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45) !important;
     }
 
     .alert-title {
@@ -4321,16 +4383,84 @@ html.dark,
         justify-content: center !important;
         text-align: center !important;
       }
+
+      &:active {
+        background: #243530 !important;
+      }
     }
 
     .app-update-confirm-btn {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
       color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
 
       .alert-button-inner {
         color: #ffffff !important;
         justify-content: center !important;
         text-align: center !important;
+      }
+
+      &:active {
+        background: #059669 !important;
+      }
+    }
+  }
+
+  .app-exit-alert {
+    .alert-wrapper {
+      background: #141d1a !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .alert-title {
+      color: #f8fafc !important;
+      font-weight: 700 !important;
+      font-size: 18px !important;
+      text-align: center !important;
+    }
+
+    .alert-message {
+      color: #cbd5e1 !important;
+      font-size: 14.5px !important;
+      text-align: center !important;
+      padding-top: 6px !important;
+    }
+
+    .app-exit-cancel-btn {
+      background: #1c2824 !important;
+      border: 1px solid rgba(52, 211, 153, 0.25) !important;
+      color: #ffffff !important;
+      border-radius: 12px !important;
+
+      .alert-button-inner {
+        color: #ffffff !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-weight: 600 !important;
+      }
+
+      &:active {
+        background: #243530 !important;
+      }
+    }
+
+    .app-exit-confirm-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.3) !important;
+      color: #ffffff !important;
+      border-radius: 12px !important;
+
+      .alert-button-inner {
+        color: #ffffff !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-weight: 700 !important;
+      }
+
+      &:active {
+        background: #047857 !important;
       }
     }
   }

@@ -146,8 +146,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No active devices to notify." }), { status: 200 });
     }
 
-    // Filter devices where user explicitly disabled stock notifications
-    const activeDevices = devices.filter((d: any) => d.notify_stock !== false);
+    // Only notify devices where user explicitly enabled stock notifications (default is false)
+    const activeDevices = devices.filter((d: any) => d.notify_stock === true);
     if (activeDevices.length === 0) {
       return new Response(JSON.stringify({ success: true, message: "No devices with stock alerts enabled." }), { status: 200 });
     }

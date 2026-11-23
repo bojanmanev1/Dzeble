@@ -242,12 +242,13 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
     return '#64748b';
   }
 
-  getWeatherDesc(code: number): string {
+  getWeatherDesc(code: number, isDay: number = 1): string {
     const t = (key: string, fallback: string) => this.translate ? this.translate.instant(key) : fallback;
+    const dayTime = isDay === 1;
 
     // 1. WMO Standard Codes
-    if (code === 0) return t('WEATHER_DESC.CLEAR', 'Ведро');
-    if (code === 1) return t('WEATHER_DESC.MAINLY_CLEAR', 'Претежно ведро');
+    if (code === 0) return dayTime ? t('WEATHER_DESC.SUNNY', 'Сончево') : t('WEATHER_DESC.CLEAR', 'Ведро');
+    if (code === 1) return dayTime ? t('WEATHER_DESC.MAINLY_SUNNY', 'Претежно сончево') : t('WEATHER_DESC.MAINLY_CLEAR', 'Претежно ведро');
     if (code === 2) return t('WEATHER_DESC.PARTLY_CLOUDY', 'Делумно Облачно');
     if (code === 3) return t('WEATHER_DESC.OVERCAST', 'Облачно');
     if (code === 45 || code === 48) return t('WEATHER_DESC.FOG', 'Магла');
@@ -259,7 +260,7 @@ private async getCoords(): Promise<{ lat: number; lng: number } | null> {
     if (code >= 95 && code <= 99) return t('WEATHER_DESC.THUNDERSTORM', 'Грмежи');
 
     // 2. Legacy OpenWeather Codes fallback
-    if (code === 800) return t('WEATHER_DESC.CLEAR', 'Ведро');
+    if (code === 800) return dayTime ? t('WEATHER_DESC.SUNNY', 'Сончево') : t('WEATHER_DESC.CLEAR', 'Ведро');
     if (code >= 801 && code <= 802) return t('WEATHER_DESC.PARTLY_CLOUDY', 'Делумно Облачно');
     if (code >= 803 && code <= 804) return t('WEATHER_DESC.OVERCAST', 'Облачно');
     if (code >= 701 && code <= 781) return t('WEATHER_DESC.FOG', 'Магла');

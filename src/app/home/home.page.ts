@@ -1438,7 +1438,7 @@ async handleLogout() {
         return { 
           ...widget, 
           value: `${Math.round(metrics.current_temp)}°`, 
-          unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+          unit: this.weatherService.getWeatherDesc(metrics.weather_code, metrics.is_day ?? 1),
           icon: weatherIcon,
           customColor: weatherColor,
           weatherEmoji: weatherEmoji
@@ -1464,7 +1464,7 @@ async handleLogout() {
         return {
           ...widget,
           value: `${Math.round(metrics.current_temp)}°`,
-          unit: this.weatherService.getWeatherDesc(metrics.weather_code),
+          unit: this.weatherService.getWeatherDesc(metrics.weather_code, metrics.is_day ?? 1),
           icon: weatherIcon,
           customColor: weatherColor,
           weatherEmoji: weatherEmoji
@@ -1622,7 +1622,7 @@ async handleLogout() {
 
   getWeatherConditionText(): string {
     if (!this.parsedWeatherData) return '';
-    return this.weatherService.getWeatherDesc(this.parsedWeatherData.weather_code);
+    return this.weatherService.getWeatherDesc(this.parsedWeatherData.weather_code, this.parsedWeatherData.is_day ?? 1);
   }
 
   getUpcomingWeatherDisturbance(): { text: string; icon: string } | null {
@@ -1634,10 +1634,12 @@ async handleLogout() {
     const isActivelySnowing = (currentCode >= 71 && currentCode <= 77) || (currentCode >= 85 && currentCode <= 86);
     const isActivelyThunder = currentCode >= 95 && currentCode <= 99;
 
-    const nowHour = new Date().getHours();
     const lang = this.currentLang || 'mk';
 
     for (let i = 0; i < list.length; i++) {
+      if (i === 0) continue; // Skip current hour
+      if (i > 16) break;
+
       const item = list[i];
       let itemHour = item.hour;
       if (itemHour === undefined && item.rawTime) {
@@ -1647,8 +1649,7 @@ async handleLogout() {
         itemHour = parseInt(item.time.split(':')[0], 10);
       }
 
-      if (itemHour === undefined || itemHour <= nowHour) continue;
-      if (i > 16) break;
+      if (itemHour === undefined) continue;
 
       const code = item.weather_code != null ? Number(item.weather_code) : null;
       const pop = Number(item.pop || 0);
@@ -3074,11 +3075,25 @@ async handleLogout() {
     return `${prefix}${converted.toFixed(2)}${symbolSuffix}`;
   }
 
-  // 1. Add notification state map
-notificationPreferences: Record<string, boolean> = JSON.parse(
-  localStorage.getItem('widget_notification_prefs') || 
-  '{"weather":true,"fuel":true,"stock":true,"crypto":true,"holidays":true,"aqi":true}'
-);
+  // 1. Add notification state map (stocks and crypto default to false)
+notificationPreferences: Record<string, boolean> = (() => {
+  try {
+    const stored = localStorage.getItem('widget_notification_prefs');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Migration: enforce stock and crypto to false by default for existing devices
+      if (localStorage.getItem('widget_prefs_v2_crypto_stock_default_false') !== 'true') {
+        parsed.stock = false;
+        parsed.crypto = false;
+        localStorage.setItem('widget_notification_prefs', JSON.stringify(parsed));
+        localStorage.setItem('widget_prefs_v2_crypto_stock_default_false', 'true');
+      }
+      return parsed;
+    }
+  } catch {}
+  localStorage.setItem('widget_prefs_v2_crypto_stock_default_false', 'true');
+  return { weather: true, fuel: true, stock: false, crypto: false, holidays: true, aqi: true, alerts: true };
+})();
 
 // 2. Check if a widget supports notification toggles
 supportsNotification(widgetId: string): boolean {
@@ -3092,7 +3107,8 @@ toggleWidgetNotification(widgetId: string, event: Event) {
     this.promptGuestLogin();
     return;
   }
-  const currentVal = this.notificationPreferences[widgetId] ?? true;
+  const defaultVal = (widgetId === 'stock' || widgetId === 'crypto') ? false : true;
+  const currentVal = this.notificationPreferences[widgetId] ?? defaultVal;
   const newVal = !currentVal;
   
   this.notificationPreferences[widgetId] = newVal;
@@ -3106,7 +3122,8 @@ toggleWidgetNotification(widgetId: string, event: Event) {
 
 isNotificationActive(widgetId: string): boolean {
   if (!this.currentUser) return false;
-  return this.notificationPreferences[widgetId] ?? true;
+  const defaultVal = (widgetId === 'stock' || widgetId === 'crypto') ? false : true;
+  return this.notificationPreferences[widgetId] ?? defaultVal;
 }
 
   // --- PHARMACY (24/7 ДЕЖУРНИ АПТЕКИ) METHODS ---

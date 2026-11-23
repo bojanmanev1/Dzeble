@@ -27,6 +27,9 @@
     "FOOTER_HINT": "Tap for details",
     "CONFIRM_LOGOUT_TITLE": "Log Out",
     "CONFIRM_LOGOUT_MSG": "Are you sure you want to log out?",
+    "CONFIRM_EXIT_TITLE": "Exit",
+    "CONFIRM_EXIT_MSG": "Are you sure you want to exit the application?",
+    "EXIT": "Exit",
     "CANCEL": "Cancel",
     "LOGIN_REQUIRED_TITLE": "Login Required",
     "LOGIN_REQUIRED_MSG": "Please log in to your account to create custom widgets.",
@@ -266,6 +269,8 @@
   "WEATHER_DESC": {
     "CLEAR": "Clear",
     "MAINLY_CLEAR": "Mainly Clear",
+    "SUNNY": "Sunny",
+    "MAINLY_SUNNY": "Mostly Sunny",
     "PARTLY_CLOUDY": "Partly Cloudy",
     "OVERCAST": "Overcast",
     "FOG": "Fog",

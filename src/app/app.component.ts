@@ -1,9 +1,19 @@
 import { Component, inject, NgZone, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NavController } from '@ionic/angular';
-import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
+import { 
+  IonApp, 
+  IonRouterOutlet, 
+  AlertController, 
+  ModalController, 
+  ActionSheetController, 
+  PopoverController, 
+  MenuController,
+  Platform
+} from '@ionic/angular/standalone';
 import { TranslateService } from '@ngx-translate/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { DeviceTrackerService } from './services/device-tracker';
 import { SessionTrackerService } from './services/session-tracker';
 import { SupabaseService } from './services/supabase';
@@ -30,12 +40,20 @@ export class AppComponent implements OnInit {
   private navCtrl = inject(NavController);
   private translate = inject(TranslateService);
   private zone = inject(NgZone);
+  private alertCtrl = inject(AlertController);
+  private modalCtrl = inject(ModalController);
+  private actionSheetCtrl = inject(ActionSheetController);
+  private popoverCtrl = inject(PopoverController);
+  private menuCtrl = inject(MenuController);
+  private platform = inject(Platform);
 
   private isResetPasswordFlow = false;
+  private isExitAlertOpen = false;
 
   async ngOnInit() {
     this.themeService.initializeTheme();
     await this.setupDeepLinks();
+    this.setupHardwareBackButton();
 
     // 1. Background analytics & session tracking
     this.deviceTracker.trackDevice().catch(err => console.error('Tracking error:', err));
@@ -138,5 +156,79 @@ export class AppComponent implements OnInit {
 
   private async checkSingleDeviceSession() {
     return;
+  }
+
+  private setupHardwareBackButton() {
+    this.platform.backButton.subscribeWithPriority(10, async () => {
+      // 1. If exit alert is already open, do not re-trigger
+      if (this.isExitAlertOpen) return;
+
+      // 2. Dismiss topmost controller modal if open
+      const topModal = await this.modalCtrl.getTop();
+      if (topModal) {
+        await topModal.dismiss();
+        return;
+      }
+
+      // 3. Fallback: check DOM for any presented inline ion-modal
+      const domModal = document.querySelector('ion-modal.show-modal') as any;
+      if (domModal && typeof domModal.dismiss === 'function') {
+        await domModal.dismiss();
+        return;
+      }
+
+      // 4. If user is on a sub-route (e.g. login or reset-password), navigate back to dashboard
+      const currentUrl = this.router.url;
+      if (currentUrl.includes('/login') || currentUrl.includes('/reset-password')) {
+        this.navCtrl.navigateRoot('/dashboard');
+        return;
+      }
+
+      // 5. On root dashboard with no overlays open -> present exit confirmation alert
+      await this.showExitConfirmAlert();
+    });
+  }
+
+  private async showExitConfirmAlert() {
+    if (this.isExitAlertOpen) return;
+
+    const title = this.translate.instant('HOME.CONFIRM_EXIT_TITLE') || 'Излез';
+    const message = this.translate.instant('HOME.CONFIRM_EXIT_MSG') || 'Дали сакате да излезете од апликацијата?';
+    const cancelText = this.translate.instant('COMMON.CANCEL') || 'Откажи';
+    const exitText = this.translate.instant('HOME.EXIT') || 'Излези';
+
+    this.isExitAlertOpen = true;
+
+    const alert = await this.alertCtrl.create({
+      header: title,
+      message: message,
+      cssClass: 'app-exit-alert',
+      backdropDismiss: true,
+      buttons: [
+        {
+          text: cancelText,
+          role: 'cancel',
+          cssClass: 'app-exit-cancel-btn',
+          handler: () => {
+            this.isExitAlertOpen = false;
+          }
+        },
+        {
+          text: exitText,
+          role: 'destructive',
+          cssClass: 'app-exit-confirm-btn',
+          handler: () => {
+            this.isExitAlertOpen = false;
+            App.exitApp();
+          }
+        }
+      ]
+    });
+
+    alert.onDidDismiss().then(() => {
+      this.isExitAlertOpen = false;
+    });
+
+    await alert.present();
   }
 }

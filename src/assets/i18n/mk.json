@@ -27,6 +27,9 @@
     "FOOTER_HINT": "Допри за детали",
     "CONFIRM_LOGOUT_TITLE": "Одјава",
     "CONFIRM_LOGOUT_MSG": "Дали сте сигурни дека сакате да се одјавите?",
+    "CONFIRM_EXIT_TITLE": "Излез",
+    "CONFIRM_EXIT_MSG": "Дали сакате да излезете од апликацијата?",
+    "EXIT": "Излези",
     "CANCEL": "Откажи",
     "LOGIN_REQUIRED_TITLE": "Најавата е задолжителна",
     "LOGIN_REQUIRED_MSG": "За да креирате ваши виџети, ве молиме најавете се на вашиот профил.",
@@ -252,6 +255,8 @@
   "WEATHER_DESC": {
     "CLEAR": "Ведро",
     "MAINLY_CLEAR": "Претежно ведро",
+    "SUNNY": "Сончево",
+    "MAINLY_SUNNY": "Претежно сончево",
     "PARTLY_CLOUDY": "Делумно Облачно",
     "OVERCAST": "Облачно",
     "FOG": "Магла",

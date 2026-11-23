@@ -27,6 +27,9 @@
     "FOOTER_HINT": "Prekni për detaje",
     "CONFIRM_LOGOUT_TITLE": "Dilni",
     "CONFIRM_LOGOUT_MSG": "A jeni të sigurt që dëshironi të dilni?",
+    "CONFIRM_EXIT_TITLE": "Dalje",
+    "CONFIRM_EXIT_MSG": "A dëshironi të dilni nga aplikacioni?",
+    "EXIT": "Dil",
     "CANCEL": "Anulo",
     "LOGIN_REQUIRED_TITLE": "Kërkohet Hyrja",
     "LOGIN_REQUIRED_MSG": "Ju lutemi hyni në llogarinë tuaj për të krijuar widget-e tuaja.",
@@ -266,6 +269,8 @@
   "WEATHER_DESC": {
     "CLEAR": "Kthjellët",
     "MAINLY_CLEAR": "Kryesisht kthjellët",
+    "SUNNY": "Me diell",
+    "MAINLY_SUNNY": "Kryesisht me diell",
     "PARTLY_CLOUDY": "Pjesërisht me re",
     "OVERCAST": "Vranët",
     "FOG": "Mjegull",
